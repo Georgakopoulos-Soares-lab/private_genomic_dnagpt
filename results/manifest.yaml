@@ -376,6 +376,88 @@ runs:
       occurred. [A] Replace it with the already validated direct T=2 sigmoid
       schedule and rerun rather than silently raising the cryptographic profile.
 
+  - id: fhe_fides_refresh_d768_t2_native_a100_asymfix2_20260724
+    task: "Released-weight DNAGPT block-0 native-GPU encrypted bootstrap refresh + post-refresh nonlinear tail"
+    status: "[V] PASS (benign non-zero teardown exit; see note)"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 5 [gpu]"
+    config:
+      dimension: 768
+      sequence_length: 2
+      ring_dim: 131072
+      multiplicative_depth: 43
+      mode: native-gpu
+      bootstrap_location: GPU/CUDA
+    metrics:
+      global_rel_inf: 1.0452832579756785e-3
+      worst_token_rel_inf: 1.0452832579756785e-3
+      max_abs_error: 6.4860649707415563e-4
+      levels_after_bootstrap: 21
+      levels_after_nonlinear_tail: 22
+      bootstrap_seconds_gpu: 0.35698478500000003
+      final_decrypt_calls: 1
+      intermediate_decrypt_attempts: 0
+    provenance:
+      result_sha256: "ce90c70127924abf98bf9ffbf9fc6059b8d93f549255adfb8f93e09667f1e926"
+      source_sha256: "4697ce27f7080233fa6ec1b74a40c870c36009850295c98e1f1fc18cb11ed2a9"
+      activation_sha256: "829b2b4b62b6315f8d93a33562cb4a4d82935c363b4ebfa9a56a8dd29edfe63f"
+      patch_sha256: "81b6f6d8f466c67bc4e764c3f43d38ad2f6caec44b807e8fb916fc8b1063e295"
+      image_sha256: "8dfa77fa298472824a86414efdc6a5d14c4fa57bce3447b61b9893fe37d547a4"
+      run_log_sha256: "4ed5fc902d9bf694db8120936f04527d96b312018c541216e4b7afe078289198"
+    verdict: >
+      [V] PASS. The first native-GPU encrypted bootstrap refresh on the released
+      block-0 activation restores 21 levels and carries a post-refresh nonlinear
+      tail (square + LayerNorm epsilon) within the 4e-2 gate, with exactly one
+      final decrypt and no evaluator private-key access. The container exits
+      139 (SIGSEGV, "free(): invalid pointer") strictly after the final decrypt
+      and JSON write, during FIDESlib/CUDA context teardown; this is a shutdown
+      defect in the binary, not a correctness or evidence-integrity issue, and
+      is recorded verbatim rather than suppressed. [U] Root-causing the teardown
+      crash is separate follow-up work; it does not block using this as the
+      accepted refresh gate.
+
+  - id: fhe_fides_real_d768_t2_attention_sigmoid13_a100_asymfix2_20260724
+    task: "Released-weight DNAGPT block-0 encrypted LayerNorm+12-head attention gate, T=2 sigmoid-identity schedule"
+    status: "[V] PASS"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 4 [gpu]"
+    config:
+      dimension: 768
+      sequence_length: 2
+      heads: 12
+      ring_dim: 131072
+      multiplicative_depth: 43
+      rotation_keys: 63
+      attention_schedule: "T=2 sigmoid identity: w1=sigmoid(s11-s10); context=v0+w1*(v1-v0)"
+      chebyshev_degree_attention_sigmoid: 13
+      packed_output_level: 22
+      depth_guards: {mlp_required_levels: 8, final_pack_required_levels: 1, fail_closed: true}
+    metrics:
+      global_rel_inf: 9.9079036110191203e-9
+      worst_token_rel_inf: 1.2276737322950739e-8
+      max_abs_error: 1.6499915211909411e-7
+      encrypted_evaluation_seconds_gpu: 709.30780322299995
+      intermediate_decrypt_attempts: 0
+      final_decrypt_calls: 1
+    provenance:
+      result_sha256: "3e63996a54f56ca20f475f19b9f9210cb511f6615ad431188c1c8b3458956ff6"
+      source_sha256: "5282543db2983c5c9d94839cdc6bc31cd73b48fb59264553c84d3f5c18e73dbb"
+      fixture_manifest_sha256: "8d20a2841ee29a7a386171f1bd173b7189144359ce8f91ea5eb21cc60c0a78fe"
+      fixture_contract_sha256: "b35651110c5e45efc53c7ab39066f1ad455cd53dfbb05959a8ffb8835bd382d8"
+      image_sha256: "8dfa77fa298472824a86414efdc6a5d14c4fa57bce3447b61b9893fe37d547a4"
+    verdict: >
+      [V] PASS. The T=2 sigmoid score-difference identity replaces the
+      exp-plus-reciprocal attention schedule that exhausted depth 43 in
+      `fhe_fides_real_d768_t2_block0_depth43_FAIL_20260724`. It closes
+      LayerNorm-1 and 12-head attention at `packed_output_level=22` (43-level
+      chain), 709.3 s GPU evaluation versus 1347.1 s for the original schedule,
+      with rel_inf `9.91e-9`, one final decrypt, and no evaluator private-key
+      access. The harness's own fail-closed depth guards confirm 21 levels
+      remain against an 8-level MLP requirement plus 1-level final pack, so
+      this schedule is the candidate for retrying the full depth-43 block
+      gate that previously failed. `[U]` The full-block (`gate=full`) run with
+      this schedule is the next step, not yet executed.
+
   - id: fhe_measured_t2_attention_boundary_20260724
     task: "Derived 12-block D768/T2 attention-only runtime boundary"
     status: "[A] measured-input derivation; not a 12-block encrypted run"

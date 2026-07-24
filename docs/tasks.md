@@ -255,6 +255,57 @@ Immutable results:
 - `fhe_fides_real_d768_t2_block0_depth43_FAIL_20260724.json` — `[V]` fail
   before final decrypt; the exact T=2 sigmoid replacement is the next run.
 
+### Sigmoid-schedule attention gate
+
+Fail-closed scheduled launch on the Brev GPU host (waits for a GPU to be
+process-free for two consecutive 30 s polls, reserves it, then runs):
+
+```bash
+fhe/gpu_real_sigmoid/schedule_when_free.sh \
+  0,1,2,3,4,5,6,7 \
+  /data/christos/private_genomic_ml/dnagpt_fides_asymfix2_20260724 \
+  gpu_real_sigmoid_v1/fhe/gpu_real_sigmoid \
+  real_fixture/gsr_pos0_block0_t2_d63353abdc1a_52d046d1fcf0 \
+  dnagpt-fideslib:786c-asymfix2 \
+  attention \
+  fhe_fides_real_d768_t2_attention_sigmoid13_a100_asymfix2_20260724 \
+  1440
+```
+
+Result: `fhe_fides_real_d768_t2_attention_sigmoid13_a100_asymfix2_20260724.json` —
+`[V]` pass, `rel_inf=9.91e-9`, `709.3 s [gpu]` versus `1347.1 s` for the original
+exp-plus-reciprocal schedule, packed at level 22 of the 43-level chain. The T=2
+sigmoid score-difference identity (`w1=sigmoid(s11-s10)`) replaces the schedule that
+exhausted depth 43 in `fhe_fides_real_d768_t2_block0_depth43_FAIL_20260724.json`.
+The harness's own depth guards confirm 21 levels remain against an 8-level MLP
+requirement plus a 1-level final pack — the full-block (`gate=full`) retry with this
+schedule is the next run, not yet executed.
+
+### Native GPU bootstrap refresh gate
+
+Run on the Brev GPU host as a fail-closed scheduled launch (waits for a GPU to be
+process-free for two consecutive 30 s polls, reserves it, then runs):
+
+```bash
+fhe/gpu_bootstrap/schedule_refresh_when_free.sh \
+  0,1,2,3,4,5,6,7 \
+  /data/christos/private_genomic_ml/dnagpt_fides_asymfix2_20260724 \
+  refresh_native_v2 \
+  real_fixture/gsr_pos0_block0_t2_d63353abdc1a_52d046d1fcf0/oracle__block_output.bin \
+  dnagpt-fideslib:786c-asymfix2 \
+  native-gpu \
+  fhe_fides_refresh_d768_t2_native_a100_asymfix2_20260724 \
+  1440
+```
+
+Result: `fhe_fides_refresh_d768_t2_native_a100_asymfix2_20260724.json` — `[V]` pass,
+`rel_inf=1.045e-3` against the `4e-2` gate, restores 21 levels through a native CUDA
+bootstrap plus a post-refresh nonlinear tail (square + LayerNorm epsilon), one final
+decrypt, on the same fixed released block-0 activation fixture used by the LayerNorm
+and attention gates above. The container exits `139` (`free(): invalid pointer`)
+strictly after the decrypt and JSON write, during FIDESlib/CUDA teardown; this is a
+recorded shutdown defect, not a correctness issue, and does not block the result.
+
 ### Twelve-block oracle and fixed nonlinear preflight
 
 ```bash

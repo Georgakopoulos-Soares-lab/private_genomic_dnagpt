@@ -53,8 +53,9 @@ that final decrypt. `fhe/oracle.py` supplies the plaintext reference and gate.
 | GPU parity | The complete toy arithmetic survives C++/CUDA execution | `[V]` complete | `fhe_fides_toy_a100_asymfix2_20260724.json` |
 | Real-width block | Released 0.1b block-0 gates work at `D=768`, 12 heads, real weights | `[V]` LayerNorm + attention complete; full MLP pending | `fhe_fides_real_d768_t2_attention_a100_asymfix2_20260724.json` |
 | Original real full-block schedule | Determine whether exp-plus-reciprocal attention fits depth 43 | `[V]` fails closed at token-1 MLP; no decrypt | `fhe_fides_real_d768_t2_block0_depth43_FAIL_20260724.json` |
+| Sigmoid-schedule attention gate | Replace exp-plus-reciprocal with the T=2 sigmoid identity to recover depth for the MLP | `[V]` LN1+attention pass at `packed_output_level=22/43`, 709.3s vs 1347.1s; full-block retry pending | `fhe_fides_real_d768_t2_attention_sigmoid13_a100_asymfix2_20260724.json` |
 | Twelve-block nonlinear schedule | Fixed public domains, stable T=2 attention, scaled LayerNorm, and full-domain GELU preserve all blocks/head | `[V/A]` plaintext preflight passes; not FHE | `fhe_range_control_t2_12block_optimized_v2_20260724.json` |
-| Scale and composition | Refreshes, two encrypted blocks, all 12 blocks, and task head close | `[U]` | future immutable runs |
+| Scale and composition | Refreshes, two encrypted blocks, all 12 blocks, and task head close | `[V]` native-GPU refresh gate passes on the released block-0 activation; `[U]` two-block and 12-block closure remain | `fhe_fides_refresh_d768_t2_native_a100_asymfix2_20260724.json` |
 
 A twelve-layer CPU run is intentionally skipped: it would repeat arithmetic already
 established by the complete block while measuring a rejected performance path.
