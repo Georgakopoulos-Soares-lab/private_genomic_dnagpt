@@ -90,6 +90,24 @@ class TwoBlockStaticContractTests(unittest.TestCase):
         self.assertEqual(result["blocks"], [0, 1])
         self.assertEqual(result["consumed_fixture_files"], 15)
 
+    def test_setup_output_is_unbuffered_and_staged(self) -> None:
+        # Redirected stdout is fully buffered; a mid-execution crash loses
+        # anything not yet flushed. A crash log is only trustworthy if every
+        # setup call gets its own immediately-flushed line.
+        self.assertIn("std::cout << std::unitbuf", self.source)
+        self.assertIn("std::cerr << std::unitbuf", self.source)
+        for marker in (
+            "[setup] GenCryptoContext done",
+            "[setup] EvalBootstrapSetup done",
+            "[setup] KeyGen done",
+            "[setup] EvalMultKeyGen done",
+            "[setup] EvalRotateKeyGen done",
+            "[setup] EvalBootstrapKeyGen done",
+            "[setup] LoadContext done",
+            "[setup] Synchronize done",
+        ):
+            self.assertIn(marker, self.source)
+
     def test_launcher_and_scheduler_are_fail_closed(self) -> None:
         runner = (ROOT / "run_two_block.sh").read_text(encoding="utf-8")
         launcher = (ROOT / "launch_brev_multiblock.sh").read_text(encoding="utf-8")

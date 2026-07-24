@@ -1,0 +1,37 @@
+{
+  "id": "fhe_fides_gpu_multiblock_blocks0_1_refresh_FAIL_20260724",
+  "status": "[V] FAIL before any decrypt; crash during context/key setup, no correctness metric emitted",
+  "task": "Two-block same-lineage encrypted gate: released block 0 -> public conditioning -> native encrypted bootstrap refresh -> released block 1, one lineage, one final decrypt",
+  "backend": "FIDESlib CKKS/CUDA asymfix2",
+  "environment": "Brev A100-SXM4-80GB physical GPU 4 [gpu]",
+  "config": {
+    "dimension": 768,
+    "sequence_length": 2,
+    "heads": 12,
+    "multiplicative_depth": 64,
+    "scale_bits": 59,
+    "first_mod_bits": 60,
+    "batch_slots": 4096,
+    "bootstrap_level_budget": [4, 4],
+    "attention_schedule": "T=2 sigmoid identity (same schedule as fhe_fides_real_d768_t2_block0_sigmoid13_a100_asymfix2_20260724)"
+  },
+  "failure": {
+    "after": "CUDA device banner printed by FIDESlib/OpenFHE",
+    "before": "the module's own '[context] ring=... depth=... slots=... rotation_keys=...' log line, which is emitted only after GenCryptoContext, EvalBootstrapSetup, KeyGen, EvalMultKeyGen, EvalRotateKeyGen, EvalBootstrapKeyGen, LoadContext, and Synchronize all complete",
+    "process_exit_code": 139,
+    "process_exit_signal": "SIGSEGV (128+11)",
+    "run_log_bytes": 3,
+    "observed_intermediate_decrypts": 0,
+    "final_decrypt_calls": 0,
+    "evidence_json_written": false,
+    "diagnosis": "[A] Not confirmed via kernel/Xid logs (checked `dmesg`/`journalctl` on the host at the time of the crash; no OOM-killer or Xid entries found, though the docker container itself leaves no separate log). The two-block context requests multiplicative_depth=64 versus depth=43 for the single complete block-0 gate that already passed; a deeper CKKS chain at 128-bit security needs a larger ring dimension and correspondingly larger per-object GPU allocations (rotation/bootstrap key material, RNS towers). The crash occurring strictly between the CUDA device banner and the module's first application-level print is consistent with a GPU memory allocation failure during context creation or key generation that is not caught as a C++ exception, but this is a hypothesis, not a measured fact.",
+    "next_step": "[U] Instrument the module to print immediately after each of GenCryptoContext, EvalBootstrapSetup, KeyGen, EvalMultKeyGen, EvalRotateKeyGen, and EvalBootstrapKeyGen (or run under cuda-memcheck / with CUDA_LAUNCH_BLOCKING=1) to localize which call segfaults, and record actual GPU memory headroom (nvidia-smi) immediately before the run."
+  },
+  "provenance": {
+    "source_sha256": "4f9e984b6b14866c5b8858834e3eb1edd65ec1c1d655bc1b6f51bb1d3212e3c6",
+    "fixture_manifest_sha256": "3c8d7bbcbfe62d9dc7f3fa89571396b93c3f92cb89563fa5cb4cd7b831bd5e4c",
+    "range_control_sha256": "b148e30b42c430405a0a2c41401ab295701e0e1c3655ef00f06984ff9f8faba2",
+    "container_image_sha256": "8dfa77fa298472824a86414efdc6a5d14c4fa57bce3447b61b9893fe37d547a4",
+    "remote_log_sha256": "48863e313536cd2cde05c070e60b65cbbb0849678ee32c4f85e90783be532108"
+  }
+}

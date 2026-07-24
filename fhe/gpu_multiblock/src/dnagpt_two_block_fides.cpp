@@ -1126,6 +1126,12 @@ void write_exclusive(const std::filesystem::path& path,
 }  // namespace
 
 int main(int argc, char** argv) {
+    // Redirected stdout is fully buffered, not line buffered: a mid-execution
+    // crash (as opposed to a normal return, which flushes via exit()) loses
+    // any output still sitting in the buffer. Force a flush after every
+    // insertion so a crash log reflects the last statement that actually ran.
+    std::cout << std::unitbuf;
+    std::cerr << std::unitbuf;
     try {
         const Options options = parse_options(argc, argv);
 
@@ -1150,21 +1156,31 @@ int main(int argc, char** argv) {
         parameters.SetCiphertextAutoload(true);
 
         Cc cc = GenCryptoContext(parameters);
+        std::cout << "[setup] GenCryptoContext done\n";
         cc->Enable(PKE);
         cc->Enable(KEYSWITCH);
         cc->Enable(LEVELEDSHE);
         cc->Enable(ADVANCEDSHE);
         cc->Enable(FHE);
+        std::cout << "[setup] Enable(PKE|KEYSWITCH|LEVELEDSHE|ADVANCEDSHE|FHE) done\n";
         cc->EvalBootstrapSetup(
             {BOOTSTRAP_LEVEL_BUDGET[0], BOOTSTRAP_LEVEL_BUDGET[1]},
             {0, 0}, SLOTS, 0);
+        std::cout << "[setup] EvalBootstrapSetup done\n";
 
         auto keys = cc->KeyGen();
+        std::cout << "[setup] KeyGen done\n";
         cc->EvalMultKeyGen(keys.secretKey);
+        std::cout << "[setup] EvalMultKeyGen done\n";
         cc->EvalRotateKeyGen(keys.secretKey, rotation_keys);
+        std::cout << "[setup] EvalRotateKeyGen done rotation_keys="
+                  << rotation_keys.size() << "\n";
         cc->EvalBootstrapKeyGen(keys.secretKey, SLOTS);
+        std::cout << "[setup] EvalBootstrapKeyGen done\n";
         cc->LoadContext(keys.publicKey);
+        std::cout << "[setup] LoadContext done\n";
         cc->Synchronize();
+        std::cout << "[setup] Synchronize done\n";
         const double setup_seconds = elapsed_seconds(setup_start);
         const std::uint32_t ring = cc->GetRingDimension();
         std::cout << "[context] security=HEStd_128_classic ring=" << ring

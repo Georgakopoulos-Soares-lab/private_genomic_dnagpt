@@ -308,6 +308,31 @@ depth-43 chain using the exp-plus-reciprocal attention schedule. Only 2 levels r
 unconsumed, so the native refresh (below) must run immediately after this block in any
 chained two-block gate.
 
+### Two-block same-lineage gate (fails closed)
+
+Fail-closed scheduled launch on the Brev GPU host:
+
+```bash
+fhe/gpu_multiblock/schedule_multiblock_when_free.sh \
+  0,1,2,3,4,5,6,7 \
+  /data/christos/private_genomic_ml/dnagpt_fides_asymfix2_20260724 \
+  gpu_multiblock_v1 \
+  multiblock_fixture_v1 \
+  dnagpt-fideslib:786c-asymfix2 \
+  fhe_fides_gpu_multiblock_blocks0_1_refresh_a100_asymfix2_20260724 \
+  1440
+```
+
+Result: `fhe_fides_gpu_multiblock_blocks0_1_refresh_FAIL_20260724.json` — `[V]` FAIL.
+The module crashes (`SIGSEGV`, exit `139`) strictly between the CUDA device banner and
+its own first log line — i.e. inside context creation, bootstrap setup, or key
+generation at `multiplicative_depth=64` — before any encryption, decrypt, or evidence
+write. `dmesg`/`journalctl` on the host show no OOM-killer or Xid entry at the crash
+time. `[A]` The leading hypothesis is GPU memory pressure from the larger ring
+dimension a depth-64 context needs, since the depth-43 context for one block already
+succeeds on the same hardware; this is not confirmed. `[U]` Localizing the crash needs
+per-call instrumentation or a `cuda-memcheck` run before retrying.
+
 ### Native GPU bootstrap refresh gate
 
 Run on the Brev GPU host as a fail-closed scheduled launch (waits for a GPU to be

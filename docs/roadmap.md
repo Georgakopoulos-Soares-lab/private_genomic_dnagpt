@@ -80,11 +80,21 @@ same fixed released block-0 activation fixture: it restores 21 levels and carrie
 post-refresh nonlinear tail (square + LayerNorm epsilon) inside the `4e-2` gate with one
 final decrypt (`fhe_fides_refresh_d768_t2_native_a100_asymfix2_20260724.json`). Both
 gates are validated in isolation on the same activation fixture, not yet chained
-end-to-end from one continuous ciphertext. The `gpu_multiblock` CUDA module (block 0 ->
-public conditioning -> native encrypted bootstrap -> block 1, one lineage, one final
-decrypt) is compiled and its minimal fixture staged on Brev; running it against the
-now-complete block-0 output is the next concrete step toward the two-block
-same-lineage gate. After the two-block gate passes, increase sequence length.
+end-to-end from one continuous ciphertext.
+
+The `gpu_multiblock` CUDA module (block 0 -> public conditioning -> native encrypted
+bootstrap -> block 1, one lineage, one final decrypt, `multiplicative_depth=64`) is
+compiled, its fixture staged, and its own fail-closed launcher/scheduler now exist
+(`fhe/gpu_multiblock/launch_brev_multiblock.sh`, `schedule_multiblock_when_free.sh`).
+The first run crashes (`SIGSEGV`, exit 139) before its own first log line, i.e. inside
+context creation, bootstrap setup, or key generation at the deeper depth — before any
+encryption, decrypt, or evidence file
+(`fhe_fides_gpu_multiblock_blocks0_1_refresh_FAIL_20260724.json`). `[A]` The leading
+hypothesis is GPU memory pressure from the larger ring dimension a depth-64 context
+needs versus the depth-43 context that already succeeds for one block; this is not
+confirmed. `[U]` Instrumenting the module to log after each setup call (or running it
+under `cuda-memcheck`) to localize the crash is the next concrete step before retrying
+the two-block gate. After the two-block gate passes, increase sequence length.
 
 The first full attempt is measured and retained as a failure: exp-plus-reciprocal
 attention creates a 13-level causal-branch gap, so token 1 needs packed level 46
