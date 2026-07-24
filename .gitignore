@@ -34,6 +34,8 @@ credentials*
 secrets*
 kubeconfig*
 *token*
+# DNAGPT source file (not a secret) — exempt from the *token* rule above:
+!**/tokenizer.py
 *.secret
 
 # --- Encrypted ciphertext blobs & FHE artifacts (large, regenerable) ---
