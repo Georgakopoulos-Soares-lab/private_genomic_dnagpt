@@ -1,0 +1,82 @@
+# --- Model weights & checkpoints (NEVER commit — license/terms + size) ---
+*.pt
+*.pth
+*.ckpt
+*.safetensors
+*.onnx
+*.h5
+*.pb
+*.bin
+*.npz
+weights/
+checkpoints/
+models/
+*.tfrecord
+*.sif
+.hf_cache/
+
+# --- Homomorphic-encryption key material (SECURITY-CRITICAL — never commit) ---
+*.key
+*.pem
+*.p12
+*.pfx
+*.evalkey
+*.galoiskey
+*.relinkey
+keys/
+*.seckey
+*.pubkey
+
+# --- Secrets / credentials ---
+.env
+.env.*
+credentials*
+secrets*
+kubeconfig*
+*token*
+*.secret
+
+# --- Encrypted ciphertext blobs & FHE artifacts (large, regenerable) ---
+*.ct
+*.ctxt
+ciphertexts/
+compiled_circuits/
+*.mlir
+
+# --- Data (genomic inputs may be sensitive) ---
+data/
+*.fasta
+*.fa
+*.vcf
+*.bed
+*.bigwig
+*.bw
+
+# --- Python ---
+__pycache__/
+*.py[cod]
+*.egg-info/
+.eggs/
+build/
+dist/
+.venv/
+.venv*/
+venv/
+env/
+.pytest_cache/
+.mypy_cache/
+.ruff_cache/
+.ipynb_checkpoints/
+
+# --- OS / editor ---
+.DS_Store
+*.swp
+.idea/
+.vscode/
+
+# --- Benchmark outputs (keep summaries in docs, not raw logs) ---
+results/raw/
+*.prof
+
+# --- Miscellaneous ---
+checkpoints/

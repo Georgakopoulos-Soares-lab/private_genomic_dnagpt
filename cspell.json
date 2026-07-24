@@ -1,0 +1,13 @@
+{
+  "version": "0.2",
+  "language": "en",
+  "words": [
+    "DNAGPT", "DNABERT", "Xpresso", "Homomorphic", "Brev", "AATAAA", "polyA",
+    "mrna", "testset", "finetune", "ktest", "gsr", "GUE", "kmer", "Kmer",
+    "onehot", "promoter", "Fantom", "Roadmap", "Ensembl", "ENSID", "histone",
+    "Kalkatawi", "Agarwal", "Shendure", "Zenodo", "gdown", "numpy", "scipy",
+    "scikit", "tqdm", "pyfaidx", "hdf5", "argmax", "zscore", "Spearman",
+    "matthews", "corrcoef", "evo", "MPS", "TSS", "UTR", "ORF", "CDS", "ecnrypted"
+  ],
+  "ignorePaths": ["DNAGPT/**", "checkpoints/**", "data/**", ".venv/**", "results/**"]
+}

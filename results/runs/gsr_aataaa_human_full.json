@@ -1,0 +1,27 @@
+{
+  "task": "GSR recognition (human AATAAA PAS)",
+  "tag": "gsr_aataaa_human_full",
+  "weight": "checkpoints/classification.pth",
+  "model": "dna_gpt0.1b_m",
+  "device": "mps",
+  "n": 22604,
+  "n_pos": 11302,
+  "n_neg": 11302,
+  "accuracy": 0.9123606441337816,
+  "precision": 0.8809776833156217,
+  "recall": 0.9535480445938772,
+  "f1": 0.9158274909708944,
+  "confusion_matrix_[0,1]x[0,1]": [
+    [
+      9846,
+      1456
+    ],
+    [
+      525,
+      10777
+    ]
+  ],
+  "non_NA_tokens": 0,
+  "seconds": 140.33343887329102,
+  "paper_reference_acc": 0.916
+}

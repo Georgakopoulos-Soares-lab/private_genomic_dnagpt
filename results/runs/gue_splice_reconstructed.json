@@ -1,0 +1,19 @@
+{
+  "task": "GUE fine-tune",
+  "tag": "gue_splice_reconstructed",
+  "dataset": "data/gue/GUE/splice/reconstructed",
+  "model": "dna_gpt0.1b_m",
+  "backbone": "checkpoints/dna_gpt0.1b_m.pth",
+  "device": "mps",
+  "num_classes": 3,
+  "n_train": 36496,
+  "n_test": 4562,
+  "epochs": 3,
+  "batch": 32,
+  "lr": 3e-05,
+  "max_len": 96,
+  "mcc": 0.8310120000816433,
+  "accuracy": 0.8954405962297238,
+  "macro_f1": 0.8915765633577574,
+  "minutes": 13.199792714913686
+}

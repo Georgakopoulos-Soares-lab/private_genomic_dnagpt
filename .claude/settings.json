@@ -1,0 +1,25 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(source .venv/bin/activate:*)",
+      "Bash(python eval/*)",
+      "Bash(python -c:*)",
+      "Bash(pip install:*)",
+      "Bash(ls:*)",
+      "Bash(cat:*)",
+      "Bash(head:*)",
+      "Bash(tail:*)",
+      "Bash(wc:*)",
+      "Bash(find:*)",
+      "Bash(grep:*)",
+      "Bash(du:*)",
+      "Bash(unzip:*)",
+      "Read(//Users/galano/Developer/patternforge/utexas/dna-gpt/**)"
+    ],
+    "deny": [
+      "Read(./checkpoints/**)",
+      "Bash(git commit:*)",
+      "Bash(git push:*)"
+    ]
+  }
+}

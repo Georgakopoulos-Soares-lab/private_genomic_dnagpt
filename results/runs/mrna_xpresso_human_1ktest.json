@@ -1,0 +1,13 @@
+{
+  "task": "Human mRNA abundance regression (Xpresso)",
+  "tag": "mrna_xpresso_human_1ktest",
+  "weight": "checkpoints/regression.pth",
+  "model": "dna_gpt0.1b_h",
+  "device": "mps",
+  "n": 1000,
+  "r2": 0.5616252440841203,
+  "pearson_r": 0.7532085034024409,
+  "spearman_r": 0.7454002609956362,
+  "seconds": 67.15600299835205,
+  "paper_reference_r2": 0.62
+}

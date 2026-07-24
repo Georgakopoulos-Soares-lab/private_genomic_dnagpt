@@ -1,0 +1,10 @@
+# Phase-A (plaintext baseline) dependencies. Python 3.12, macOS arm64 (MPS).
+# Upstream DNAGPT itself only needs numpy + torch; the rest drive datasets/metrics.
+torch==2.13.0
+numpy==2.5.1
+scikit-learn==1.9.0
+pandas==3.0.5
+h5py==3.16.0
+scipy==1.18.0
+gdown==6.1.0
+tqdm

@@ -1,0 +1,19 @@
+{
+  "task": "GUE fine-tune",
+  "tag": "gue_prom_300_all",
+  "dataset": "data/gue/GUE/prom/prom_300_all",
+  "model": "dna_gpt0.1b_m",
+  "backbone": "checkpoints/dna_gpt0.1b_m.pth",
+  "device": "mps",
+  "num_classes": 2,
+  "n_train": 47356,
+  "n_test": 5920,
+  "epochs": 3,
+  "batch": 32,
+  "lr": 3e-05,
+  "max_len": 64,
+  "mcc": 0.8969466953668734,
+  "accuracy": 0.9483108108108108,
+  "macro_f1": 0.9483086809982013,
+  "minutes": 13.52733608086904
+}

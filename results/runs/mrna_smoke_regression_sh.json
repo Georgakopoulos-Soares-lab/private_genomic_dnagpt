@@ -1,0 +1,14 @@
+{
+  "task": "Human mRNA abundance regression (Xpresso) - PIPELINE SMOKE TEST ONLY",
+  "tag": "mrna_smoke_regression_sh",
+  "note": "n=2 official examples from scripts/regression.sh. NOT a reliability measurement (full test set blocked: Xpresso data host krishna.gs.washington.edu:443 unreachable). Demonstrates the regression.pth head is functional and calibrated on Mac CPU/float32.",
+  "weight": "checkpoints/regression.pth",
+  "model": "dna_gpt0.1b_h",
+  "device": "cpu",
+  "dtype": "float32",
+  "examples": [
+    {"expected_gt": -1.1045350663284883, "predicted": -1.0636780261993408, "abs_err": 0.0409},
+    {"expected_gt": 0.18310068655135697, "predicted": 0.14812195301055908, "abs_err": 0.0350}
+  ],
+  "interpretation": "Predictions within ~0.04 of author-provided ground truth (small gap consistent with float32 vs upstream float16). Pipeline verified; full-scale r2 pending data."
+}

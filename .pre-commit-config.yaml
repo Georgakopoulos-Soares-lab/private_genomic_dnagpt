@@ -1,0 +1,37 @@
+# Pre-commit hooks for the encrypted-DNAGPT repo.
+# Install once:  pip install pre-commit && pre-commit install
+# Run manually:  pre-commit run --all-files
+exclude: '^(DNAGPT/|results/runs/.*\.csv$)'   # vendored upstream + large evidence CSVs
+
+repos:
+  - repo: https://github.com/pre-commit/pre-commit-hooks
+    rev: v5.0.0
+    hooks:
+      - id: trailing-whitespace
+      - id: end-of-file-fixer
+      - id: check-merge-conflict
+      - id: check-yaml
+      - id: check-json
+      - id: check-toml
+      - id: mixed-line-ending
+      - id: detect-private-key            # blocks PEM/OpenSSH private keys
+      - id: check-added-large-files       # blocks accidental big blobs (weights, ciphertexts)
+        args: ['--maxkb=1024']
+
+  - repo: https://github.com/astral-sh/ruff-pre-commit
+    rev: v0.9.4
+    hooks:
+      - id: ruff                          # lint python (eval/ harnesses)
+        args: ['--fix']
+      - id: ruff-format
+
+  # SECURITY-CRITICAL guard: never commit model weights, HE keys, ciphertexts, or genomic data,
+  # even if .gitignore is bypassed (git add -f). Belt-and-suspenders for CLAUDE.md hard rule #1.
+  - repo: local
+    hooks:
+      - id: forbid-sensitive-artifacts
+        name: forbid weights / HE keys / ciphertexts / genomic data
+        entry: >
+          bash -c 'f=$(printf "%s\n" "$@" | grep -Ei "\.(pth|pt|ckpt|safetensors|onnx|h5|hdf5|bin|pb|npz|tfrecord|key|pem|p12|pfx|seckey|pubkey|evalkey|galoiskey|relinkey|ct|ctxt|fa|fasta|vcf|bed|bigwig|bw)$" || true); if [ -n "$f" ]; then echo "BLOCKED — do not commit these artifacts:"; echo "$f"; exit 1; fi' --
+        language: system
+        pass_filenames: true
