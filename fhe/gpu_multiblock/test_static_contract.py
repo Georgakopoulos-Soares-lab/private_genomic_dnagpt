@@ -90,6 +90,25 @@ class TwoBlockStaticContractTests(unittest.TestCase):
         self.assertEqual(result["blocks"], [0, 1])
         self.assertEqual(result["consumed_fixture_files"], 15)
 
+    def test_launcher_and_scheduler_are_fail_closed(self) -> None:
+        runner = (ROOT / "run_two_block.sh").read_text(encoding="utf-8")
+        launcher = (ROOT / "launch_brev_multiblock.sh").read_text(encoding="utf-8")
+        scheduler = (ROOT / "schedule_multiblock_when_free.sh").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn('"_blocks0_1_refresh_"', runner)
+        self.assertIn("run_two_block.sh", launcher)
+        self.assertIn('"_blocks0_1_refresh_"', launcher)
+        self.assertIn("--query-compute-apps=gpu_uuid", launcher)
+        self.assertIn("COMPUTE_PROCESS_COUNT != 0", launcher)
+        self.assertIn("refusing to overwrite", launcher)
+        self.assertIn("--query-compute-apps=gpu_uuid", scheduler)
+        self.assertIn("REQUIRED_STABLE_POLLS=2", scheduler)
+        self.assertIn("memory_mib < 100", scheduler)
+        self.assertIn("/tmp/dnagpt-fhe-gpu-${gpu}.lock", scheduler)
+        self.assertIn("trap cleanup_lock EXIT", scheduler)
+        self.assertIn("launch_brev_multiblock.sh", scheduler)
+
 
 if __name__ == "__main__":
     unittest.main()

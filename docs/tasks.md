@@ -281,6 +281,33 @@ The harness's own depth guards confirm 21 levels remain against an 8-level MLP
 requirement plus a 1-level final pack — the full-block (`gate=full`) retry with this
 schedule is the next run, not yet executed.
 
+### Complete block-0 gate, sigmoid schedule
+
+Fail-closed scheduled launch on the Brev GPU host (same script and fixture as the
+sigmoid attention sub-gate above, `--gate full`):
+
+```bash
+fhe/gpu_real_sigmoid/schedule_when_free.sh \
+  0,1,2,3,4,5,6,7 \
+  /data/christos/private_genomic_ml/dnagpt_fides_asymfix2_20260724 \
+  gpu_real_sigmoid_v1/fhe/gpu_real_sigmoid \
+  real_fixture/gsr_pos0_block0_t2_d63353abdc1a_52d046d1fcf0 \
+  dnagpt-fideslib:786c-asymfix2 \
+  full \
+  fhe_fides_real_d768_t2_block0_sigmoid13_a100_asymfix2_20260724 \
+  1440
+```
+
+Result: `fhe_fides_real_d768_t2_block0_sigmoid13_a100_asymfix2_20260724.json` — `[V]`
+pass. The complete released block 0 (LayerNorm-1, 12-head T=2 sigmoid-identity
+attention, projection, residual, LayerNorm-2, the full 3072-wide GELU MLP, and output
+packing) closes in one encrypted lineage, packing at level 41 of the 43-level chain
+with `rel_inf=6.41e-6`, `2461.8 s [gpu]`, one final decrypt. This resolves
+`fhe_fides_real_d768_t2_block0_depth43_FAIL_20260724.json`, which exhausted the same
+depth-43 chain using the exp-plus-reciprocal attention schedule. Only 2 levels remain
+unconsumed, so the native refresh (below) must run immediately after this block in any
+chained two-block gate.
+
 ### Native GPU bootstrap refresh gate
 
 Run on the Brev GPU host as a fail-closed scheduled launch (waits for a GPU to be

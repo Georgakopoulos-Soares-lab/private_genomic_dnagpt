@@ -51,11 +51,12 @@ that final decrypt. `fhe/oracle.py` supplies the plaintext reference and gate.
 | Complete toy block | A DNAGPT-shaped block closes in one encrypted lineage | `[V]` complete | `fhe_toy_block.json` |
 | Optimization screens | BSGS/hoisting, numerator-first attention, and GELU degree candidates preserve correctness | `[V]` complete | `fhe_local_optimizations_20260724.json` |
 | GPU parity | The complete toy arithmetic survives C++/CUDA execution | `[V]` complete | `fhe_fides_toy_a100_asymfix2_20260724.json` |
-| Real-width block | Released 0.1b block-0 gates work at `D=768`, 12 heads, real weights | `[V]` LayerNorm + attention complete; full MLP pending | `fhe_fides_real_d768_t2_attention_a100_asymfix2_20260724.json` |
+| Real-width block | Released 0.1b block-0 gates work at `D=768`, 12 heads, real weights | `[V]` LayerNorm + attention complete (original schedule) | `fhe_fides_real_d768_t2_attention_a100_asymfix2_20260724.json` |
 | Original real full-block schedule | Determine whether exp-plus-reciprocal attention fits depth 43 | `[V]` fails closed at token-1 MLP; no decrypt | `fhe_fides_real_d768_t2_block0_depth43_FAIL_20260724.json` |
-| Sigmoid-schedule attention gate | Replace exp-plus-reciprocal with the T=2 sigmoid identity to recover depth for the MLP | `[V]` LN1+attention pass at `packed_output_level=22/43`, 709.3s vs 1347.1s; full-block retry pending | `fhe_fides_real_d768_t2_attention_sigmoid13_a100_asymfix2_20260724.json` |
+| Sigmoid-schedule attention gate | Replace exp-plus-reciprocal with the T=2 sigmoid identity to recover depth for the MLP | `[V]` LN1+attention pass at `packed_output_level=22/43`, 709.3s vs 1347.1s | `fhe_fides_real_d768_t2_attention_sigmoid13_a100_asymfix2_20260724.json` |
+| Complete real-width block | Close block 0 (LN1+attention+MLP+LN2+pack) at depth 43 with the sigmoid schedule | `[V]` complete: packed at level 41/43, rel_inf `6.41e-6`, `2461.8 s [gpu]` | `fhe_fides_real_d768_t2_block0_sigmoid13_a100_asymfix2_20260724.json` |
 | Twelve-block nonlinear schedule | Fixed public domains, stable T=2 attention, scaled LayerNorm, and full-domain GELU preserve all blocks/head | `[V/A]` plaintext preflight passes; not FHE | `fhe_range_control_t2_12block_optimized_v2_20260724.json` |
-| Scale and composition | Refreshes, two encrypted blocks, all 12 blocks, and task head close | `[V]` native-GPU refresh gate passes on the released block-0 activation; `[U]` two-block and 12-block closure remain | `fhe_fides_refresh_d768_t2_native_a100_asymfix2_20260724.json` |
+| Scale and composition | Refreshes, two encrypted blocks, all 12 blocks, and task head close | `[V]` native-GPU refresh gate and the complete block-0 sigmoid gate both pass in isolation; `[U]` chaining them (refresh after this exact block, then two-block, then 12-block) remains | `fhe_fides_refresh_d768_t2_native_a100_asymfix2_20260724.json`, `fhe_fides_real_d768_t2_block0_sigmoid13_a100_asymfix2_20260724.json` |
 
 A twelve-layer CPU run is intentionally skipped: it would repeat arithmetic already
 established by the complete block while measuring a rejected performance path.

@@ -67,25 +67,34 @@ scaling. `T=2` is the smallest non-degenerate causal-attention graph and exercis
 real block-0 matrix while containing memory. It uses public, query-independent
 polynomial domains and never feeds a decrypted diagnostic into evaluation.
 
-LayerNorm and QKV/12-head attention/projection have passed. The full 3072-wide GELU MLP
-is the remaining block-0 gate. The native GPU block-boundary refresh has also passed as
-a staged gate on the same fixed released block-0 activation fixture: it restores 21
-levels and carries a post-refresh nonlinear tail (square + LayerNorm epsilon) inside the
-`4e-2` gate with one final decrypt (`fhe_fides_refresh_d768_t2_native_a100_asymfix2_20260724.json`).
-The `gpu_multiblock` CUDA module (block 0 -> public conditioning -> native encrypted
-bootstrap -> block 1, one lineage, one final decrypt) is compiled and its minimal fixture
-staged on Brev; running it is the next concrete step toward the two-block same-lineage
-gate. After the complete block and the two-block gate both pass, increase sequence length.
+The complete released block 0 (LayerNorm-1, QKV/12-head attention/projection, residual,
+LayerNorm-2, the full 3072-wide GELU MLP, and output packing) now closes in one
+encrypted lineage inside the `4e-2` gate: `packed_output_level=41` of the 43-level
+chain, `rel_inf=6.41e-6`, one final decrypt
+(`fhe_fides_real_d768_t2_block0_sigmoid13_a100_asymfix2_20260724.json`). Only 2 levels
+remain unconsumed at that point, so a same-lineage native refresh must be triggered
+before block 1, not after further block-0 work.
+
+The native GPU block-boundary refresh has separately passed as a staged gate on the
+same fixed released block-0 activation fixture: it restores 21 levels and carries a
+post-refresh nonlinear tail (square + LayerNorm epsilon) inside the `4e-2` gate with one
+final decrypt (`fhe_fides_refresh_d768_t2_native_a100_asymfix2_20260724.json`). Both
+gates are validated in isolation on the same activation fixture, not yet chained
+end-to-end from one continuous ciphertext. The `gpu_multiblock` CUDA module (block 0 ->
+public conditioning -> native encrypted bootstrap -> block 1, one lineage, one final
+decrypt) is compiled and its minimal fixture staged on Brev; running it against the
+now-complete block-0 output is the next concrete step toward the two-block
+same-lineage gate. After the two-block gate passes, increase sequence length.
 
 The first full attempt is measured and retained as a failure: exp-plus-reciprocal
 attention creates a 13-level causal-branch gap, so token 1 needs packed level 46
 against a depth-43 chain. The `T=2` sigmoid score-difference identity replacing that
-path has now passed as a staged LN1+attention gate at `packed_output_level=22` inside
-the same depth-43 chain, with 21 levels free against the harness's own guard of 8
-(MLP) plus 1 (final pack) (`fhe_fides_real_d768_t2_attention_sigmoid13_a100_asymfix2_20260724.json`).
-Retrying the full depth-43 block (`gate=full`) with this schedule is the next concrete
-step; raising depth to 49 without changing the graph remains the fallback/control, not
-the preferred performance path, and should not be needed if the full-block retry passes.
+path resolves it: the full block closes at level 41 instead of failing at level 46,
+first validated as a staged LN1+attention sub-gate at `packed_output_level=22`
+(`fhe_fides_real_d768_t2_attention_sigmoid13_a100_asymfix2_20260724.json`) before the
+full-block retry above. Raising depth to 49 without changing the graph remains the
+fallback/control, not the preferred performance path, and is not needed now that the
+sigmoid schedule closes block 0 at depth 43.
 
 The twelve-block plaintext preflight rejected blind block-0 interval reuse and selected
 public per-block domains, T=2 sigmoid attention, public-scaled LayerNorm, and full-domain

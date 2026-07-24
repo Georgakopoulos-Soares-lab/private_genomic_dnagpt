@@ -458,6 +458,48 @@ runs:
       gate that previously failed. `[U]` The full-block (`gate=full`) run with
       this schedule is the next step, not yet executed.
 
+  - id: fhe_fides_real_d768_t2_block0_sigmoid13_a100_asymfix2_20260724
+    task: "Released-weight DNAGPT block-0 full encrypted depth-43 gate, T=2 sigmoid-identity schedule"
+    status: "[V] PASS"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 4 [gpu]"
+    config:
+      dimension: 768
+      sequence_length: 2
+      heads: 12
+      mlp_dim: 3072
+      ring_dim: 131072
+      multiplicative_depth: 43
+      rotation_keys: 63
+      attention_schedule: "T=2 sigmoid identity: w1=sigmoid(s11-s10); context=v0+w1*(v1-v0)"
+      chebyshev_degrees: {ln1_invsqrt: 27, ln2_invsqrt: 15, attention_sigmoid: 13, gelu: 15}
+      packed_output_level: 41
+    metrics:
+      global_rel_inf: 6.4122994057685603e-6
+      worst_token_rel_inf: 6.4122994057685603e-6
+      max_abs_error: 1.0102152927982111e-4
+      encrypted_evaluation_seconds_gpu: 2461.8033919579998
+      intermediate_decrypt_attempts: 0
+      final_decrypt_calls: 1
+    provenance:
+      result_sha256: "f1d617dfea5cfea08fa1110c022a28d13587aedb97a8f4aacd1a0a19ec61d425"
+      source_sha256: "5282543db2983c5c9d94839cdc6bc31cd73b48fb59264553c84d3f5c18e73dbb"
+      fixture_manifest_sha256: "8d20a2841ee29a7a386171f1bd173b7189144359ce8f91ea5eb21cc60c0a78fe"
+      fixture_contract_sha256: "b35651110c5e45efc53c7ab39066f1ad455cd53dfbb05959a8ffb8835bd382d8"
+      image_sha256: "8dfa77fa298472824a86414efdc6a5d14c4fa57bce3447b61b9893fe37d547a4"
+    verdict: >
+      [V] PASS. The complete released block 0 (LayerNorm-1, QKV, 12-head T=2
+      sigmoid-identity attention, projection, residual, LayerNorm-2, the full
+      3072-wide GELU MLP, and output packing) closes in one encrypted
+      lineage inside the 43-level chain, packing at level 41 with 2 levels
+      to spare, rel_inf `6.41e-6`, one final decrypt, and no evaluator
+      private-key access. This resolves the earlier
+      `fhe_fides_real_d768_t2_block0_depth43_FAIL_20260724` failure, which
+      exhausted depth 43 using the exp-plus-reciprocal attention schedule;
+      the T=2 sigmoid identity is now the accepted block-0 schedule.
+      `[U]` The native-GPU block-boundary refresh and two-block same-lineage
+      composition are the next gates, not yet run with this schedule chained.
+
   - id: fhe_measured_t2_attention_boundary_20260724
     task: "Derived 12-block D768/T2 attention-only runtime boundary"
     status: "[A] measured-input derivation; not a 12-block encrypted run"

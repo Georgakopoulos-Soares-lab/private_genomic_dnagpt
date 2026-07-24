@@ -44,6 +44,7 @@ real, and it is what the paper cites.
 | `fhe_measured_t2_attention_boundary_20260724` | derived current-schedule runtime boundary | `[A]` `4.49 h` for 12× measured T=2 attention only; excludes MLP/refresh/head |
 | `fhe_fides_refresh_d768_t2_native_a100_asymfix2_20260724` | native-GPU encrypted bootstrap refresh + nonlinear tail, block-0 | `[V]` pass, rel-inf `1.045e-3`, restores 21 levels; container exits `139` post-decrypt (teardown crash, non-blocking) |
 | `fhe_fides_real_d768_t2_attention_sigmoid13_a100_asymfix2_20260724` | T=2 sigmoid-identity LN1+attention gate, block-0 | `[V]` pass, rel-inf `9.91e-9`, `709.3 s [gpu]` (vs `1347.1 s` exp-schedule), packed at level 22/43 |
+| `fhe_fides_real_d768_t2_block0_sigmoid13_a100_asymfix2_20260724` | complete released block-0 (LN1+attention+MLP+LN2+pack), T=2 sigmoid schedule | `[V]` pass, rel-inf `6.41e-6`, packed at level 41/43, `2461.8 s [gpu]`; resolves the earlier depth-43 FAIL |
 
 The CPU and CUDA toy-block results are the current complete-graph arithmetic anchors.
 Their encrypted inputs begin after embedding, and their one final decrypt exists only
