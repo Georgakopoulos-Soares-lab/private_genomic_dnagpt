@@ -14,12 +14,12 @@
       "Bash(grep:*)",
       "Bash(du:*)",
       "Bash(unzip:*)",
-      "Read(//Users/galano/Developer/patternforge/utexas/dna-gpt/**)"
-    ],
-    "deny": [
-      "Read(./checkpoints/**)",
+      "Read(//Users/galano/Developer/patternforge/utexas/dna-gpt/**)",
       "Bash(git commit:*)",
       "Bash(git push:*)"
+    ],
+    "deny": [
+      "Read(./checkpoints/**)"
     ]
   }
 }

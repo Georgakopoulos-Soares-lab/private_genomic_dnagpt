@@ -1,0 +1,34 @@
+# OpenFHE (CKKS, with rotations/bootstrapping) Python runner.
+#
+# Why this exists: we need a DEPTH-TOLERANT linear layer. TenSEAL's matmul only works
+# on a depth-0 ciphertext (facts-ledger L11), which blocks the output projection and
+# layer-stacking. OpenFHE exposes rotations (EvalRotate) + level-aware EvalMult, so we
+# can implement the diagonal (Halevi-Shoup) matmul that works at any depth.
+#
+# The `openfhe` PyPI wheels are built per-Ubuntu (version suffix .24.4 = Ubuntu 24.04),
+# so we install on a matching base. No native macOS build needed; runs via linux/amd64
+# emulation on Apple Silicon (OrbStack).
+#
+# Build (from repo root):
+#   docker build --platform linux/amd64 -f docker/Dockerfile.openfhe -t dnagpt-openfhe .
+# Run:
+#   docker run --rm --platform linux/amd64 -v "$PWD":/work -w /work dnagpt-openfhe \
+#     python3 -u fhe/ops/op_matrix_ckks.py
+#
+# No model weights, no secrets, no network at runtime.
+
+FROM --platform=linux/amd64 ubuntu:24.04
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends python3 python3-pip python3-venv libgomp1 \
+    && rm -rf /var/lib/apt/lists/*
+
+# Isolated venv (Ubuntu 24.04 marks the system env externally-managed).
+RUN python3 -m venv /opt/venv
+ENV PATH="/opt/venv/bin:$PATH"
+RUN pip install --no-cache-dir --upgrade pip \
+    && pip install --no-cache-dir "openfhe==1.5.1.0.24.4" "numpy==2.5.1"
+
+WORKDIR /work
+CMD ["python3", "-c", "import openfhe; print('openfhe OK')"]

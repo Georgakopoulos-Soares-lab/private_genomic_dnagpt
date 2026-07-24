@@ -1,0 +1,35 @@
+{
+  "schema_version": 2,
+  "task": "DNAGPT CKKS operator feasibility matrix",
+  "measured_at_utc": "2026-07-24T14:40:17.992999+00:00",
+  "backend": "OpenFHE CKKS",
+  "security": "HEStd_128_classic",
+  "environment": "Brev OCI DGXC x86_64 CPU, 8-vCPU container [native]",
+  "config": {
+    "dimension": 8,
+    "ring_dim": 65536,
+    "multiplicative_depth": 20,
+    "scaling_mod_bits": 50,
+    "context_keygen_s": 2.1791157573461533
+  },
+  "operators": [
+    {
+      "op": "gelu(tanh)",
+      "levels_consumed": 5,
+      "max_abs_err": 0.0011021712679162854,
+      "rel_inf": 0.0006837520177475226,
+      "tol": 0.04,
+      "passed": true,
+      "latency_s": 1.632021153345704,
+      "latency_label": "[native-cpu]",
+      "public_polynomial_domain": {
+        "gelu": [
+          -2.0,
+          2.0
+        ],
+        "degree": 7
+      }
+    }
+  ],
+  "passed": true
+}

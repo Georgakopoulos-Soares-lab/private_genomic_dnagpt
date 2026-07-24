@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "task": "FIDESlib GPU asymmetric-interval Chebyshev inverse-square-root prepatch gate",
+  "measured_at_utc": "2026-07-24T18:22:05.370772880Z",
+  "status": "[V] FAIL",
+  "backend": {
+    "scheme": "CKKS",
+    "fideslib_commit": "786c7600fb2f16b724e0acf73df367b27b8afed6",
+    "container_image": "dnagpt-fideslib:786c-install@sha256:58605bb36cad67617835ad7d439620a7dd7878751451969e940b8baca69e78a5",
+    "security": "HEStd_128_classic"
+  },
+  "environment": "Brev A100-SXM4-80GB GPU 4 [gpu]",
+  "config": {
+    "ring_dim": 65536,
+    "slots": 32,
+    "multiplicative_depth": 14,
+    "domain": [0.03, 0.9],
+    "degree": 27,
+    "output_level": 5
+  },
+  "metrics": {
+    "max_abs_error": 1.690996328888474,
+    "rel_inf": 0.29288915570472884,
+    "seconds": 0.185175995,
+    "tol": 0.04,
+    "passed": false
+  },
+  "provenance": {
+    "source": "fhe/gpu/probes/asymmetric_cheb.cpp",
+    "source_sha256": "b09cd6dfd5c2b6730a54c916354f17f56d7eee6305f47470eedc87278d2b94ce",
+    "cmake_sha256": "af4a1018411d486ae9d7d97194af3d0830aa209f58b222b93a40205a17393f5f",
+    "remote_log_sha256": "6d3657214291040ec1288ed166eaa7263bea644d1923457b907d292278a584b5"
+  },
+  "diagnosis": "[V] FIDESlib commit 786c760 centers an asymmetric [a,b] interval at (b-a)/2 instead of (a+b)/2. The measured 0.292889 relative error matches evaluation at x+a for a=0.03.",
+  "qualification": "[V] This failed gate disqualifies the unpatched image for DNAGPT nonlinearities. It is retained as immutable negative evidence."
+}

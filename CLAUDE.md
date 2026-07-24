@@ -9,11 +9,11 @@ Determine whether **DNAGPT**
 ([TencentAILabHealthcare/DNAGPT](https://github.com/TencentAILabHealthcare/DNAGPT), arXiv 2307.05628)
 inference can be executed under **Fully Homomorphic Encryption** — a compute provider evaluating the
 model on an **encrypted genome** without receiving plaintext — and measure where correctness,
-performance, or memory would prevent a complete encrypted deployment. This is the DNAGPT counterpart
-of the sibling `../evo2` project. A correct-but-slow encrypted path is a valid outcome; feasibility
-and practicality are separate verdicts — never tune claims or parameters to force "practical".
+performance, or memory would prevent a complete encrypted deployment. A correct-but-slow encrypted
+path is a valid outcome; feasibility and practicality are separate verdicts — never tune claims or
+parameters to force "practical".
 
-### Phase A (current): plaintext baseline = the oracle
+### Phase A (complete): plaintext baseline = the oracle
 
 An encrypted run is only meaningful against the exact plaintext prediction it must reproduce. So we
 first establish that DNAGPT is a good, reproducible model on three downstream tasks and freeze its
@@ -26,20 +26,23 @@ per-example predictions as the FHE acceptance oracle:
 A task "passes" when DNAGPT's local metric is at/near the published reference; a negative boundary is
 valid — never tune to force a pass.
 
-### Phase B: FHE feasibility
+### Phase B (current): FHE feasibility
 
 Encrypted operators on the 0.1b backbone → encrypted end-to-end on a task, matching the Phase-A
 oracle within a declared tolerance. See `docs/roadmap.md`.
 
 **In scope:** the DNAGPT model graph as the FHE target; plaintext baseline harnesses; dataset
 provenance; measured metrics; the evidence trail feeding the paper.
-**Out of scope (for now):** wet-lab/clinical claims; GPU-only performance work (deferred to Brev).
+**Out of scope (for now):** wet-lab/clinical claims; encrypted token-index embedding
+lookup; a production client/server key-custody and transport service.
 
 ## Locked decisions
 
 - **Weights:** 0.1b only (`dna_gpt0.1b_h`, `dna_gpt0.1b_m`, released `classification.pth`,
   `regression.pth`). 3b deferred.
-- **Device:** local Mac (MPS/CPU), float32. Brev A100 only if a task proves too slow locally.
+- **Device:** Phase A uses local Mac MPS/CPU float32. Phase B uses Mac Docker
+  emulation for primitive accuracy, native Brev CPU for the complete toy-block anchor,
+  then Brev A100 through the C++/CUDA FIDESlib performance path.
 - **Task heads:** GSR + mRNA use the *released fine-tuned* heads (inference only). GUE has no
   released head → we fine-tune the foundation backbone ourselves (`eval/finetune_gue.py`).
 - **Metrics:** GSR = accuracy/F1; mRNA = r² + Pearson/Spearman; GUE = MCC (primary) + acc/F1.
@@ -67,6 +70,7 @@ provenance; measured metrics; the evidence trail feeding the paper.
 | Evaluation methodology & design (why these metrics, harness design, oracle) | `docs/eval_approach.md` |
 | Dataset origins, recovery, licenses | `docs/data_provenance.md` |
 | Next steps toward FHE | `docs/roadmap.md` |
+| Phase-B backend, operator, block, and Brev evidence | `docs/feasibility/` |
 | Run provenance | `results/manifest.yaml`, `results/runs/` |
 | Evidence acceptance rules | `results/README.md` |
 
@@ -77,6 +81,8 @@ DNAGPT/            cloned upstream model code (unmodified)
 checkpoints/       downloaded 0.1b weights (gitignored)
 data/{gsr,mrna,gue}/  datasets (gitignored; see docs/data_provenance.md)
 eval/              common.py + eval_gsr.py + eval_mrna.py + build_mrna_testset.py + finetune_gue.py
+fhe/               OpenFHE oracle plus FIDESlib CUDA toy/real-width gates
+docker/            pinned OpenFHE Python and patched FIDESlib CUDA environments
 results/           manifest.yaml + runs/ (immutable evidence) + README.md
 docs/              overview, tasks, eval_approach, data_provenance, roadmap
 requirements.txt   pinned Phase-A dependencies

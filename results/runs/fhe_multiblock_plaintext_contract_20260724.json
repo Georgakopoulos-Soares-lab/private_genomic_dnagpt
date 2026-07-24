@@ -1,0 +1,87 @@
+{
+  "id": "fhe_multiblock_plaintext_contract_20260724",
+  "status": "[V] PASS plaintext/export contract; not an encrypted run",
+  "purpose": "Freeze the released-weight 12-block DNAGPT and GSR-head oracle, and measure public polynomial domains before encrypted composition.",
+  "model": {
+    "name": "dna_gpt0.1b_m",
+    "layers": 12,
+    "heads": 12,
+    "dimension": 768,
+    "checkpoint_sha256": "d63353abdc1adba18e076b8f8b1ee9cc4d55f6948361324a825ea2245caf55f5"
+  },
+  "fixture": {
+    "token_count": 2,
+    "token_ids": [
+      21,
+      8250
+    ],
+    "array_count": 392,
+    "array_bytes": 688322848,
+    "content_identity_sha256": "a0d7b07ab3c741e068dc4a5391998ace8f95fafcf893996708b1eab340204cd6",
+    "manifest_sha256": "3c8d7bbcbfe62d9dc7f3fa89571396b93c3f92cb89563fa5cb4cd7b831bd5e4c"
+  },
+  "oracle_gate": {
+    "passed": true,
+    "all_finite": true,
+    "per_block_rtol": 2e-05,
+    "per_block_atol": 2e-05,
+    "block_11_max_abs_error": 0.0004400333129979117,
+    "block_11_rel_inf_error": 1.140086152800643e-06,
+    "head_max_abs_error": 1.623711474163514e-05,
+    "head_rel_inf_error": 1.5379823244574249e-06
+  },
+  "classification_boundary": {
+    "t2_margin_n_minus_a": -4.669534131615688,
+    "t2_binary_label": "A",
+    "t2_global_argmax": "AAAAAA",
+    "t2_is_task_representative": false,
+    "full_prompt_token_count": 103,
+    "full_prompt_margin_n_minus_a": 12.2666015625,
+    "full_prompt_binary_label": "N",
+    "full_prompt_global_argmax": "N"
+  },
+  "public_t2_ranges": {
+    "ln_variance_plus_eps": [
+      0.0037538374298219917,
+      486.05913730273727
+    ],
+    "attention_delta": [
+      -20.136043702934742,
+      9.734527410128477
+    ],
+    "attention_denominator": [
+      1.000000001798984,
+      16891.851282969088
+    ],
+    "gelu_input": [
+      -13.922174423301929,
+      38.343031416276624
+    ],
+    "block_output": [
+      -229.25572765972416,
+      404.66203779728977
+    ],
+    "head_silu_input": [
+      -5.797236555330722,
+      21.969342705122422
+    ]
+  },
+  "composition_finding": {
+    "block0_fixed_domains_compose_all_12": false,
+    "first_failed_block": 1,
+    "first_failed_fields": [
+      "ln1_variance_plus_eps",
+      "attention_delta_s1_minus_s0",
+      "gelu_input"
+    ],
+    "interpretation": "[V] Block-0 domains cannot be reused blindly. Per-block public calibration or a separately validated range-control transform is required."
+  },
+  "provenance": {
+    "dataset_sha256": "52d046d1fcf0f03bbaa4b971a1baa6b3fdbe29bc576bcdea8fe28f619efd2f11",
+    "record_sequence_sha256": "c3f792aa4d1c08137c8aaa8e95e630c186a2676da8e0729b2b0190e2fb9ef137",
+    "export_fixture_sha256": "620b949d4d739dadae5ba579b012dad23b387d41233c67858d93a6f35ff1780e",
+    "manual_sha256": "82be8edbd6388f342bf919723bea2b0784847605afb7dfec34d747d8c00a1f71",
+    "realweights_contract_sha256": "dbc6d5ba19e5cb7649f76d2dbcf5f866d11fc18ce8d6266917a0c7cc60c00832",
+    "realweights_manual_sha256": "23cfda4c803e197b564140af4e9a53c62e00ed7030266194739f0fe4f2b1c86d"
+  }
+}

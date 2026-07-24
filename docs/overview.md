@@ -2,12 +2,14 @@
 
 ## Purpose
 
-Evaluate whether **DNAGPT** (arXiv 2307.05628) inference can run under **FHE** (encrypted operations
-on an encrypted genome, compute-provider side) — the DNAGPT counterpart of `../evo2`.
+Evaluate whether **DNAGPT** (arXiv 2307.05628) inference can run under **FHE**: encrypted embedded
+numeric genomic-token vectors, compute-provider-side evaluation, encrypted output, and no
+intermediate decryption. Encrypted token-index embedding lookup remains a separate `[U]` boundary.
 
-**Phase A (this repo's current work):** measure DNAGPT locally on three downstream tasks, confirm it
-is a good, reproducible model, and freeze its per-example predictions as the **plaintext oracle** the
-encrypted path must later reproduce. **Phase B:** encrypted operators on the 0.1b backbone (see
+**Phase A is complete:** DNAGPT passes three local downstream-task gates and its
+per-example predictions are frozen as plaintext oracles. **Phase B is active:** toy
+arithmetic and CUDA backend parity are complete; work is closing a released-weight
+real-width block, refresh/composition, and then sequence scaling (see
 [roadmap.md](roadmap.md)).
 
 ## What DNAGPT ships
@@ -28,6 +30,29 @@ max_len 4096). No datasets, no fine-tuning code, no GUE head — we supply those
 are the frozen oracle for the encrypted (FHE) path.
 
 See [tasks.md](tasks.md) for methods/commands and [data_provenance.md](data_provenance.md) for sources.
+
+## Phase B status
+
+- `[V]` OpenFHE CKKS linear, LayerNorm, causal-softmax, GELU, and bootstrap
+  primitives pass at `HEStd_128_classic`.
+- `[V]` A complete `D=8`, `T=4`, two-head block passes natively on Brev CPU
+  with global rel-inf `1.49e-3`, zero intermediate decrypts, and one final decrypt.
+- `[V]` The complete toy graph passes the C++/CUDA A100 gate. Released-weight
+  `D=768`, `T=2` LayerNorm and 12-head attention/projection gates also pass.
+- `[V]` The original full-block depth-43 schedule fails closed from deterministic
+  level exhaustion before any final decrypt; the exact T=2 sigmoid reformulation
+  is the active replacement.
+- `[V/A]` The fixed plaintext nonlinear schedule passes all 12 released blocks
+  and the GSR head on the public T=2 fixture.
+- `[V]` Local probes validate BSGS rotation reduction, numerator-first attention, and
+  lower-degree GELU candidates without changing the correctness gate.
+- `[U]` The optimized real-width MLP/full block, encrypted refresh/composition,
+  broader public calibration, and a task-valid encrypted sequence remain.
+
+The full twelve-layer CPU route is not a planned stage: after a complete block closes,
+it adds no new arithmetic claim. Performance work moves to C++/CUDA with current
+FIDESlib/OpenFHE interoperability. The ordered gates and skip rules are documented in
+[roadmap.md](roadmap.md).
 
 ## Environment
 

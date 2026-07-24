@@ -1,7 +1,7 @@
 # Pre-commit hooks for the encrypted-DNAGPT repo.
 # Install once:  pip install pre-commit && pre-commit install
 # Run manually:  pre-commit run --all-files
-exclude: '^(DNAGPT/|results/runs/.*\.csv$)'   # vendored upstream + large evidence CSVs
+exclude: '^(DNAGPT/|results/runs/.*\.csv$)' # vendored upstream + large evidence CSVs
 
 repos:
   - repo: https://github.com/pre-commit/pre-commit-hooks
@@ -14,14 +14,14 @@ repos:
       - id: check-json
       - id: check-toml
       - id: mixed-line-ending
-      - id: detect-private-key            # blocks PEM/OpenSSH private keys
-      - id: check-added-large-files       # blocks accidental big blobs (weights, ciphertexts)
+      - id: detect-private-key # blocks PEM/OpenSSH private keys
+      - id: check-added-large-files # blocks accidental big blobs (weights, ciphertexts)
         args: ['--maxkb=1024']
 
   - repo: https://github.com/astral-sh/ruff-pre-commit
     rev: v0.9.4
     hooks:
-      - id: ruff                          # lint python (eval/ harnesses)
+      - id: ruff # lint python (eval/ harnesses)
         args: ['--fix']
       - id: ruff-format
 

@@ -1,0 +1,86 @@
+{
+  "schema_version": 1,
+  "task": "DNAGPT CKKS operator feasibility matrix",
+  "measured_at_utc": "2026-07-24T14:00:20.593320+00:00",
+  "backend": "OpenFHE CKKS",
+  "security": "HEStd_128_classic",
+  "environment": "Docker linux/amd64 on Apple Silicon [emu]",
+  "config": {
+    "dimension": 8,
+    "ring_dim": 65536,
+    "multiplicative_depth": 20,
+    "scaling_mod_bits": 50,
+    "context_keygen_s": 6.3515508179998506
+  },
+  "operators": [
+    {
+      "op": "linear/matmul",
+      "levels_consumed": 1,
+      "max_abs_err": 1.9353962876778041e-13,
+      "rel_inf": 4.726814008086395e-13,
+      "tol": 0.04,
+      "passed": true,
+      "latency_emu_s": 2.4859510229998705,
+      "algorithm": {
+        "name": "Halevi-Shoup diagonal BSGS",
+        "baby_steps": 2,
+        "giant_steps": 4,
+        "ciphertext_rotations": 4
+      }
+    },
+    {
+      "op": "layernorm",
+      "levels_consumed": 10,
+      "max_abs_err": 6.833061198419088e-06,
+      "rel_inf": 4.543224965221636e-06,
+      "tol": 0.04,
+      "passed": true,
+      "latency_emu_s": 6.7836306629997125,
+      "public_polynomial_domain": {
+        "invsqrt": [
+          0.03,
+          0.9
+        ],
+        "degree": 27
+      }
+    },
+    {
+      "op": "causal-softmax primitive",
+      "levels_consumed": 12,
+      "max_abs_err": 1.5020520598985065e-06,
+      "rel_inf": 6.589729364384274e-06,
+      "tol": 0.04,
+      "passed": true,
+      "latency_emu_s": 7.836518511999202,
+      "public_polynomial_domain": {
+        "exp": [
+          -2.0,
+          2.0
+        ],
+        "exp_degree": 13,
+        "reciprocal": [
+          0.5,
+          12.0
+        ],
+        "reciprocal_degree": 27
+      }
+    },
+    {
+      "op": "gelu(tanh)",
+      "levels_consumed": 5,
+      "max_abs_err": 0.0009733399363363038,
+      "rel_inf": 0.0006038291550481083,
+      "tol": 0.04,
+      "passed": true,
+      "latency_emu_s": 3.7635653399993316,
+      "public_polynomial_domain": {
+        "gelu": [
+          -4.0,
+          4.0
+        ],
+        "degree": 13
+      }
+    }
+  ],
+  "passed": true
+}

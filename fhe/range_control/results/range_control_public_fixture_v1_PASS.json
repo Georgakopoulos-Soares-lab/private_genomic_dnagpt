@@ -1,0 +1,1751 @@
+{
+  "schema": "dnagpt.range_control.plaintext.v1",
+  "status": "PASS",
+  "evidence": "[V] deterministic NumPy float64 approximation simulation; [A] domains calibrated from one fixed public T=2 fixture",
+  "not_fhe_measurement": true,
+  "fixture": {
+    "directory": "/Users/galano/Developer/patternforge/utexas/dna-gpt/checkpoints/fhe_exports/gsr_pos0_multiblock_t2_d63353abdc1a_52d046d1fcf0",
+    "manifest_sha256": "3c8d7bbcbfe62d9dc7f3fa89571396b93c3f92cb89563fa5cb4cd7b831bd5e4c",
+    "content_identity_sha256": "a0d7b07ab3c741e068dc4a5391998ace8f95fafcf893996708b1eab340204cd6",
+    "checkpoint_sha256": "d63353abdc1adba18e076b8f8b1ee9cc4d55f6948361324a825ea2245caf55f5",
+    "dataset_sha256": "52d046d1fcf0f03bbaa4b971a1baa6b3fdbe29bc576bcdea8fe28f619efd2f11",
+    "token_ids": [
+      21,
+      8250
+    ]
+  },
+  "contract": {
+    "layers": 12,
+    "token_count": 2,
+    "embedding_dim": 768,
+    "heads": 12,
+    "same_released_weights_and_model_semantics": true,
+    "acceptance": {
+      "global_rel_inf_max": 0.04,
+      "worst_token_rel_inf_max": 0.04,
+      "all_finite": true,
+      "zero_public_domain_violations": true
+    },
+    "public_calibration": "per-block fixed domains loaded from the immutable public fixture; never selected from an evaluated private query"
+  },
+  "polynomials": {
+    "degrees": {
+      "inverse_sqrt": 63,
+      "sigmoid": 47,
+      "gelu": 127,
+      "silu": 95
+    },
+    "balanced_multiplicative_depth_proxies": {
+      "inverse_sqrt": 6,
+      "sigmoid": 6,
+      "gelu": 7,
+      "silu": 7
+    },
+    "per_block_nonlinear_depth_proxy": 25,
+    "head_nonlinear_depth_proxy": 19,
+    "warning": "proxies exclude CKKS rescale, plaintext-multiply, rotation, relinearization, and bootstrap costs"
+  },
+  "blocks": [
+    {
+      "block": 0,
+      "output_gate": {
+        "global_rel_inf": 9.471294751736928e-15,
+        "worst_token_rel_inf": 9.471294751736928e-15,
+        "max_abs_error": 1.4921397450962104e-13,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "output_range": {
+        "min": -15.754337545271248,
+        "max": 8.678533673619555,
+        "abs_max": 15.754337545271248,
+        "count": 1536
+      },
+      "domain_checks": [
+        {
+          "name": "block0.ln1_variance_plus_eps",
+          "public_domain": [
+            0.0030030699438575933,
+            0.010106134790696561
+          ],
+          "observed": {
+            "min": 0.0037538374298219917,
+            "max": 0.00808490783255725,
+            "abs_max": 0.00808490783255725,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 63,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 0.00390625,
+          "normalized_public_domain": [
+            0.7687859056275439,
+            2.5871705064183197
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block0.attention_delta_s1_minus_s0",
+          "public_domain": [
+            -6.069866743337161,
+            -0.3590256163108004
+          ],
+          "observed": {
+            "min": -4.855893394669742,
+            "max": -0.4487820203885,
+            "abs_max": 4.855893394669742,
+            "count": 12
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "sigmoid",
+          "degree": 47,
+          "multiplicative_depth_proxy": 6,
+          "schedule": "p1=sigmoid(score_11-score_10); p0=1-p1",
+          "probability_range": {
+            "min": 0.0,
+            "max": 1.0,
+            "abs_max": 1.0,
+            "count": 48
+          },
+          "unbounded_exp_denominator_eliminated": true
+        },
+        {
+          "name": "block0.ln2_variance_plus_eps",
+          "public_domain": [
+            0.504245970267154,
+            1.289585701152818
+          ],
+          "observed": {
+            "min": 0.6303074628339371,
+            "max": 1.0316685609222367,
+            "abs_max": 1.0316685609222367,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 63,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 1.0,
+          "normalized_public_domain": [
+            0.504245970267154,
+            1.289585701152818
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block0.gelu_input",
+          "public_domain": [
+            -3.46661639687445,
+            3.46661639687445
+          ],
+          "observed": {
+            "min": -2.7732931174995707,
+            "max": 2.455819886370142,
+            "abs_max": 2.7732931174995707,
+            "count": 6144
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "gelu",
+          "degree": 127,
+          "multiplicative_depth_proxy": 7
+        }
+      ],
+      "domain_violations": [],
+      "passed": true
+    },
+    {
+      "block": 1,
+      "output_gate": {
+        "global_rel_inf": 1.1581669136117024e-14,
+        "worst_token_rel_inf": 1.1581669136117024e-14,
+        "max_abs_error": 2.5934809855243657e-13,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "output_range": {
+        "min": -22.392981141523677,
+        "max": 11.618116495032844,
+        "abs_max": 22.392981141523677,
+        "count": 1536
+      },
+      "domain_checks": [
+        {
+          "name": "block1.ln1_variance_plus_eps",
+          "public_domain": [
+            0.7231809701265808,
+            1.5063129576985312
+          ],
+          "observed": {
+            "min": 0.9039762126582248,
+            "max": 1.205050366158808,
+            "abs_max": 1.205050366158808,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 63,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 1.0,
+          "normalized_public_domain": [
+            0.7231809701265808,
+            1.5063129576985312
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block1.attention_delta_s1_minus_s0",
+          "public_domain": [
+            -8.981407641021296,
+            -0.03387460816733352
+          ],
+          "observed": {
+            "min": -7.185126112817151,
+            "max": -0.04234326020909229,
+            "abs_max": 7.185126112817151,
+            "count": 12
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "sigmoid",
+          "degree": 47,
+          "multiplicative_depth_proxy": 6,
+          "schedule": "p1=sigmoid(score_11-score_10); p0=1-p1",
+          "probability_range": {
+            "min": 0.0,
+            "max": 1.0,
+            "abs_max": 1.0,
+            "count": 48
+          },
+          "unbounded_exp_denominator_eliminated": true
+        },
+        {
+          "name": "block1.ln2_variance_plus_eps",
+          "public_domain": [
+            0.7487770832251114,
+            1.3440084965164667
+          ],
+          "observed": {
+            "min": 0.9359713540313924,
+            "max": 1.0752067972131647,
+            "abs_max": 1.0752067972131647,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 63,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 1.0,
+          "normalized_public_domain": [
+            0.7487770832251114,
+            1.3440084965164667
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block1.gelu_input",
+          "public_domain": [
+            -9.905612243716092,
+            9.905612243716092
+          ],
+          "observed": {
+            "min": -7.924489794972906,
+            "max": 2.5443260489950386,
+            "abs_max": 7.924489794972906,
+            "count": 6144
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "gelu",
+          "degree": 127,
+          "multiplicative_depth_proxy": 7
+        }
+      ],
+      "domain_violations": [],
+      "passed": true
+    },
+    {
+      "block": 2,
+      "output_gate": {
+        "global_rel_inf": 1.3915867984835601e-12,
+        "worst_token_rel_inf": 1.6712058612311986e-12,
+        "max_abs_error": 3.9721115285829e-11,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "output_range": {
+        "min": -28.543756903352175,
+        "max": 14.674716236400435,
+        "abs_max": 28.543756903352175,
+        "count": 1536
+      },
+      "domain_checks": [
+        {
+          "name": "block2.ln1_variance_plus_eps",
+          "public_domain": [
+            0.8154397725232878,
+            1.40450520858288
+          ],
+          "observed": {
+            "min": 1.0192997156541168,
+            "max": 1.1236041668662924,
+            "abs_max": 1.1236041668662924,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 63,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 1.0,
+          "normalized_public_domain": [
+            0.8154397725232878,
+            1.40450520858288
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block2.attention_delta_s1_minus_s0",
+          "public_domain": [
+            -9.837404944491563,
+            1.0533190978984461
+          ],
+          "observed": {
+            "min": -7.869923955594125,
+            "max": 0.8426552783188638,
+            "abs_max": 7.869923955594125,
+            "count": 12
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "sigmoid",
+          "degree": 47,
+          "multiplicative_depth_proxy": 6,
+          "schedule": "p1=sigmoid(score_11-score_10); p0=1-p1",
+          "probability_range": {
+            "min": 0.0,
+            "max": 1.0,
+            "abs_max": 1.0,
+            "count": 48
+          },
+          "unbounded_exp_denominator_eliminated": true
+        },
+        {
+          "name": "block2.ln2_variance_plus_eps",
+          "public_domain": [
+            0.8558986417118375,
+            1.408513974353831
+          ],
+          "observed": {
+            "min": 1.0698733021398088,
+            "max": 1.1268111794830535,
+            "abs_max": 1.1268111794830535,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 63,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 1.0,
+          "normalized_public_domain": [
+            0.8558986417118375,
+            1.408513974353831
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block2.gelu_input",
+          "public_domain": [
+            -13.189370877790543,
+            13.189370877790543
+          ],
+          "observed": {
+            "min": -4.131102013835078,
+            "max": 10.551496702233012,
+            "abs_max": 10.551496702233012,
+            "count": 6144
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "gelu",
+          "degree": 127,
+          "multiplicative_depth_proxy": 7
+        }
+      ],
+      "domain_violations": [],
+      "passed": true
+    },
+    {
+      "block": 3,
+      "output_gate": {
+        "global_rel_inf": 0.0009877449758776335,
+        "worst_token_rel_inf": 0.0026723385043152664,
+        "max_abs_error": 0.10843252281990079,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "output_range": {
+        "min": -58.072977449884135,
+        "max": 109.75995869258966,
+        "abs_max": 109.75995869258966,
+        "count": 1536
+      },
+      "domain_checks": [
+        {
+          "name": "block3.ln1_variance_plus_eps",
+          "public_domain": [
+            1.3123035519118953,
+            3.2166640386001126
+          ],
+          "observed": {
+            "min": 1.6403794398885787,
+            "max": 2.573331230879641,
+            "abs_max": 2.573331230879641,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 63,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 2.0,
+          "normalized_public_domain": [
+            0.6561517759559476,
+            1.6083320193000563
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block3.attention_delta_s1_minus_s0",
+          "public_domain": [
+            -8.881790890732608,
+            9.541019415885899
+          ],
+          "observed": {
+            "min": -7.10543271256055,
+            "max": 7.632815532686176,
+            "abs_max": 7.632815532686176,
+            "count": 12
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "sigmoid",
+          "degree": 47,
+          "multiplicative_depth_proxy": 6,
+          "schedule": "p1=sigmoid(score_11-score_10); p0=1-p1",
+          "probability_range": {
+            "min": 0.0,
+            "max": 1.0,
+            "abs_max": 1.0,
+            "count": 48
+          },
+          "unbounded_exp_denominator_eliminated": true
+        },
+        {
+          "name": "block3.ln2_variance_plus_eps",
+          "public_domain": [
+            1.1322330479568268,
+            5.812582569329473
+          ],
+          "observed": {
+            "min": 1.4152913099452074,
+            "max": 4.650066103139522,
+            "abs_max": 4.650066103139522,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 63,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 2.0,
+          "normalized_public_domain": [
+            0.5661165239784134,
+            2.9062912846647366
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block3.gelu_input",
+          "public_domain": [
+            -47.92878927034578,
+            47.92878927034578
+          ],
+          "observed": {
+            "min": -13.922174802121372,
+            "max": 38.34303141625216,
+            "abs_max": 38.34303141625216,
+            "count": 6144
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "gelu",
+          "degree": 127,
+          "multiplicative_depth_proxy": 7
+        }
+      ],
+      "domain_violations": [],
+      "passed": true
+    },
+    {
+      "block": 4,
+      "output_gate": {
+        "global_rel_inf": 0.000659357303009251,
+        "worst_token_rel_inf": 0.004655531024168047,
+        "max_abs_error": 0.2608284279908162,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "output_range": {
+        "min": -227.18352995236881,
+        "max": 395.31896844453536,
+        "abs_max": 395.31896844453536,
+        "count": 1536
+      },
+      "domain_checks": [
+        {
+          "name": "block4.ln1_variance_plus_eps",
+          "public_domain": [
+            4.129161853308171,
+            44.64726162437281
+          ],
+          "observed": {
+            "min": 5.1562606689632355,
+            "max": 35.72143665792087,
+            "abs_max": 35.72143665792087,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 63,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 16.0,
+          "normalized_public_domain": [
+            0.25807261583176067,
+            2.7904538515233006
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block4.attention_delta_s1_minus_s0",
+          "public_domain": [
+            -3.3414252433893683,
+            5.268320010357526
+          ],
+          "observed": {
+            "min": -2.6857442365786497,
+            "max": 4.1812036698463855,
+            "abs_max": 4.1812036698463855,
+            "count": 12
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "sigmoid",
+          "degree": 47,
+          "multiplicative_depth_proxy": 6,
+          "schedule": "p1=sigmoid(score_11-score_10); p0=1-p1",
+          "probability_range": {
+            "min": 0.0,
+            "max": 1.0,
+            "abs_max": 1.0,
+            "count": 48
+          },
+          "unbounded_exp_denominator_eliminated": true
+        },
+        {
+          "name": "block4.ln2_variance_plus_eps",
+          "public_domain": [
+            3.1514475554115693,
+            44.28111159156455
+          ],
+          "observed": {
+            "min": 3.940867708336841,
+            "max": 35.42908197742544,
+            "abs_max": 35.42908197742544,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 63,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 16.0,
+          "normalized_public_domain": [
+            0.19696547221322308,
+            2.7675694744727846
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block4.gelu_input",
+          "public_domain": [
+            -33.51974699568684,
+            33.51974699568684
+          ],
+          "observed": {
+            "min": -10.054997737103841,
+            "max": 26.791405600039155,
+            "abs_max": 26.791405600039155,
+            "count": 6144
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "gelu",
+          "degree": 127,
+          "multiplicative_depth_proxy": 7
+        }
+      ],
+      "domain_violations": [],
+      "passed": true
+    },
+    {
+      "block": 5,
+      "output_gate": {
+        "global_rel_inf": 0.0006538313286528664,
+        "worst_token_rel_inf": 0.004935988161723781,
+        "max_abs_error": 0.26061092779252704,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "output_range": {
+        "min": -227.41799533271765,
+        "max": 398.32984561928305,
+        "abs_max": 398.32984561928305,
+        "count": 1536
+      },
+      "domain_checks": [
+        {
+          "name": "block5.ln1_variance_plus_eps",
+          "public_domain": [
+            9.596026028909337,
+            594.085063953076
+          ],
+          "observed": {
+            "min": 11.913079352049532,
+            "max": 474.6942646307459,
+            "abs_max": 474.6942646307459,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 63,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 64.0,
+          "normalized_public_domain": [
+            0.1499379067017084,
+            9.282579124266812
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block5.attention_delta_s1_minus_s0",
+          "public_domain": [
+            -16.631584623776746,
+            -1.2274606982621472
+          ],
+          "observed": {
+            "min": -13.307527144456197,
+            "max": -1.5298330533923898,
+            "abs_max": 13.307527144456197,
+            "count": 12
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "sigmoid",
+          "degree": 47,
+          "multiplicative_depth_proxy": 6,
+          "schedule": "p1=sigmoid(score_11-score_10); p0=1-p1",
+          "probability_range": {
+            "min": 0.0,
+            "max": 1.0,
+            "abs_max": 1.0,
+            "count": 48
+          },
+          "unbounded_exp_denominator_eliminated": true
+        },
+        {
+          "name": "block5.ln2_variance_plus_eps",
+          "public_domain": [
+            9.110494197570379,
+            594.4295729290171
+          ],
+          "observed": {
+            "min": 11.307620431337002,
+            "max": 474.96789849734995,
+            "abs_max": 474.96789849734995,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 63,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 64.0,
+          "normalized_public_domain": [
+            0.14235147183703717,
+            9.287962077015893
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block5.gelu_input",
+          "public_domain": [
+            -6.805845990817236,
+            6.805845990817236
+          ],
+          "observed": {
+            "min": -5.452069232646166,
+            "max": 3.2731378899752657,
+            "abs_max": 5.452069232646166,
+            "count": 6144
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "gelu",
+          "degree": 127,
+          "multiplicative_depth_proxy": 7
+        }
+      ],
+      "domain_violations": [],
+      "passed": true
+    },
+    {
+      "block": 6,
+      "output_gate": {
+        "global_rel_inf": 0.0006429108866426306,
+        "worst_token_rel_inf": 0.0037619943778745358,
+        "max_abs_error": 0.25865372705015943,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "output_range": {
+        "min": -229.01203454730836,
+        "max": 402.0579541015789,
+        "abs_max": 402.0579541015789,
+        "count": 1536
+      },
+      "domain_checks": [
+        {
+          "name": "block6.ln1_variance_plus_eps",
+          "public_domain": [
+            9.755716055172117,
+            598.1440713902257
+          ],
+          "observed": {
+            "min": 12.118605644494986,
+            "max": 477.9387542994563,
+            "abs_max": 477.9387542994563,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 63,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 64.0,
+          "normalized_public_domain": [
+            0.15243306336206433,
+            9.346001115472276
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block6.attention_delta_s1_minus_s0",
+          "public_domain": [
+            -6.427104878782305,
+            12.168159262660597
+          ],
+          "observed": {
+            "min": -5.1353695176377,
+            "max": 9.735508753993415,
+            "abs_max": 9.735508753993415,
+            "count": 12
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "sigmoid",
+          "degree": 47,
+          "multiplicative_depth_proxy": 6,
+          "schedule": "p1=sigmoid(score_11-score_10); p0=1-p1",
+          "probability_range": {
+            "min": 0.0,
+            "max": 1.0,
+            "abs_max": 1.0,
+            "count": 48
+          },
+          "unbounded_exp_denominator_eliminated": true
+        },
+        {
+          "name": "block6.ln2_variance_plus_eps",
+          "public_domain": [
+            10.271458349298587,
+            603.8831211657011
+          ],
+          "observed": {
+            "min": 12.768178531702619,
+            "max": 482.53050323139746,
+            "abs_max": 482.53050323139746,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 63,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 64.0,
+          "normalized_public_domain": [
+            0.16049153670779043,
+            9.43567376821408
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block6.gelu_input",
+          "public_domain": [
+            -5.726628575542443,
+            5.726628575542443
+          ],
+          "observed": {
+            "min": -4.58137294377158,
+            "max": 3.1027180659587725,
+            "abs_max": 4.58137294377158,
+            "count": 6144
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "gelu",
+          "degree": 127,
+          "multiplicative_depth_proxy": 7
+        }
+      ],
+      "domain_violations": [],
+      "passed": true
+    },
+    {
+      "block": 7,
+      "output_gate": {
+        "global_rel_inf": 0.0006377140671540543,
+        "worst_token_rel_inf": 0.003101925642511663,
+        "max_abs_error": 0.25768938695188126,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "output_range": {
+        "min": -229.13728216577758,
+        "max": 403.8252691431609,
+        "abs_max": 403.8252691431609,
+        "count": 1536
+      },
+      "domain_checks": [
+        {
+          "name": "block7.ln1_variance_plus_eps",
+          "public_domain": [
+            11.516172689595226,
+            605.0081350124333
+          ],
+          "observed": {
+            "min": 14.322126909734873,
+            "max": 483.430481878188,
+            "abs_max": 483.430481878188,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 63,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 64.0,
+          "normalized_public_domain": [
+            0.1799401982749254,
+            9.45325210956927
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block7.attention_delta_s1_minus_s0",
+          "public_domain": [
+            -4.568107090480003,
+            4.3529524052162145
+          ],
+          "observed": {
+            "min": -3.6688573057797838,
+            "max": 3.4870014287260442,
+            "abs_max": 3.6688573057797838,
+            "count": 12
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "sigmoid",
+          "degree": 47,
+          "multiplicative_depth_proxy": 6,
+          "schedule": "p1=sigmoid(score_11-score_10); p0=1-p1",
+          "probability_range": {
+            "min": 0.0,
+            "max": 1.0,
+            "abs_max": 1.0,
+            "count": 48
+          },
+          "unbounded_exp_denominator_eliminated": true
+        },
+        {
+          "name": "block7.ln2_variance_plus_eps",
+          "public_domain": [
+            9.643373996809427,
+            607.5739216284215
+          ],
+          "observed": {
+            "min": 11.999446220729043,
+            "max": 485.4837627229296,
+            "abs_max": 485.4837627229296,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 63,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 64.0,
+          "normalized_public_domain": [
+            0.1506777187001473,
+            9.493342525444087
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block7.gelu_input",
+          "public_domain": [
+            -4.084147754869162,
+            4.084147754869162
+          ],
+          "observed": {
+            "min": -2.875331719088094,
+            "max": 3.270611954674109,
+            "abs_max": 3.270611954674109,
+            "count": 6144
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "gelu",
+          "degree": 127,
+          "multiplicative_depth_proxy": 7
+        }
+      ],
+      "domain_violations": [],
+      "passed": true
+    },
+    {
+      "block": 8,
+      "output_gate": {
+        "global_rel_inf": 0.0006326904812028239,
+        "worst_token_rel_inf": 0.002030685191360271,
+        "max_abs_error": 0.25602581941848257,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "output_range": {
+        "min": -227.34516799794767,
+        "max": 404.4060119778713,
+        "abs_max": 404.4060119778713,
+        "count": 1536
+      },
+      "domain_checks": [
+        {
+          "name": "block8.ln1_variance_plus_eps",
+          "public_domain": [
+            3.568737166244477,
+            604.9400737722249
+          ],
+          "observed": {
+            "min": 4.442613132498255,
+            "max": 483.3790698837263,
+            "abs_max": 483.3790698837263,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 63,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 64.0,
+          "normalized_public_domain": [
+            0.05576151822256995,
+            9.452188652691014
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block8.attention_delta_s1_minus_s0",
+          "public_domain": [
+            -6.207676908830379,
+            2.902376229768392
+          ],
+          "observed": {
+            "min": -4.982589796055208,
+            "max": 2.3067296019028447,
+            "abs_max": 4.982589796055208,
+            "count": 12
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "sigmoid",
+          "degree": 47,
+          "multiplicative_depth_proxy": 6,
+          "schedule": "p1=sigmoid(score_11-score_10); p0=1-p1",
+          "probability_range": {
+            "min": 0.0,
+            "max": 1.0,
+            "abs_max": 1.0,
+            "count": 48
+          },
+          "unbounded_exp_denominator_eliminated": true
+        },
+        {
+          "name": "block8.ln2_variance_plus_eps",
+          "public_domain": [
+            4.377006192275399,
+            605.6560854427335
+          ],
+          "observed": {
+            "min": 5.451397692311189,
+            "max": 483.9526398678766,
+            "abs_max": 483.9526398678766,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 63,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 64.0,
+          "normalized_public_domain": [
+            0.06839072175430311,
+            9.46337633504271
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block8.gelu_input",
+          "public_domain": [
+            -4.533430693630507,
+            4.533430693630507
+          ],
+          "observed": {
+            "min": -3.6274072339250822,
+            "max": 2.5750098241309747,
+            "abs_max": 3.6274072339250822,
+            "count": 6144
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "gelu",
+          "degree": 127,
+          "multiplicative_depth_proxy": 7
+        }
+      ],
+      "domain_violations": [],
+      "passed": true
+    },
+    {
+      "block": 9,
+      "output_gate": {
+        "global_rel_inf": 0.0006364512989182456,
+        "worst_token_rel_inf": 0.0016658801449591868,
+        "max_abs_error": 0.25602882729265275,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "output_range": {
+        "min": -223.6443925747001,
+        "max": 402.0195698364482,
+        "abs_max": 402.0195698364482,
+        "count": 1536
+      },
+      "domain_checks": [
+        {
+          "name": "block9.ln1_variance_plus_eps",
+          "public_domain": [
+            2.931341889799673,
+            603.8180281622637
+          ],
+          "observed": {
+            "min": 3.6577457824928192,
+            "max": 482.48496003336567,
+            "abs_max": 482.48496003336567,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 63,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 32.0,
+          "normalized_public_domain": [
+            0.09160443405623978,
+            18.86931338007074
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block9.attention_delta_s1_minus_s0",
+          "public_domain": [
+            -4.675779382007815,
+            1.4843505947400526
+          ],
+          "observed": {
+            "min": -3.750549864873835,
+            "max": 1.1757905480935174,
+            "abs_max": 3.750549864873835,
+            "count": 12
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "sigmoid",
+          "degree": 47,
+          "multiplicative_depth_proxy": 6,
+          "schedule": "p1=sigmoid(score_11-score_10); p0=1-p1",
+          "probability_range": {
+            "min": 0.0,
+            "max": 1.0,
+            "abs_max": 1.0,
+            "count": 48
+          },
+          "unbounded_exp_denominator_eliminated": true
+        },
+        {
+          "name": "block9.ln2_variance_plus_eps",
+          "public_domain": [
+            3.289606470577751,
+            603.2951995786957
+          ],
+          "observed": {
+            "min": 4.108329436610986,
+            "max": 482.0665836775136,
+            "abs_max": 482.0665836775136,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 63,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 32.0,
+          "normalized_public_domain": [
+            0.10280020220555472,
+            18.85297498683424
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block9.gelu_input",
+          "public_domain": [
+            -5.141903526736064,
+            5.141903526736064
+          ],
+          "observed": {
+            "min": -4.121742431777023,
+            "max": 1.5742172895518036,
+            "abs_max": 4.121742431777023,
+            "count": 6144
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "gelu",
+          "degree": 127,
+          "multiplicative_depth_proxy": 7
+        }
+      ],
+      "domain_violations": [],
+      "passed": true
+    },
+    {
+      "block": 10,
+      "output_gate": {
+        "global_rel_inf": 0.0006448288192888983,
+        "worst_token_rel_inf": 0.0014057437390320425,
+        "max_abs_error": 0.2552257895882235,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "output_range": {
+        "min": -218.45500524853674,
+        "max": 395.54871775884124,
+        "abs_max": 395.54871775884124,
+        "count": 1536
+      },
+      "domain_checks": [
+        {
+          "name": "block10.ln1_variance_plus_eps",
+          "public_domain": [
+            2.6245936036413307,
+            594.3305223446512
+          ],
+          "observed": {
+            "min": 3.2832924477186287,
+            "max": 474.9007434304601,
+            "abs_max": 474.9007434304601,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 63,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 32.0,
+          "normalized_public_domain": [
+            0.08201855011379158,
+            18.57282882327035
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block10.attention_delta_s1_minus_s0",
+          "public_domain": [
+            -25.170054628668428,
+            1.9374775959767887
+          ],
+          "observed": {
+            "min": -20.07300900562975,
+            "max": 1.5444157267060525,
+            "abs_max": 20.07300900562975,
+            "count": 12
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "sigmoid",
+          "degree": 47,
+          "multiplicative_depth_proxy": 6,
+          "schedule": "p1=sigmoid(score_11-score_10); p0=1-p1",
+          "probability_range": {
+            "min": 0.0,
+            "max": 1.0,
+            "abs_max": 1.0,
+            "count": 48
+          },
+          "unbounded_exp_denominator_eliminated": true
+        },
+        {
+          "name": "block10.ln2_variance_plus_eps",
+          "public_domain": [
+            2.5401035341030824,
+            591.9118990469999
+          ],
+          "observed": {
+            "min": 3.1779987438592365,
+            "max": 472.9664251445294,
+            "abs_max": 472.9664251445294,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 63,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 32.0,
+          "normalized_public_domain": [
+            0.07937823544072133,
+            18.497246845218747
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block10.gelu_input",
+          "public_domain": [
+            -5.253499759248167,
+            5.253499759248167
+          ],
+          "observed": {
+            "min": -4.202454456015736,
+            "max": 3.8798988782224146,
+            "abs_max": 4.202454456015736,
+            "count": 6144
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "gelu",
+          "degree": 127,
+          "multiplicative_depth_proxy": 7
+        }
+      ],
+      "domain_violations": [],
+      "passed": true
+    },
+    {
+      "block": 11,
+      "output_gate": {
+        "global_rel_inf": 0.001041676790881178,
+        "worst_token_rel_inf": 0.007977408744232866,
+        "max_abs_error": 0.4020512053607561,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "output_range": {
+        "min": -217.27061415819298,
+        "max": 385.70916730796944,
+        "abs_max": 385.70916730796944,
+        "count": 1536
+      },
+      "domain_checks": [
+        {
+          "name": "block11.ln1_variance_plus_eps",
+          "public_domain": [
+            2.1273762846721676,
+            575.4149686580101
+          ],
+          "observed": {
+            "min": 2.658802440632255,
+            "max": 459.7785921172886,
+            "abs_max": 459.7785921172886,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 63,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 32.0,
+          "normalized_public_domain": [
+            0.06648050889600524,
+            17.981717770562817
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block11.attention_delta_s1_minus_s0",
+          "public_domain": [
+            -13.847222262558462,
+            2.0697998078469784
+          ],
+          "observed": {
+            "min": -11.031906783277412,
+            "max": 1.6519466814076935,
+            "abs_max": 11.031906783277412,
+            "count": 12
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "sigmoid",
+          "degree": 47,
+          "multiplicative_depth_proxy": 6,
+          "schedule": "p1=sigmoid(score_11-score_10); p0=1-p1",
+          "probability_range": {
+            "min": 0.0,
+            "max": 1.0,
+            "abs_max": 1.0,
+            "count": 48
+          },
+          "unbounded_exp_denominator_eliminated": true
+        },
+        {
+          "name": "block11.ln2_variance_plus_eps",
+          "public_domain": [
+            2.925413642076467,
+            573.7741863265973
+          ],
+          "observed": {
+            "min": 3.661979630342099,
+            "max": 458.4668726496111,
+            "abs_max": 458.4668726496111,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 63,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 32.0,
+          "normalized_public_domain": [
+            0.09141917631488959,
+            17.930443322706164
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block11.gelu_input",
+          "public_domain": [
+            -10.386750417443436,
+            10.386750417443436
+          ],
+          "observed": {
+            "min": -8.296975973505138,
+            "max": 2.909625835564266,
+            "abs_max": 8.296975973505138,
+            "count": 6144
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "gelu",
+          "degree": 127,
+          "multiplicative_depth_proxy": 7
+        }
+      ],
+      "domain_violations": [],
+      "passed": true
+    }
+  ],
+  "head": {
+    "stage_gates": {
+      "final_ln_output": {
+        "global_rel_inf": 0.0029081507329042234,
+        "worst_token_rel_inf": 0.0029081507329042234,
+        "max_abs_error": 0.050587200943898125,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "head_linear": {
+        "global_rel_inf": 0.005997162021341927,
+        "worst_token_rel_inf": 0.005997162021341927,
+        "max_abs_error": 0.1317537077050055,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "head_silu": {
+        "global_rel_inf": 0.005997100513409082,
+        "worst_token_rel_inf": 0.005997100513409082,
+        "max_abs_error": 0.13175235637825367,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "head_ln_output": {
+        "global_rel_inf": 0.002655831552040094,
+        "worst_token_rel_inf": 0.002655831552040094,
+        "max_abs_error": 0.018303244969660598,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "n_a_margin_readout": {
+        "global_rel_inf": 0.0028644988332373225,
+        "worst_token_rel_inf": 0.0028644988332373225,
+        "max_abs_error": 0.018865505924201997,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      }
+    },
+    "domain_checks": [
+      {
+        "name": "head.final_ln_variance_plus_eps",
+        "public_domain": [
+          5.145473908059764,
+          559.847318976615
+        ],
+        "observed": {
+          "min": 6.496593022701461,
+          "max": 447.3302733456832,
+          "abs_max": 447.3302733456832,
+          "count": 2
+        },
+        "passed": true,
+        "lower_overflow": 0.0,
+        "upper_overflow": 0.0,
+        "function": "inverse_sqrt",
+        "degree": 63,
+        "multiplicative_depth_proxy": 6,
+        "public_power_of_two_scale": 64.0,
+        "normalized_public_domain": [
+          0.08039802981343382,
+          8.74761435900961
+        ],
+        "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+      },
+      {
+        "name": "head.silu_input",
+        "public_domain": [
+          -27.461678381403026,
+          27.461678381403026
+        ],
+        "observed": {
+          "min": -5.76372037030674,
+          "max": 21.837588997417416,
+          "abs_max": 21.837588997417416,
+          "count": 1536
+        },
+        "passed": true,
+        "lower_overflow": 0.0,
+        "upper_overflow": 0.0,
+        "function": "silu",
+        "degree": 95,
+        "multiplicative_depth_proxy": 7
+      },
+      {
+        "name": "head.head_ln_variance_plus_eps",
+        "public_domain": [
+          0.3413509902140417,
+          3.1474549727205003
+        ],
+        "observed": {
+          "min": 0.42675281697535844,
+          "max": 2.4940598225875403,
+          "abs_max": 2.4940598225875403,
+          "count": 2
+        },
+        "passed": true,
+        "lower_overflow": 0.0,
+        "upper_overflow": 0.0,
+        "function": "inverse_sqrt",
+        "degree": 63,
+        "multiplicative_depth_proxy": 6,
+        "public_power_of_two_scale": 1.0,
+        "normalized_public_domain": [
+          0.3413509902140417,
+          3.1474549727205003
+        ],
+        "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+      }
+    ],
+    "domain_violations": [],
+    "readout": {
+      "n_logit": -6.5785745743477655,
+      "a_logit": -1.9279059652367028,
+      "margin_n_minus_a": -4.650668625691486,
+      "binary_label": "A",
+      "reference_binary_label": "A",
+      "label_preserved": true
+    },
+    "passed": true
+  },
+  "ablations": {
+    "A_fixed_public_domains": {
+      "status": "[A]",
+      "source": "fixture manifest public_calibration.per_block",
+      "selected_before_simulated_query": true,
+      "private_query_adaptation": false,
+      "margin_multiplier": 1.25,
+      "legacy_block0_domain_failure_count": 11,
+      "legacy_block0_domain_failures": [
+        {
+          "block": 1,
+          "fields": [
+            "ln1_variance_plus_eps",
+            "attention_delta_s1_minus_s0",
+            "gelu_input"
+          ]
+        },
+        {
+          "block": 2,
+          "fields": [
+            "ln1_variance_plus_eps",
+            "attention_delta_s1_minus_s0",
+            "attention_denominator",
+            "gelu_input"
+          ]
+        },
+        {
+          "block": 3,
+          "fields": [
+            "ln1_variance_plus_eps",
+            "ln2_variance_plus_eps",
+            "attention_delta_s1_minus_s0",
+            "attention_denominator",
+            "gelu_input"
+          ]
+        },
+        {
+          "block": 4,
+          "fields": [
+            "ln1_variance_plus_eps",
+            "ln2_variance_plus_eps",
+            "attention_delta_s1_minus_s0",
+            "attention_denominator",
+            "gelu_input"
+          ]
+        },
+        {
+          "block": 5,
+          "fields": [
+            "ln1_variance_plus_eps",
+            "ln2_variance_plus_eps",
+            "attention_delta_s1_minus_s0",
+            "gelu_input"
+          ]
+        },
+        {
+          "block": 6,
+          "fields": [
+            "ln1_variance_plus_eps",
+            "ln2_variance_plus_eps",
+            "attention_delta_s1_minus_s0",
+            "attention_denominator",
+            "gelu_input"
+          ]
+        },
+        {
+          "block": 7,
+          "fields": [
+            "ln1_variance_plus_eps",
+            "ln2_variance_plus_eps",
+            "attention_delta_s1_minus_s0",
+            "attention_denominator",
+            "gelu_input"
+          ]
+        },
+        {
+          "block": 8,
+          "fields": [
+            "ln1_variance_plus_eps",
+            "ln2_variance_plus_eps",
+            "attention_delta_s1_minus_s0",
+            "attention_denominator",
+            "gelu_input"
+          ]
+        },
+        {
+          "block": 9,
+          "fields": [
+            "ln1_variance_plus_eps",
+            "ln2_variance_plus_eps",
+            "attention_delta_s1_minus_s0",
+            "attention_denominator",
+            "gelu_input"
+          ]
+        },
+        {
+          "block": 10,
+          "fields": [
+            "ln1_variance_plus_eps",
+            "ln2_variance_plus_eps",
+            "attention_delta_s1_minus_s0",
+            "attention_denominator",
+            "gelu_input"
+          ]
+        },
+        {
+          "block": 11,
+          "fields": [
+            "ln1_variance_plus_eps",
+            "ln2_variance_plus_eps",
+            "attention_delta_s1_minus_s0",
+            "attention_denominator",
+            "gelu_input"
+          ]
+        }
+      ],
+      "proposed_schedule_domain_violations": 0
+    },
+    "B_t2_sigmoid_attention": {
+      "identity": "softmax([s0,s1])[1] = sigmoid(s1-s0)",
+      "exact_identity_max_abs_error": 0.0,
+      "sigmoid_degree": 47,
+      "sigmoid_polynomial_max_abs_error": 1.3174910645785687e-07,
+      "old_exp_denominator_observed_range": {
+        "min": 1.000000001798984,
+        "max": 16891.851282969088,
+        "abs_max": 16891.851282969088,
+        "count": 144
+      },
+      "new_probability_codomain": [
+        0.0,
+        1.0
+      ],
+      "unbounded_exp_denominator_eliminated": true
+    },
+    "C_public_scaled_layernorm": {
+      "identity": "inv_sqrt(v) = inv_sqrt(v/public_power_of_two_scale) / sqrt(public_power_of_two_scale)",
+      "inverse_sqrt_degree": 63,
+      "worst_isolated_relative_error": 0.00014582200786025332,
+      "scale_is_public_and_per_block": true
+    },
+    "D_tail_aware_full_domain_gelu": {
+      "semantics": "released tanh-GELU",
+      "strategy": "one full-domain Chebyshev polynomial; tails included, no clipping and no encrypted comparison",
+      "degree": 127,
+      "legacy_minus3_plus3_violating_blocks": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "proposed_domain_violating_blocks": [],
+      "worst_isolated_max_abs_error": 0.006867081073812735,
+      "fixture_observed_global_input_range": {
+        "min": -13.922174423301929,
+        "max": 38.343031416276624,
+        "abs_max": 38.343031416276624,
+        "count": 73728
+      }
+    }
+  },
+  "domain_violation_count": 0,
+  "failure": null,
+  "elapsed_seconds": 0.07516300000133924,
+  "passed": true
+}

@@ -1,8 +1,9 @@
 # Tasks — methodology, commands, results, verdicts
 
-All commands run from the repo root inside `.venv`. Each reported number has exactly one command
-that regenerates it. Raw outputs: `results/runs/<tag>.json` (+ `_preds.csv`). Data origins:
-[data_provenance.md](data_provenance.md).
+Commands run from the repo root. Phase A uses `.venv`; Phase B uses the pinned Docker
+image or the documented Brev container. Each reported number has exactly one command
+that regenerates it. Raw outputs: `results/runs/<tag>.json` (+ `_preds.csv`). Data
+origins: [data_provenance.md](data_provenance.md).
 
 ---
 
@@ -81,3 +82,190 @@ python eval/finetune_gue.py --data data/gue/GUE/splice/reconstructed    --tag gu
 human promoter and splice-site GUE tasks (matches prom_core, exceeds prom_300, close on splice).
 `[A]` DNABERT-2 references are approximate — confirm against the DNABERT-2 paper table for exact deltas.
 Note: this is 3 of the 28 GUE datasets (the human promoter/splice subset named in the brief).
+
+---
+
+## Phase B — encrypted operator and toy-block feasibility
+
+Primitive and bootstrap latency below is `linux/amd64` OpenFHE running under Apple
+Silicon emulation and is tagged `[emu]`. Build the pinned image once:
+
+```bash
+docker build --platform linux/amd64 -f docker/Dockerfile.openfhe -t dnagpt-openfhe .
+```
+
+### Operator matrix
+
+```bash
+docker run --rm --platform linux/amd64 \
+  -v "$PWD":/work -w /work dnagpt-openfhe \
+  python3 -u fhe/ops/op_matrix_ckks.py \
+  --gelu-profile broad \
+  --tag fhe_operator_matrix_d8_20260724
+```
+
+Result: `results/runs/fhe_operator_matrix_d8_20260724.json`.
+
+### Bootstrap refresh
+
+```bash
+docker run --rm --platform linux/amd64 \
+  -v "$PWD":/work -w /work dnagpt-openfhe \
+  python3 -u fhe/ops/bootstrap_ckks.py \
+  --tag fhe_bootstrap_d8_20260724
+```
+
+Result: `results/runs/fhe_bootstrap_d8_20260724.json`.
+
+### Toy-block GELU profile on native Brev CPU
+
+```bash
+brev exec awesome-gpu-name -- \
+  "docker run --rm --cpus 8 --memory 16g \
+   -e OMP_NUM_THREADS=8 -e OPENBLAS_NUM_THREADS=1 \
+   -v /data/christos/private_genomic_ml/dnagpt_fhe_20260724:/work \
+   -w /work dnagpt-openfhe:20260724 \
+   python3 -u fhe/ops/op_matrix_ckks.py \
+     --only gelu --gelu-profile toy \
+     --environment 'Brev OCI DGXC x86_64 CPU, 8-vCPU container [native]' \
+     --latency-label '[native-cpu]' \
+     --tag fhe_gelu_toy_profile_brev_cpu_20260724"
+```
+
+Result: `results/runs/fhe_gelu_toy_profile_brev_cpu_20260724.json`.
+
+### Embedded-input-to-block-output encrypted toy block — `[V]` PASS
+
+```bash
+brev exec awesome-gpu-name -- \
+  "cd /data/christos/private_genomic_ml/dnagpt_fhe_20260724 && \
+   test ! -e results/runs/fhe_toy_block.json && \
+   docker run --rm --cpus 32 --memory 64g \
+     -e OMP_NUM_THREADS=32 -e OPENBLAS_NUM_THREADS=1 \
+     -v /data/christos/private_genomic_ml/dnagpt_fhe_20260724:/work \
+     -w /work dnagpt-openfhe:20260724 \
+     python3 -u fhe/block/toy_block_ckks.py \
+       --tag fhe_toy_block \
+       --environment 'Brev OCI DGXC x86_64 CPU, 32-vCPU container [native]' \
+       --latency-label '[native-cpu]' \
+       --container-image \
+       'dnagpt-openfhe:20260724@sha256:6260e3f4ea6364c40c91299936b0ddbe5be11038059001d6842666cb5fabf603'"
+```
+
+Result: `results/runs/fhe_toy_block.json`: global rel-inf `1.49e-3`,
+worst-token rel-inf `2.21e-3`, zero intermediate decrypt attempts, one final decrypt,
+and `330.741 s [native-cpu]`. The encrypted input is an embedded numeric vector;
+encrypted token-index lookup is outside this run.
+
+### Derived 0.1b boundary
+
+```bash
+python fhe/extrapolate.py --tag fhe_0p1b_extrapolation_20260724
+```
+
+Result: `results/runs/fhe_0p1b_extrapolation_20260724.json`. This is an `[A/U]` work-count
+derivation from the measured toy and bootstrap runs, not an encrypted 0.1b execution.
+
+### Local optimization correctness screen
+
+```bash
+docker run --rm --platform linux/amd64 \
+  -v "$PWD":/work -w /work dnagpt-openfhe \
+  python3 -u fhe/optimizations/local_ckks_probe.py \
+  --tag fhe_local_optimizations_20260724
+```
+
+Result: `results/runs/fhe_local_optimizations_20260724.json`: all probes pass. BSGS
+reduces rotations `15 → 6`; numerator-first attention saves two levels; degree-5 GELU
+uses four levels with `4.26e-3` sample-grid rel-inf. Mac times are
+`[emu-directional]`, not GPU speedups.
+
+### Runtime boundary
+
+```bash
+python3 fhe/runtime_projection.py --tag fhe_runtime_projection_20260724
+```
+
+Result: `results/runs/fhe_runtime_projection_20260724.json`. This is an `[A/U]`
+planning boundary, not a benchmark: the repeated toy CPU layout is rejected; direct
+published-primitive substitution gives a `12.95 h` unoptimized GPU subtotal; the
+`0.5–4 h` range is now a historical optimized target, superseded for the current
+unoptimized T=2 graph by the real-width measurement below.
+
+The first real-width measured-input boundary is reproduced with:
+
+```bash
+source .venv/bin/activate
+python fhe/measured_runtime_boundary.py \
+  --tag fhe_measured_t2_attention_boundary_20260724
+```
+
+Result: `results/runs/fhe_measured_t2_attention_boundary_20260724.json`. It repeats
+the measured `D=768/T=2` block-0 attention time twelve times to obtain `4.49 h`.
+This is an `[A]` lower boundary for the current unoptimized T=2 schedule: it excludes
+all MLPs, refreshes, the task head, and later-block range handling. It is not a
+12-block encrypted measurement and is not extrapolated to task-scale `T=103`.
+
+### CUDA toy and released-weight gates
+
+Build and run the pinned CUDA modules using the exact commands in
+[`04_brev_runbook.md`](feasibility/04_brev_runbook.md):
+
+```bash
+bash fhe/gpu/launch_brev_toy.sh \
+  7 \
+  /data/christos/private_genomic_ml/dnagpt_fides_786c_20260724/gpu_v2 \
+  dnagpt-fideslib:786c-asymfix2 \
+  dnagpt-fideslib:786c-asymfix2@sha256:8dfa77fa298472824a86414efdc6a5d14c4fa57bce3447b61b9893fe37d547a4 \
+  fhe_fides_toy_a100_asymfix2_20260724
+
+bash fhe/gpu_real/launch_brev_real.sh \
+  6 \
+  /data/christos/private_genomic_ml/dnagpt_fides_asymfix2_20260724 \
+  gpu_real_v3 \
+  real_fixture/gsr_pos0_block0_t2_d63353abdc1a_52d046d1fcf0 \
+  dnagpt-fideslib:786c-asymfix2 \
+  ln1 \
+  fhe_fides_real_d768_t2_ln1_a100_asymfix2_20260724
+
+bash fhe/gpu_real/launch_brev_real.sh \
+  6 \
+  /data/christos/private_genomic_ml/dnagpt_fides_asymfix2_20260724 \
+  gpu_real_v3 \
+  real_fixture/gsr_pos0_block0_t2_d63353abdc1a_52d046d1fcf0 \
+  dnagpt-fideslib:786c-asymfix2 \
+  attention \
+  fhe_fides_real_d768_t2_attention_a100_asymfix2_20260724
+
+bash fhe/gpu_real/launch_brev_real.sh \
+  5 \
+  /data/christos/private_genomic_ml/dnagpt_fides_asymfix2_20260724 \
+  gpu_real_v3 \
+  real_fixture/gsr_pos0_block0_t2_d63353abdc1a_52d046d1fcf0 \
+  dnagpt-fideslib:786c-asymfix2 \
+  full \
+  fhe_fides_real_d768_t2_block0_a100_asymfix2_20260724
+```
+
+Immutable results:
+
+- `fhe_fides_toy_a100_asymfix2_20260724.json` — `[V]` pass.
+- `fhe_fides_real_d768_t2_ln1_a100_asymfix2_20260724.json` — `[V]` pass.
+- `fhe_fides_real_d768_t2_attention_a100_asymfix2_20260724.json` — `[V]` pass.
+- `fhe_fides_real_d768_t2_block0_depth43_FAIL_20260724.json` — `[V]` fail
+  before final decrypt; the exact T=2 sigmoid replacement is the next run.
+
+### Twelve-block oracle and fixed nonlinear preflight
+
+```bash
+source .venv/bin/activate
+python -m fhe.multiblock.export_fixture
+python -m fhe.multiblock.validate_fixture \
+  checkpoints/fhe_exports/gsr_pos0_multiblock_t2_d63353abdc1a_52d046d1fcf0
+python -m fhe.range_control.simulate
+```
+
+Evidence: `fhe_multiblock_plaintext_contract_20260724.json` and
+`fhe_range_control_t2_12block_optimized_v2_20260724.json`. The latter is a
+plaintext approximation preflight on one public T=2 fixture, not an encrypted
+or task-representative run.

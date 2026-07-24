@@ -1,0 +1,60 @@
+{
+  "id": "fhe_fides_real_d768_t2_block0_depth43_FAIL_20260724",
+  "status": "[V] FAIL before final decrypt; no correctness metric emitted",
+  "task": "Released-weight DNAGPT block-0 full encrypted gate at the original depth-43 schedule",
+  "backend": "FIDESlib CKKS/CUDA asymfix2",
+  "environment": "Brev A100-SXM4-80GB physical GPU 5 [gpu]",
+  "config": {
+    "dimension": 768,
+    "sequence_length": 2,
+    "heads": 12,
+    "ring_dim": 131072,
+    "multiplicative_depth": 43,
+    "batch_slots": 4096,
+    "rotation_keys": 63,
+    "attention_schedule": "exp(delta) plus reciprocal(1+exp(delta))"
+  },
+  "observed_level_trace": {
+    "ln1": [
+      10,
+      10
+    ],
+    "qkv": [
+      11,
+      11
+    ],
+    "attention_context": [
+      12,
+      25
+    ],
+    "attention_projection": [
+      13,
+      26
+    ],
+    "residual1": [
+      13,
+      26
+    ],
+    "ln2": [
+      24,
+      37
+    ],
+    "block_output_token0": 32
+  },
+  "failure": {
+    "after": "token-0 MLP and residual completed",
+    "before": "token-1 block output and final output packing",
+    "message": "vector::_M_range_check: __n (which is 18446744073709551615) >= this->size() (which is 44)",
+    "observed_intermediate_decrypts": 0,
+    "final_decrypt_calls": 0,
+    "evidence": "[V] process exit code 2 and exact remote run trace",
+    "diagnosis": "[A] The 13-level causal-attention asymmetry leaves token 1 at LayerNorm2 level 37; its degree-15 GELU/projection attempts to exceed the 44-level vector. Validate with the direct T=2 sigmoid schedule before retrying."
+  },
+  "provenance": {
+    "source_sha256": "6fd345268f5715499104b0a47a64c4ce01048a0ab6c7732f94b5f517d480381a",
+    "fixture_manifest_sha256": "8d20a2841ee29a7a386171f1bd173b7189144359ce8f91ea5eb21cc60c0a78fe",
+    "backend_patch_sha256": "81b6f6d8f466c67bc4e764c3f43d38ad2f6caec44b807e8fb916fc8b1063e295",
+    "container_image_sha256": "8dfa77fa298472824a86414efdc6a5d14c4fa57bce3447b61b9893fe37d547a4",
+    "remote_log_sha256": "fbc7c1ee4b2490e6c923f68401b917641061dd9dda3daccb7961408ba9de4293"
+  }
+}

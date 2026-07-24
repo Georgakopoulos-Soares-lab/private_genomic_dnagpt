@@ -1,0 +1,37 @@
+# Pinned C++/CUDA CKKS backend for encrypted DNAGPT on NVIDIA A100 (sm_80).
+#
+# FIDESlib commit 786c760 includes the asymmetric-Chebyshev interval correction
+# needed by DNAGPT's non-symmetric inverse-square-root and reciprocal domains.
+FROM nvidia/cuda:13.0.1-cudnn-devel-ubuntu24.04
+
+ARG FIDESLIB_COMMIT=786c7600fb2f16b724e0acf73df367b27b8afed6
+
+ENV DEBIAN_FRONTEND=noninteractive
+RUN apt-get update \
+    && apt-get install -y --no-install-recommends \
+        ca-certificates cmake g++ gcc git make ninja-build \
+    && rm -rf /var/lib/apt/lists/*
+
+WORKDIR /opt
+RUN git clone https://github.com/CAPS-UMU/FIDESlib.git \
+    && cd FIDESlib \
+    && git checkout "${FIDESLIB_COMMIT}" \
+    && git submodule update --init --recursive
+
+COPY docker/patches/fideslib-asymmetric-chebyshev.patch /opt/fideslib-asymmetric-chebyshev.patch
+
+WORKDIR /opt/FIDESlib
+RUN git apply --check /opt/fideslib-asymmetric-chebyshev.patch \
+    && git apply /opt/fideslib-asymmetric-chebyshev.patch \
+    && mkdir -p build \
+    && cd build \
+    && cmake .. \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DFIDESLIB_ARCH=80 \
+        -DFIDESLIB_INSTALL_OPENFHE=ON \
+        -DFIDESLIB_COMPILE_BENCHMARKS=OFF \
+        -DFIDESLIB_COMPILE_TESTS=OFF \
+    && cmake --build . -j"$(nproc)" \
+    && cmake --install .
+
+CMD ["bash", "-lc", "git rev-parse HEAD && ls -la build/fideslib.a /usr/local/share/fideslib/cmake/fideslibTargets.cmake"]

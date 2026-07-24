@@ -1,0 +1,2111 @@
+{
+  "schema": "dnagpt.range_control.plaintext.v1",
+  "status": "PASS",
+  "evidence": "[V] deterministic NumPy float64 approximation simulation; [A] domains calibrated from one fixed public T=2 fixture",
+  "not_fhe_measurement": true,
+  "fixture": {
+    "directory": "/Users/galano/Developer/patternforge/utexas/dna-gpt/checkpoints/fhe_exports/gsr_pos0_multiblock_t2_d63353abdc1a_52d046d1fcf0",
+    "manifest_sha256": "3c8d7bbcbfe62d9dc7f3fa89571396b93c3f92cb89563fa5cb4cd7b831bd5e4c",
+    "content_identity_sha256": "a0d7b07ab3c741e068dc4a5391998ace8f95fafcf893996708b1eab340204cd6",
+    "checkpoint_sha256": "d63353abdc1adba18e076b8f8b1ee9cc4d55f6948361324a825ea2245caf55f5",
+    "dataset_sha256": "52d046d1fcf0f03bbaa4b971a1baa6b3fdbe29bc576bcdea8fe28f619efd2f11",
+    "token_ids": [
+      21,
+      8250
+    ]
+  },
+  "contract": {
+    "layers": 12,
+    "token_count": 2,
+    "embedding_dim": 768,
+    "heads": 12,
+    "same_released_weights_and_model_semantics": true,
+    "acceptance": {
+      "global_rel_inf_max": 0.04,
+      "worst_token_rel_inf_max": 0.04,
+      "all_finite": true,
+      "zero_public_domain_violations": true
+    },
+    "public_calibration": "per-block fixed domains loaded from the immutable public fixture; never selected from an evaluated private query"
+  },
+  "polynomials": {
+    "degree_selection": "smallest public candidate meeting <=1e-4 isolated error, capped at degree 127, followed by the cumulative 4e-2 dual gate; two wide GELU stages hit the cap",
+    "isolated_approximation_target": 0.0001,
+    "degree_cap": 127,
+    "attention_zero_guard": [
+      -0.25,
+      0.25
+    ],
+    "per_block": [
+      {
+        "block": 0,
+        "degrees": {
+          "ln1_inverse_sqrt": 7,
+          "sigmoid": 9,
+          "ln2_inverse_sqrt": 7,
+          "gelu": 15
+        },
+        "balanced_multiplicative_depth_proxies": {
+          "ln1_inverse_sqrt": 3,
+          "sigmoid": 4,
+          "ln2_inverse_sqrt": 3,
+          "gelu": 4
+        },
+        "nonlinear_depth_proxy": 14
+      },
+      {
+        "block": 1,
+        "degrees": {
+          "ln1_inverse_sqrt": 7,
+          "sigmoid": 11,
+          "ln2_inverse_sqrt": 7,
+          "gelu": 39
+        },
+        "balanced_multiplicative_depth_proxies": {
+          "ln1_inverse_sqrt": 3,
+          "sigmoid": 4,
+          "ln2_inverse_sqrt": 3,
+          "gelu": 6
+        },
+        "nonlinear_depth_proxy": 16
+      },
+      {
+        "block": 2,
+        "degrees": {
+          "ln1_inverse_sqrt": 7,
+          "sigmoid": 13,
+          "ln2_inverse_sqrt": 7,
+          "gelu": 63
+        },
+        "balanced_multiplicative_depth_proxies": {
+          "ln1_inverse_sqrt": 3,
+          "sigmoid": 4,
+          "ln2_inverse_sqrt": 3,
+          "gelu": 6
+        },
+        "nonlinear_depth_proxy": 16
+      },
+      {
+        "block": 3,
+        "degrees": {
+          "ln1_inverse_sqrt": 7,
+          "sigmoid": 27,
+          "ln2_inverse_sqrt": 9,
+          "gelu": 127
+        },
+        "balanced_multiplicative_depth_proxies": {
+          "ln1_inverse_sqrt": 3,
+          "sigmoid": 5,
+          "ln2_inverse_sqrt": 4,
+          "gelu": 7
+        },
+        "nonlinear_depth_proxy": 19
+      },
+      {
+        "block": 4,
+        "degrees": {
+          "ln1_inverse_sqrt": 13,
+          "sigmoid": 13,
+          "ln2_inverse_sqrt": 15,
+          "gelu": 127
+        },
+        "balanced_multiplicative_depth_proxies": {
+          "ln1_inverse_sqrt": 4,
+          "sigmoid": 4,
+          "ln2_inverse_sqrt": 4,
+          "gelu": 7
+        },
+        "nonlinear_depth_proxy": 19
+      },
+      {
+        "block": 5,
+        "degrees": {
+          "ln1_inverse_sqrt": 39,
+          "sigmoid": 15,
+          "ln2_inverse_sqrt": 39,
+          "gelu": 27
+        },
+        "balanced_multiplicative_depth_proxies": {
+          "ln1_inverse_sqrt": 6,
+          "sigmoid": 4,
+          "ln2_inverse_sqrt": 6,
+          "gelu": 5
+        },
+        "nonlinear_depth_proxy": 21
+      },
+      {
+        "block": 6,
+        "degrees": {
+          "ln1_inverse_sqrt": 39,
+          "sigmoid": 27,
+          "ln2_inverse_sqrt": 39,
+          "gelu": 23
+        },
+        "balanced_multiplicative_depth_proxies": {
+          "ln1_inverse_sqrt": 6,
+          "sigmoid": 5,
+          "ln2_inverse_sqrt": 6,
+          "gelu": 5
+        },
+        "nonlinear_depth_proxy": 22
+      },
+      {
+        "block": 7,
+        "degrees": {
+          "ln1_inverse_sqrt": 31,
+          "sigmoid": 13,
+          "ln2_inverse_sqrt": 39,
+          "gelu": 17
+        },
+        "balanced_multiplicative_depth_proxies": {
+          "ln1_inverse_sqrt": 5,
+          "sigmoid": 4,
+          "ln2_inverse_sqrt": 6,
+          "gelu": 5
+        },
+        "nonlinear_depth_proxy": 20
+      },
+      {
+        "block": 8,
+        "degrees": {
+          "ln1_inverse_sqrt": 63,
+          "sigmoid": 13,
+          "ln2_inverse_sqrt": 63,
+          "gelu": 19
+        },
+        "balanced_multiplicative_depth_proxies": {
+          "ln1_inverse_sqrt": 6,
+          "sigmoid": 4,
+          "ln2_inverse_sqrt": 6,
+          "gelu": 5
+        },
+        "nonlinear_depth_proxy": 21
+      },
+      {
+        "block": 9,
+        "degrees": {
+          "ln1_inverse_sqrt": 63,
+          "sigmoid": 9,
+          "ln2_inverse_sqrt": 63,
+          "gelu": 21
+        },
+        "balanced_multiplicative_depth_proxies": {
+          "ln1_inverse_sqrt": 6,
+          "sigmoid": 4,
+          "ln2_inverse_sqrt": 6,
+          "gelu": 5
+        },
+        "nonlinear_depth_proxy": 21
+      },
+      {
+        "block": 10,
+        "degrees": {
+          "ln1_inverse_sqrt": 79,
+          "sigmoid": 23,
+          "ln2_inverse_sqrt": 79,
+          "gelu": 23
+        },
+        "balanced_multiplicative_depth_proxies": {
+          "ln1_inverse_sqrt": 7,
+          "sigmoid": 5,
+          "ln2_inverse_sqrt": 7,
+          "gelu": 5
+        },
+        "nonlinear_depth_proxy": 24
+      },
+      {
+        "block": 11,
+        "degrees": {
+          "ln1_inverse_sqrt": 79,
+          "sigmoid": 17,
+          "ln2_inverse_sqrt": 63,
+          "gelu": 47
+        },
+        "balanced_multiplicative_depth_proxies": {
+          "ln1_inverse_sqrt": 7,
+          "sigmoid": 5,
+          "ln2_inverse_sqrt": 6,
+          "gelu": 6
+        },
+        "nonlinear_depth_proxy": 24
+      }
+    ],
+    "head": {
+      "degrees": {
+        "final_ln_inverse_sqrt": 47,
+        "silu": 95,
+        "head_ln_inverse_sqrt": 13
+      },
+      "balanced_multiplicative_depth_proxies": {
+        "final_ln_inverse_sqrt": 6,
+        "silu": 7,
+        "head_ln_inverse_sqrt": 4
+      },
+      "nonlinear_depth_proxy": 17
+    },
+    "warning": "proxies exclude CKKS rescale, plaintext-multiply, rotation, relinearization, and bootstrap costs"
+  },
+  "blocks": [
+    {
+      "block": 0,
+      "degrees": {
+        "ln1_inverse_sqrt": 7,
+        "sigmoid": 9,
+        "ln2_inverse_sqrt": 7,
+        "gelu": 15
+      },
+      "output_gate": {
+        "global_rel_inf": 3.91519372873168e-05,
+        "worst_token_rel_inf": 3.91519372873168e-05,
+        "max_abs_error": 0.0006168128355756863,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "output_range": {
+        "min": -15.754048724451529,
+        "max": 8.678352529824075,
+        "abs_max": 15.754048724451529,
+        "count": 1536
+      },
+      "domain_checks": [
+        {
+          "name": "block0.ln1_variance_plus_eps",
+          "public_domain": [
+            0.0030030699438575933,
+            0.010106134790696561
+          ],
+          "observed": {
+            "min": 0.0037538374298219917,
+            "max": 0.00808490783255725,
+            "abs_max": 0.00808490783255725,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 7,
+          "multiplicative_depth_proxy": 3,
+          "public_power_of_two_scale": 0.00390625,
+          "normalized_public_domain": [
+            0.7687859056275439,
+            2.5871705064183197
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block0.attention_delta_s1_minus_s0",
+          "public_domain": [
+            -6.069866743337161,
+            0.25
+          ],
+          "observed": {
+            "min": -4.855999918075071,
+            "max": -0.44878789941477454,
+            "abs_max": 4.855999918075071,
+            "count": 12
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "sigmoid",
+          "degree": 9,
+          "multiplicative_depth_proxy": 4,
+          "schedule": "p1=sigmoid(score_11-score_10); p0=1-p1",
+          "probability_range": {
+            "min": 0.0,
+            "max": 1.0,
+            "abs_max": 1.0,
+            "count": 48
+          },
+          "unbounded_exp_denominator_eliminated": true
+        },
+        {
+          "name": "block0.ln2_variance_plus_eps",
+          "public_domain": [
+            0.504245970267154,
+            1.289585701152818
+          ],
+          "observed": {
+            "min": 0.6302971199496323,
+            "max": 1.031638668584766,
+            "abs_max": 1.031638668584766,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 7,
+          "multiplicative_depth_proxy": 3,
+          "public_power_of_two_scale": 1.0,
+          "normalized_public_domain": [
+            0.504245970267154,
+            1.289585701152818
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block0.gelu_input",
+          "public_domain": [
+            -3.46661639687445,
+            3.46661639687445
+          ],
+          "observed": {
+            "min": -2.7733006155834983,
+            "max": 2.455817280904648,
+            "abs_max": 2.7733006155834983,
+            "count": 6144
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "gelu",
+          "degree": 15,
+          "multiplicative_depth_proxy": 4
+        }
+      ],
+      "domain_violations": [],
+      "passed": true
+    },
+    {
+      "block": 1,
+      "degrees": {
+        "ln1_inverse_sqrt": 7,
+        "sigmoid": 11,
+        "ln2_inverse_sqrt": 7,
+        "gelu": 39
+      },
+      "output_gate": {
+        "global_rel_inf": 2.663837568243076e-05,
+        "worst_token_rel_inf": 2.663837568243076e-05,
+        "max_abs_error": 0.0005965126442974977,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "output_range": {
+        "min": -22.39270430875437,
+        "max": 11.617903614464382,
+        "abs_max": 22.39270430875437,
+        "count": 1536
+      },
+      "domain_checks": [
+        {
+          "name": "block1.ln1_variance_plus_eps",
+          "public_domain": [
+            0.7231809701265808,
+            1.5063129576985312
+          ],
+          "observed": {
+            "min": 0.9039560020858739,
+            "max": 1.2050077390146428,
+            "abs_max": 1.2050077390146428,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 7,
+          "multiplicative_depth_proxy": 3,
+          "public_power_of_two_scale": 1.0,
+          "normalized_public_domain": [
+            0.7231809701265808,
+            1.5063129576985312
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block1.attention_delta_s1_minus_s0",
+          "public_domain": [
+            -8.981407641021296,
+            0.25
+          ],
+          "observed": {
+            "min": -7.185412746660407,
+            "max": -0.042181890920706344,
+            "abs_max": 7.185412746660407,
+            "count": 12
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "sigmoid",
+          "degree": 11,
+          "multiplicative_depth_proxy": 4,
+          "schedule": "p1=sigmoid(score_11-score_10); p0=1-p1",
+          "probability_range": {
+            "min": 0.0,
+            "max": 1.0,
+            "abs_max": 1.0,
+            "count": 48
+          },
+          "unbounded_exp_denominator_eliminated": true
+        },
+        {
+          "name": "block1.ln2_variance_plus_eps",
+          "public_domain": [
+            0.7487770832251114,
+            1.3440084965164667
+          ],
+          "observed": {
+            "min": 0.9359534862917152,
+            "max": 1.0751769187746207,
+            "abs_max": 1.0751769187746207,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 7,
+          "multiplicative_depth_proxy": 3,
+          "public_power_of_two_scale": 1.0,
+          "normalized_public_domain": [
+            0.7487770832251114,
+            1.3440084965164667
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block1.gelu_input",
+          "public_domain": [
+            -9.905612243716092,
+            9.905612243716092
+          ],
+          "observed": {
+            "min": -7.924776866223264,
+            "max": 2.543850802146817,
+            "abs_max": 7.924776866223264,
+            "count": 6144
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "gelu",
+          "degree": 39,
+          "multiplicative_depth_proxy": 6
+        }
+      ],
+      "domain_violations": [],
+      "passed": true
+    },
+    {
+      "block": 2,
+      "degrees": {
+        "ln1_inverse_sqrt": 7,
+        "sigmoid": 13,
+        "ln2_inverse_sqrt": 7,
+        "gelu": 63
+      },
+      "output_gate": {
+        "global_rel_inf": 2.175382614998884e-05,
+        "worst_token_rel_inf": 2.3965091902822458e-05,
+        "max_abs_error": 0.0006209359253430691,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "output_range": {
+        "min": -28.543519133224574,
+        "max": 14.674398362389024,
+        "abs_max": 28.543519133224574,
+        "count": 1536
+      },
+      "domain_checks": [
+        {
+          "name": "block2.ln1_variance_plus_eps",
+          "public_domain": [
+            0.8154397725232878,
+            1.40450520858288
+          ],
+          "observed": {
+            "min": 1.0192615867651504,
+            "max": 1.1235664523884272,
+            "abs_max": 1.1235664523884272,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 7,
+          "multiplicative_depth_proxy": 3,
+          "public_power_of_two_scale": 1.0,
+          "normalized_public_domain": [
+            0.8154397725232878,
+            1.40450520858288
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block2.attention_delta_s1_minus_s0",
+          "public_domain": [
+            -9.837404944491563,
+            1.0533190978984461
+          ],
+          "observed": {
+            "min": -7.869686718375085,
+            "max": 0.8419437695764823,
+            "abs_max": 7.869686718375085,
+            "count": 12
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "sigmoid",
+          "degree": 13,
+          "multiplicative_depth_proxy": 4,
+          "schedule": "p1=sigmoid(score_11-score_10); p0=1-p1",
+          "probability_range": {
+            "min": 0.0,
+            "max": 1.0,
+            "abs_max": 1.0,
+            "count": 48
+          },
+          "unbounded_exp_denominator_eliminated": true
+        },
+        {
+          "name": "block2.ln2_variance_plus_eps",
+          "public_domain": [
+            0.8558986417118375,
+            1.408513974353831
+          ],
+          "observed": {
+            "min": 1.0698246726683218,
+            "max": 1.126778275603557,
+            "abs_max": 1.126778275603557,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 7,
+          "multiplicative_depth_proxy": 3,
+          "public_power_of_two_scale": 1.0,
+          "normalized_public_domain": [
+            0.8558986417118375,
+            1.408513974353831
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block2.gelu_input",
+          "public_domain": [
+            -13.189370877790543,
+            13.189370877790543
+          ],
+          "observed": {
+            "min": -4.130845033903099,
+            "max": 10.55155723389978,
+            "abs_max": 10.55155723389978,
+            "count": 6144
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "gelu",
+          "degree": 63,
+          "multiplicative_depth_proxy": 6
+        }
+      ],
+      "domain_violations": [],
+      "passed": true
+    },
+    {
+      "block": 3,
+      "degrees": {
+        "ln1_inverse_sqrt": 7,
+        "sigmoid": 27,
+        "ln2_inverse_sqrt": 9,
+        "gelu": 127
+      },
+      "output_gate": {
+        "global_rel_inf": 0.0009836462666372515,
+        "worst_token_rel_inf": 0.002661249469403868,
+        "max_abs_error": 0.10798257531918587,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "output_range": {
+        "min": -58.07115542955088,
+        "max": 109.75778052779638,
+        "abs_max": 109.75778052779638,
+        "count": 1536
+      },
+      "domain_checks": [
+        {
+          "name": "block3.ln1_variance_plus_eps",
+          "public_domain": [
+            1.3123035519118953,
+            3.2166640386001126
+          ],
+          "observed": {
+            "min": 1.6403465284440089,
+            "max": 2.573252270924973,
+            "abs_max": 2.573252270924973,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 7,
+          "multiplicative_depth_proxy": 3,
+          "public_power_of_two_scale": 2.0,
+          "normalized_public_domain": [
+            0.6561517759559476,
+            1.6083320193000563
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block3.attention_delta_s1_minus_s0",
+          "public_domain": [
+            -8.881790890732608,
+            9.541019415885899
+          ],
+          "observed": {
+            "min": -7.105515403238307,
+            "max": 7.633250157774319,
+            "abs_max": 7.633250157774319,
+            "count": 12
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "sigmoid",
+          "degree": 27,
+          "multiplicative_depth_proxy": 5,
+          "schedule": "p1=sigmoid(score_11-score_10); p0=1-p1",
+          "probability_range": {
+            "min": 0.0,
+            "max": 1.0,
+            "abs_max": 1.0,
+            "count": 48
+          },
+          "unbounded_exp_denominator_eliminated": true
+        },
+        {
+          "name": "block3.ln2_variance_plus_eps",
+          "public_domain": [
+            1.1322330479568268,
+            5.812582569329473
+          ],
+          "observed": {
+            "min": 1.415300598007692,
+            "max": 4.649883718712168,
+            "abs_max": 4.649883718712168,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 9,
+          "multiplicative_depth_proxy": 4,
+          "public_power_of_two_scale": 2.0,
+          "normalized_public_domain": [
+            0.5661165239784134,
+            2.9062912846647366
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block3.gelu_input",
+          "public_domain": [
+            -47.92878927034578,
+            47.92878927034578
+          ],
+          "observed": {
+            "min": -13.922393053083653,
+            "max": 38.342052714666515,
+            "abs_max": 38.342052714666515,
+            "count": 6144
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "gelu",
+          "degree": 127,
+          "multiplicative_depth_proxy": 7
+        }
+      ],
+      "domain_violations": [],
+      "passed": true
+    },
+    {
+      "block": 4,
+      "degrees": {
+        "ln1_inverse_sqrt": 13,
+        "sigmoid": 13,
+        "ln2_inverse_sqrt": 15,
+        "gelu": 127
+      },
+      "output_gate": {
+        "global_rel_inf": 0.0006435984912015921,
+        "worst_token_rel_inf": 0.00462860989020535,
+        "max_abs_error": 0.25459456041699013,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "output_range": {
+        "min": -227.18673431377005,
+        "max": 395.3252023121092,
+        "abs_max": 395.3252023121092,
+        "count": 1536
+      },
+      "domain_checks": [
+        {
+          "name": "block4.ln1_variance_plus_eps",
+          "public_domain": [
+            4.129161853308171,
+            44.64726162437281
+          ],
+          "observed": {
+            "min": 5.1561197807433885,
+            "max": 35.71970818301574,
+            "abs_max": 35.71970818301574,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 13,
+          "multiplicative_depth_proxy": 4,
+          "public_power_of_two_scale": 16.0,
+          "normalized_public_domain": [
+            0.25807261583176067,
+            2.7904538515233006
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block4.attention_delta_s1_minus_s0",
+          "public_domain": [
+            -3.3414252433893683,
+            5.268320010357526
+          ],
+          "observed": {
+            "min": -2.6857754350787624,
+            "max": 4.181113047247903,
+            "abs_max": 4.181113047247903,
+            "count": 12
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "sigmoid",
+          "degree": 13,
+          "multiplicative_depth_proxy": 4,
+          "schedule": "p1=sigmoid(score_11-score_10); p0=1-p1",
+          "probability_range": {
+            "min": 0.0,
+            "max": 1.0,
+            "abs_max": 1.0,
+            "count": 48
+          },
+          "unbounded_exp_denominator_eliminated": true
+        },
+        {
+          "name": "block4.ln2_variance_plus_eps",
+          "public_domain": [
+            3.1514475554115693,
+            44.28111159156455
+          ],
+          "observed": {
+            "min": 3.9407644676111167,
+            "max": 35.42735413645486,
+            "abs_max": 35.42735413645486,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 15,
+          "multiplicative_depth_proxy": 4,
+          "public_power_of_two_scale": 16.0,
+          "normalized_public_domain": [
+            0.19696547221322308,
+            2.7675694744727846
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block4.gelu_input",
+          "public_domain": [
+            -33.51974699568684,
+            33.51974699568684
+          ],
+          "observed": {
+            "min": -10.055015138300115,
+            "max": 26.79223838695437,
+            "abs_max": 26.79223838695437,
+            "count": 6144
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "gelu",
+          "degree": 127,
+          "multiplicative_depth_proxy": 7
+        }
+      ],
+      "domain_violations": [],
+      "passed": true
+    },
+    {
+      "block": 5,
+      "degrees": {
+        "ln1_inverse_sqrt": 39,
+        "sigmoid": 15,
+        "ln2_inverse_sqrt": 39,
+        "gelu": 27
+      },
+      "output_gate": {
+        "global_rel_inf": 0.0006373449781999057,
+        "worst_token_rel_inf": 0.0049135142090457285,
+        "max_abs_error": 0.25403962583868633,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "output_range": {
+        "min": -227.42012086179622,
+        "max": 398.3364169212369,
+        "abs_max": 398.3364169212369,
+        "count": 1536
+      },
+      "domain_checks": [
+        {
+          "name": "block5.ln1_variance_plus_eps",
+          "public_domain": [
+            9.596026028909337,
+            594.085063953076
+          ],
+          "observed": {
+            "min": 11.913526368273756,
+            "max": 474.7085855194107,
+            "abs_max": 474.7085855194107,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 39,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 64.0,
+          "normalized_public_domain": [
+            0.1499379067017084,
+            9.282579124266812
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block5.attention_delta_s1_minus_s0",
+          "public_domain": [
+            -16.631584623776746,
+            0.25
+          ],
+          "observed": {
+            "min": -13.307797119925644,
+            "max": -1.5299401103675396,
+            "abs_max": 13.307797119925644,
+            "count": 12
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "sigmoid",
+          "degree": 15,
+          "multiplicative_depth_proxy": 4,
+          "schedule": "p1=sigmoid(score_11-score_10); p0=1-p1",
+          "probability_range": {
+            "min": -5.077713914586335e-06,
+            "max": 1.0000050777139147,
+            "abs_max": 1.0000050777139147,
+            "count": 48
+          },
+          "unbounded_exp_denominator_eliminated": true
+        },
+        {
+          "name": "block5.ln2_variance_plus_eps",
+          "public_domain": [
+            9.110494197570379,
+            594.4295729290171
+          ],
+          "observed": {
+            "min": 11.308080011936948,
+            "max": 474.9822365820866,
+            "abs_max": 474.9822365820866,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 39,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 64.0,
+          "normalized_public_domain": [
+            0.14235147183703717,
+            9.287962077015893
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block5.gelu_input",
+          "public_domain": [
+            -6.805845990817236,
+            6.805845990817236
+          ],
+          "observed": {
+            "min": -5.452088170571698,
+            "max": 3.2730872244315843,
+            "abs_max": 5.452088170571698,
+            "count": 6144
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "gelu",
+          "degree": 27,
+          "multiplicative_depth_proxy": 5
+        }
+      ],
+      "domain_violations": [],
+      "passed": true
+    },
+    {
+      "block": 6,
+      "degrees": {
+        "ln1_inverse_sqrt": 39,
+        "sigmoid": 27,
+        "ln2_inverse_sqrt": 39,
+        "gelu": 23
+      },
+      "output_gate": {
+        "global_rel_inf": 0.0006259840751346846,
+        "worst_token_rel_inf": 0.003745809730644698,
+        "max_abs_error": 0.251843789662928,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "output_range": {
+        "min": -229.01353879911852,
+        "max": 402.06476403896613,
+        "abs_max": 402.06476403896613,
+        "count": 1536
+      },
+      "domain_checks": [
+        {
+          "name": "block6.ln1_variance_plus_eps",
+          "public_domain": [
+            9.755716055172117,
+            598.1440713902257
+          ],
+          "observed": {
+            "min": 12.118803719514641,
+            "max": 477.95185357488316,
+            "abs_max": 477.95185357488316,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 39,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 64.0,
+          "normalized_public_domain": [
+            0.15243306336206433,
+            9.346001115472276
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block6.attention_delta_s1_minus_s0",
+          "public_domain": [
+            -6.427104878782305,
+            12.168159262660597
+          ],
+          "observed": {
+            "min": -5.135756888833091,
+            "max": 9.734806744007361,
+            "abs_max": 9.734806744007361,
+            "count": 12
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "sigmoid",
+          "degree": 27,
+          "multiplicative_depth_proxy": 5,
+          "schedule": "p1=sigmoid(score_11-score_10); p0=1-p1",
+          "probability_range": {
+            "min": 0.0,
+            "max": 1.0,
+            "abs_max": 1.0,
+            "count": 48
+          },
+          "unbounded_exp_denominator_eliminated": true
+        },
+        {
+          "name": "block6.ln2_variance_plus_eps",
+          "public_domain": [
+            10.271458349298587,
+            603.8831211657011
+          ],
+          "observed": {
+            "min": 12.76867108071512,
+            "max": 482.54360536833775,
+            "abs_max": 482.54360536833775,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 39,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 64.0,
+          "normalized_public_domain": [
+            0.16049153670779043,
+            9.43567376821408
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block6.gelu_input",
+          "public_domain": [
+            -5.726628575542443,
+            5.726628575542443
+          ],
+          "observed": {
+            "min": -4.581345070819773,
+            "max": 3.1024399120201123,
+            "abs_max": 4.581345070819773,
+            "count": 6144
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "gelu",
+          "degree": 23,
+          "multiplicative_depth_proxy": 5
+        }
+      ],
+      "domain_violations": [],
+      "passed": true
+    },
+    {
+      "block": 7,
+      "degrees": {
+        "ln1_inverse_sqrt": 31,
+        "sigmoid": 13,
+        "ln2_inverse_sqrt": 39,
+        "gelu": 17
+      },
+      "output_gate": {
+        "global_rel_inf": 0.0006213691959889366,
+        "worst_token_rel_inf": 0.0030859008733432496,
+        "max_abs_error": 0.251084703054687,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "output_range": {
+        "min": -229.13858606108292,
+        "max": 403.8318738270581,
+        "abs_max": 403.8318738270581,
+        "count": 1536
+      },
+      "domain_checks": [
+        {
+          "name": "block7.ln1_variance_plus_eps",
+          "public_domain": [
+            11.516172689595226,
+            605.0081350124333
+          ],
+          "observed": {
+            "min": 14.321937312231096,
+            "max": 483.4435653466514,
+            "abs_max": 483.4435653466514,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 31,
+          "multiplicative_depth_proxy": 5,
+          "public_power_of_two_scale": 64.0,
+          "normalized_public_domain": [
+            0.1799401982749254,
+            9.45325210956927
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block7.attention_delta_s1_minus_s0",
+          "public_domain": [
+            -4.568107090480003,
+            4.3529524052162145
+          ],
+          "observed": {
+            "min": -3.6691268179430345,
+            "max": 3.4874052487768896,
+            "abs_max": 3.6691268179430345,
+            "count": 12
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "sigmoid",
+          "degree": 13,
+          "multiplicative_depth_proxy": 4,
+          "schedule": "p1=sigmoid(score_11-score_10); p0=1-p1",
+          "probability_range": {
+            "min": 0.0,
+            "max": 1.0,
+            "abs_max": 1.0,
+            "count": 48
+          },
+          "unbounded_exp_denominator_eliminated": true
+        },
+        {
+          "name": "block7.ln2_variance_plus_eps",
+          "public_domain": [
+            9.643373996809427,
+            607.5739216284215
+          ],
+          "observed": {
+            "min": 11.999303613750453,
+            "max": 485.4964828825207,
+            "abs_max": 485.4964828825207,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 39,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 64.0,
+          "normalized_public_domain": [
+            0.1506777187001473,
+            9.493342525444087
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block7.gelu_input",
+          "public_domain": [
+            -4.084147754869162,
+            4.084147754869162
+          ],
+          "observed": {
+            "min": -2.8753368514231066,
+            "max": 3.2704140623971627,
+            "abs_max": 3.2704140623971627,
+            "count": 6144
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "gelu",
+          "degree": 17,
+          "multiplicative_depth_proxy": 5
+        }
+      ],
+      "domain_violations": [],
+      "passed": true
+    },
+    {
+      "block": 8,
+      "degrees": {
+        "ln1_inverse_sqrt": 63,
+        "sigmoid": 13,
+        "ln2_inverse_sqrt": 63,
+        "gelu": 19
+      },
+      "output_gate": {
+        "global_rel_inf": 0.0006172295110717155,
+        "worst_token_rel_inf": 0.002027274426536458,
+        "max_abs_error": 0.24976935173890524,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "output_range": {
+        "min": -227.34617321305308,
+        "max": 404.41226844555086,
+        "abs_max": 404.41226844555086,
+        "count": 1536
+      },
+      "domain_checks": [
+        {
+          "name": "block8.ln1_variance_plus_eps",
+          "public_domain": [
+            3.568737166244477,
+            604.9400737722249
+          ],
+          "observed": {
+            "min": 4.442589440931523,
+            "max": 483.3907224070863,
+            "abs_max": 483.3907224070863,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 63,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 64.0,
+          "normalized_public_domain": [
+            0.05576151822256995,
+            9.452188652691014
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block8.attention_delta_s1_minus_s0",
+          "public_domain": [
+            -6.207676908830379,
+            2.902376229768392
+          ],
+          "observed": {
+            "min": -4.981979769273551,
+            "max": 2.3072620737090945,
+            "abs_max": 4.981979769273551,
+            "count": 12
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "sigmoid",
+          "degree": 13,
+          "multiplicative_depth_proxy": 4,
+          "schedule": "p1=sigmoid(score_11-score_10); p0=1-p1",
+          "probability_range": {
+            "min": 0.0,
+            "max": 1.0,
+            "abs_max": 1.0,
+            "count": 48
+          },
+          "unbounded_exp_denominator_eliminated": true
+        },
+        {
+          "name": "block8.ln2_variance_plus_eps",
+          "public_domain": [
+            4.377006192275399,
+            605.6560854427335
+          ],
+          "observed": {
+            "min": 5.451505438854685,
+            "max": 483.96403574173837,
+            "abs_max": 483.96403574173837,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 63,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 64.0,
+          "normalized_public_domain": [
+            0.06839072175430311,
+            9.46337633504271
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block8.gelu_input",
+          "public_domain": [
+            -4.533430693630507,
+            4.533430693630507
+          ],
+          "observed": {
+            "min": -3.6273944808337797,
+            "max": 2.575001452305719,
+            "abs_max": 3.6273944808337797,
+            "count": 6144
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "gelu",
+          "degree": 19,
+          "multiplicative_depth_proxy": 5
+        }
+      ],
+      "domain_violations": [],
+      "passed": true
+    },
+    {
+      "block": 9,
+      "degrees": {
+        "ln1_inverse_sqrt": 63,
+        "sigmoid": 9,
+        "ln2_inverse_sqrt": 63,
+        "gelu": 21
+      },
+      "output_gate": {
+        "global_rel_inf": 0.0006219179338166095,
+        "worst_token_rel_inf": 0.0016584097807205399,
+        "max_abs_error": 0.25018240914579337,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "output_range": {
+        "min": -223.64517719972358,
+        "max": 402.0254162545951,
+        "abs_max": 402.0254162545951,
+        "count": 1536
+      },
+      "domain_checks": [
+        {
+          "name": "block9.ln1_variance_plus_eps",
+          "public_domain": [
+            2.931341889799673,
+            603.8180281622637
+          ],
+          "observed": {
+            "min": 3.6577464441264067,
+            "max": 482.4955483985802,
+            "abs_max": 482.4955483985802,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 63,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 32.0,
+          "normalized_public_domain": [
+            0.09160443405623978,
+            18.86931338007074
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block9.attention_delta_s1_minus_s0",
+          "public_domain": [
+            -4.675779382007815,
+            1.4843505947400526
+          ],
+          "observed": {
+            "min": -3.750576780516158,
+            "max": 1.1757108760012978,
+            "abs_max": 3.750576780516158,
+            "count": 12
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "sigmoid",
+          "degree": 9,
+          "multiplicative_depth_proxy": 4,
+          "schedule": "p1=sigmoid(score_11-score_10); p0=1-p1",
+          "probability_range": {
+            "min": 0.0,
+            "max": 1.0,
+            "abs_max": 1.0,
+            "count": 48
+          },
+          "unbounded_exp_denominator_eliminated": true
+        },
+        {
+          "name": "block9.ln2_variance_plus_eps",
+          "public_domain": [
+            3.289606470577751,
+            603.2951995786957
+          ],
+          "observed": {
+            "min": 4.108435672118719,
+            "max": 482.0769643116053,
+            "abs_max": 482.0769643116053,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 63,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 32.0,
+          "normalized_public_domain": [
+            0.10280020220555472,
+            18.85297498683424
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block9.gelu_input",
+          "public_domain": [
+            -5.141903526736064,
+            5.141903526736064
+          ],
+          "observed": {
+            "min": -4.121418590666385,
+            "max": 1.5741065639704146,
+            "abs_max": 4.121418590666385,
+            "count": 6144
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "gelu",
+          "degree": 21,
+          "multiplicative_depth_proxy": 5
+        }
+      ],
+      "domain_violations": [],
+      "passed": true
+    },
+    {
+      "block": 10,
+      "degrees": {
+        "ln1_inverse_sqrt": 79,
+        "sigmoid": 23,
+        "ln2_inverse_sqrt": 79,
+        "gelu": 23
+      },
+      "output_gate": {
+        "global_rel_inf": 0.0006305536534281974,
+        "worst_token_rel_inf": 0.0013954096534474101,
+        "max_abs_error": 0.24957562264575017,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "output_range": {
+        "min": -218.4557217935677,
+        "max": 395.5543679257837,
+        "abs_max": 395.5543679257837,
+        "count": 1536
+      },
+      "domain_checks": [
+        {
+          "name": "block10.ln1_variance_plus_eps",
+          "public_domain": [
+            2.6245936036413307,
+            594.3305223446512
+          ],
+          "observed": {
+            "min": 3.283367046468027,
+            "max": 474.91041437091286,
+            "abs_max": 474.91041437091286,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 79,
+          "multiplicative_depth_proxy": 7,
+          "public_power_of_two_scale": 32.0,
+          "normalized_public_domain": [
+            0.08201855011379158,
+            18.57282882327035
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block10.attention_delta_s1_minus_s0",
+          "public_domain": [
+            -25.170054628668428,
+            1.9374775959767887
+          ],
+          "observed": {
+            "min": -20.068876233717475,
+            "max": 1.5441256927605318,
+            "abs_max": 20.068876233717475,
+            "count": 12
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "sigmoid",
+          "degree": 23,
+          "multiplicative_depth_proxy": 5,
+          "schedule": "p1=sigmoid(score_11-score_10); p0=1-p1",
+          "probability_range": {
+            "min": 0.0,
+            "max": 1.0,
+            "abs_max": 1.0,
+            "count": 48
+          },
+          "unbounded_exp_denominator_eliminated": true
+        },
+        {
+          "name": "block10.ln2_variance_plus_eps",
+          "public_domain": [
+            2.5401035341030824,
+            591.9118990469999
+          ],
+          "observed": {
+            "min": 3.178055917771847,
+            "max": 472.9760334562513,
+            "abs_max": 472.9760334562513,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 79,
+          "multiplicative_depth_proxy": 7,
+          "public_power_of_two_scale": 32.0,
+          "normalized_public_domain": [
+            0.07937823544072133,
+            18.497246845218747
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block10.gelu_input",
+          "public_domain": [
+            -5.253499759248167,
+            5.253499759248167
+          ],
+          "observed": {
+            "min": -4.202436112149285,
+            "max": 3.8794241701431145,
+            "abs_max": 4.202436112149285,
+            "count": 6144
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "gelu",
+          "degree": 23,
+          "multiplicative_depth_proxy": 5
+        }
+      ],
+      "domain_violations": [],
+      "passed": true
+    },
+    {
+      "block": 11,
+      "degrees": {
+        "ln1_inverse_sqrt": 79,
+        "sigmoid": 17,
+        "ln2_inverse_sqrt": 63,
+        "gelu": 47
+      },
+      "output_gate": {
+        "global_rel_inf": 0.0010599503582224869,
+        "worst_token_rel_inf": 0.00811735207135026,
+        "max_abs_error": 0.40910417019603784,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "output_range": {
+        "min": -217.27128624522507,
+        "max": 385.71471648609486,
+        "abs_max": 385.71471648609486,
+        "count": 1536
+      },
+      "domain_checks": [
+        {
+          "name": "block11.ln1_variance_plus_eps",
+          "public_domain": [
+            2.1273762846721676,
+            575.4149686580101
+          ],
+          "observed": {
+            "min": 2.6587628319731698,
+            "max": 459.7877599842595,
+            "abs_max": 459.7877599842595,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 79,
+          "multiplicative_depth_proxy": 7,
+          "public_power_of_two_scale": 32.0,
+          "normalized_public_domain": [
+            0.06648050889600524,
+            17.981717770562817
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block11.attention_delta_s1_minus_s0",
+          "public_domain": [
+            -13.847222262558462,
+            2.0697998078469784
+          ],
+          "observed": {
+            "min": -11.0279218717669,
+            "max": 1.650656853259961,
+            "abs_max": 11.0279218717669,
+            "count": 12
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "sigmoid",
+          "degree": 17,
+          "multiplicative_depth_proxy": 5,
+          "schedule": "p1=sigmoid(score_11-score_10); p0=1-p1",
+          "probability_range": {
+            "min": 0.0,
+            "max": 1.0,
+            "abs_max": 1.0,
+            "count": 48
+          },
+          "unbounded_exp_denominator_eliminated": true
+        },
+        {
+          "name": "block11.ln2_variance_plus_eps",
+          "public_domain": [
+            2.925413642076467,
+            573.7741863265973
+          ],
+          "observed": {
+            "min": 3.6619930421786258,
+            "max": 458.4758389415345,
+            "abs_max": 458.4758389415345,
+            "count": 2
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "inverse_sqrt",
+          "degree": 63,
+          "multiplicative_depth_proxy": 6,
+          "public_power_of_two_scale": 32.0,
+          "normalized_public_domain": [
+            0.09141917631488959,
+            17.930443322706164
+          ],
+          "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+        },
+        {
+          "name": "block11.gelu_input",
+          "public_domain": [
+            -10.386750417443436,
+            10.386750417443436
+          ],
+          "observed": {
+            "min": -8.296284207713992,
+            "max": 2.9093888337928724,
+            "abs_max": 8.296284207713992,
+            "count": 6144
+          },
+          "passed": true,
+          "lower_overflow": 0.0,
+          "upper_overflow": 0.0,
+          "function": "gelu",
+          "degree": 47,
+          "multiplicative_depth_proxy": 6
+        }
+      ],
+      "domain_violations": [],
+      "passed": true
+    }
+  ],
+  "head": {
+    "stage_gates": {
+      "final_ln_output": {
+        "global_rel_inf": 0.0029806613600393294,
+        "worst_token_rel_inf": 0.0029806613600393294,
+        "max_abs_error": 0.05184852128192219,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "head_linear": {
+        "global_rel_inf": 0.006184863059054598,
+        "worst_token_rel_inf": 0.006184863059054598,
+        "max_abs_error": 0.13587737612862227,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "head_silu": {
+        "global_rel_inf": 0.006184801106938215,
+        "worst_token_rel_inf": 0.006184801106938215,
+        "max_abs_error": 0.135876015042264,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "head_ln_output": {
+        "global_rel_inf": 0.002730196483199345,
+        "worst_token_rel_inf": 0.002730196483199345,
+        "max_abs_error": 0.018815747184311282,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      },
+      "n_a_margin_readout": {
+        "global_rel_inf": 0.0029639701708950037,
+        "worst_token_rel_inf": 0.0029639701708950037,
+        "max_abs_error": 0.019520621258198645,
+        "tolerance": 0.04,
+        "all_finite": true,
+        "passed": true
+      }
+    },
+    "domain_checks": [
+      {
+        "name": "head.final_ln_variance_plus_eps",
+        "public_domain": [
+          5.145473908059764,
+          559.847318976615
+        ],
+        "observed": {
+          "min": 6.4974578704105435,
+          "max": 447.3391545557337,
+          "abs_max": 447.3391545557337,
+          "count": 2
+        },
+        "passed": true,
+        "lower_overflow": 0.0,
+        "upper_overflow": 0.0,
+        "function": "inverse_sqrt",
+        "degree": 47,
+        "multiplicative_depth_proxy": 6,
+        "public_power_of_two_scale": 64.0,
+        "normalized_public_domain": [
+          0.08039802981343382,
+          8.74761435900961
+        ],
+        "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+      },
+      {
+        "name": "head.silu_input",
+        "public_domain": [
+          -27.461678381403026,
+          27.461678381403026
+        ],
+        "observed": {
+          "min": -5.763240628606551,
+          "max": 21.8334653289938,
+          "abs_max": 21.8334653289938,
+          "count": 1536
+        },
+        "passed": true,
+        "lower_overflow": 0.0,
+        "upper_overflow": 0.0,
+        "function": "silu",
+        "degree": 95,
+        "multiplicative_depth_proxy": 7
+      },
+      {
+        "name": "head.head_ln_variance_plus_eps",
+        "public_domain": [
+          0.3413509902140417,
+          3.1474549727205003
+        ],
+        "observed": {
+          "min": 0.4267348357577334,
+          "max": 2.4934001287584104,
+          "abs_max": 2.4934001287584104,
+          "count": 2
+        },
+        "passed": true,
+        "lower_overflow": 0.0,
+        "upper_overflow": 0.0,
+        "function": "inverse_sqrt",
+        "degree": 13,
+        "multiplicative_depth_proxy": 4,
+        "public_power_of_two_scale": 1.0,
+        "normalized_public_domain": [
+          0.3413509902140417,
+          3.1474549727205003
+        ],
+        "identity": "inv_sqrt(v) = inv_sqrt(v/public_scale) / sqrt(public_scale)"
+      }
+    ],
+    "domain_violations": [],
+    "readout": {
+      "n_logit": -6.578542247568709,
+      "a_logit": -1.9285287537869107,
+      "margin_n_minus_a": -4.650013510357489,
+      "binary_label": "A",
+      "reference_binary_label": "A",
+      "label_preserved": true
+    },
+    "passed": true
+  },
+  "ablations": {
+    "A_fixed_public_domains": {
+      "status": "[A]",
+      "source": "fixture manifest public_calibration.per_block",
+      "selected_before_simulated_query": true,
+      "private_query_adaptation": false,
+      "margin_multiplier": 1.25,
+      "legacy_block0_domain_failure_count": 11,
+      "legacy_block0_domain_failures": [
+        {
+          "block": 1,
+          "fields": [
+            "ln1_variance_plus_eps",
+            "attention_delta_s1_minus_s0",
+            "gelu_input"
+          ]
+        },
+        {
+          "block": 2,
+          "fields": [
+            "ln1_variance_plus_eps",
+            "attention_delta_s1_minus_s0",
+            "attention_denominator",
+            "gelu_input"
+          ]
+        },
+        {
+          "block": 3,
+          "fields": [
+            "ln1_variance_plus_eps",
+            "ln2_variance_plus_eps",
+            "attention_delta_s1_minus_s0",
+            "attention_denominator",
+            "gelu_input"
+          ]
+        },
+        {
+          "block": 4,
+          "fields": [
+            "ln1_variance_plus_eps",
+            "ln2_variance_plus_eps",
+            "attention_delta_s1_minus_s0",
+            "attention_denominator",
+            "gelu_input"
+          ]
+        },
+        {
+          "block": 5,
+          "fields": [
+            "ln1_variance_plus_eps",
+            "ln2_variance_plus_eps",
+            "attention_delta_s1_minus_s0",
+            "gelu_input"
+          ]
+        },
+        {
+          "block": 6,
+          "fields": [
+            "ln1_variance_plus_eps",
+            "ln2_variance_plus_eps",
+            "attention_delta_s1_minus_s0",
+            "attention_denominator",
+            "gelu_input"
+          ]
+        },
+        {
+          "block": 7,
+          "fields": [
+            "ln1_variance_plus_eps",
+            "ln2_variance_plus_eps",
+            "attention_delta_s1_minus_s0",
+            "attention_denominator",
+            "gelu_input"
+          ]
+        },
+        {
+          "block": 8,
+          "fields": [
+            "ln1_variance_plus_eps",
+            "ln2_variance_plus_eps",
+            "attention_delta_s1_minus_s0",
+            "attention_denominator",
+            "gelu_input"
+          ]
+        },
+        {
+          "block": 9,
+          "fields": [
+            "ln1_variance_plus_eps",
+            "ln2_variance_plus_eps",
+            "attention_delta_s1_minus_s0",
+            "attention_denominator",
+            "gelu_input"
+          ]
+        },
+        {
+          "block": 10,
+          "fields": [
+            "ln1_variance_plus_eps",
+            "ln2_variance_plus_eps",
+            "attention_delta_s1_minus_s0",
+            "attention_denominator",
+            "gelu_input"
+          ]
+        },
+        {
+          "block": 11,
+          "fields": [
+            "ln1_variance_plus_eps",
+            "ln2_variance_plus_eps",
+            "attention_delta_s1_minus_s0",
+            "attention_denominator",
+            "gelu_input"
+          ]
+        }
+      ],
+      "proposed_schedule_domain_violations": 0
+    },
+    "B_t2_sigmoid_attention": {
+      "identity": "softmax([s0,s1])[1] = sigmoid(s1-s0)",
+      "exact_identity_max_abs_error": 0.0,
+      "per_block_sigmoid_degrees": [
+        9,
+        11,
+        13,
+        27,
+        13,
+        15,
+        27,
+        13,
+        13,
+        9,
+        23,
+        17
+      ],
+      "sigmoid_polynomial_max_abs_error": 9.72530822597184e-05,
+      "old_exp_denominator_observed_range": {
+        "min": 1.000000001798984,
+        "max": 16891.851282969088,
+        "abs_max": 16891.851282969088,
+        "count": 144
+      },
+      "new_probability_codomain": [
+        0.0,
+        1.0
+      ],
+      "unbounded_exp_denominator_eliminated": true
+    },
+    "C_public_scaled_layernorm": {
+      "identity": "inv_sqrt(v) = inv_sqrt(v/public_power_of_two_scale) / sqrt(public_power_of_two_scale)",
+      "per_block_inverse_sqrt_degrees": [
+        {
+          "ln1": 7,
+          "ln2": 7
+        },
+        {
+          "ln1": 7,
+          "ln2": 7
+        },
+        {
+          "ln1": 7,
+          "ln2": 7
+        },
+        {
+          "ln1": 7,
+          "ln2": 9
+        },
+        {
+          "ln1": 13,
+          "ln2": 15
+        },
+        {
+          "ln1": 39,
+          "ln2": 39
+        },
+        {
+          "ln1": 39,
+          "ln2": 39
+        },
+        {
+          "ln1": 31,
+          "ln2": 39
+        },
+        {
+          "ln1": 63,
+          "ln2": 63
+        },
+        {
+          "ln1": 63,
+          "ln2": 63
+        },
+        {
+          "ln1": 79,
+          "ln2": 79
+        },
+        {
+          "ln1": 79,
+          "ln2": 63
+        }
+      ],
+      "worst_isolated_relative_error": 2.5787977444291815e-05,
+      "scale_is_public_and_per_block": true
+    },
+    "D_tail_aware_full_domain_gelu": {
+      "semantics": "released tanh-GELU",
+      "strategy": "one full-domain Chebyshev polynomial; tails included, no clipping and no encrypted comparison",
+      "per_block_degrees": [
+        15,
+        39,
+        63,
+        127,
+        127,
+        27,
+        23,
+        17,
+        19,
+        21,
+        23,
+        47
+      ],
+      "maximum_degree": 127,
+      "legacy_minus3_plus3_violating_blocks": [
+        1,
+        2,
+        3,
+        4,
+        5,
+        6,
+        7,
+        8,
+        9,
+        10,
+        11
+      ],
+      "proposed_domain_violating_blocks": [],
+      "worst_isolated_max_abs_error": 0.006867081073812735,
+      "degree_cap_exceptions": [
+        {
+          "block": 3,
+          "degree": 127,
+          "isolated_max_abs_error": 0.006867081073812735
+        },
+        {
+          "block": 4,
+          "degree": 127,
+          "isolated_max_abs_error": 0.00017272259902034265
+        }
+      ],
+      "fixture_observed_global_input_range": {
+        "min": -13.922174423301929,
+        "max": 38.343031416276624,
+        "abs_max": 38.343031416276624,
+        "count": 73728
+      }
+    }
+  },
+  "domain_violation_count": 0,
+  "failure": null,
+  "elapsed_seconds": 0.06787016699672677,
+  "passed": true
+}

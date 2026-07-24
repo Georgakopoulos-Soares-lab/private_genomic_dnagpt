@@ -66,3 +66,336 @@ runs:
     verdict: >
       [V] PASS. DNAGPT 0.1b (locally fine-tuned) competitive with DNABERT-2 on the human
       promoter/splice GUE subset. Covers 3 of 28 GUE datasets (the ones named in the brief).
+
+  - id: fhe_operator_matrix_d8_20260724
+    task: "Phase B - isolated CKKS operator matrix"
+    status: "[V] PASS"
+    backend: "OpenFHE CKKS 1.5.1.0.24.4, HEStd_128_classic"
+    environment: "Docker linux/amd64 under Apple Silicon emulation [emu]"
+    config: {dimension: 8, ring_dim: 65536, multiplicative_depth: 20}
+    metrics:
+      linear: {levels: 1, rel_inf: 4.73e-13, seconds_emu: 2.486}
+      layernorm: {levels: 10, rel_inf: 4.54e-6, seconds_emu: 6.784}
+      causal_softmax: {levels: 12, rel_inf: 6.59e-6, seconds_emu: 7.837}
+      gelu_broad: {levels: 5, rel_inf: 6.04e-4, seconds_emu: 3.764}
+    gate: "all finite and rel_inf <= 4e-2"
+    verdict: "[V] PASS. Every isolated DNAGPT operator is inside the declared gate."
+
+  - id: fhe_bootstrap_d8_20260724
+    task: "Phase B - CKKS bootstrap refresh"
+    status: "[V] PASS"
+    backend: "OpenFHE CKKS 1.5.1.0.24.4, HEStd_128_classic"
+    environment: "Docker linux/amd64 under Apple Silicon emulation [emu]"
+    config:
+      slots: 8
+      ring_dim: 131072
+      multiplicative_depth: 30
+      level_budget: [3, 3]
+    metrics:
+      levels_restored: 10
+      post_bootstrap_levels_consumed: 9
+      rel_inf: 2.56e-5
+      seconds_emu: 53.814
+    verdict: "[V] PASS. Refresh restores usable depth within the 4e-2 gate."
+
+  - id: fhe_gelu_toy_profile_brev_cpu_20260724
+    task: "Phase B - toy-block GELU profile"
+    status: "[V] PASS"
+    backend: "OpenFHE CKKS 1.5.1.0.24.4, HEStd_128_classic"
+    environment: "Brev OCI DGXC x86_64 CPU, 8-vCPU container [native]"
+    config: {domain: [-2.0, 2.0], degree: 7, levels: 5}
+    metrics: {max_abs_err: 1.10e-3, rel_inf: 6.84e-4, seconds_native_cpu: 1.632}
+    verdict: "[V] PASS. The source-frozen toy GELU band is inside the 4e-2 gate."
+
+  - id: fhe_toy_block
+    task: "Phase B - complete encrypted toy DNAGPT block"
+    status: "[V] PASS"
+    backend: "OpenFHE CKKS 1.5.1.0.24.4, HEStd_128_classic"
+    environment: "Brev OCI DGXC x86_64 CPU, 32-vCPU container [native]"
+    config:
+      dimension: 8
+      sequence_length: 4
+      heads: 2
+      ring_dim: 131072
+      multiplicative_depth: 49
+      encrypted_input: "embedded numeric vectors"
+      bootstraps: 0
+    metrics:
+      global_rel_inf: 1.4908e-3
+      worst_token_rel_inf: 2.2093e-3
+      intermediate_decrypt_attempts: 0
+      final_decrypt_calls: 1
+      context_keygen_seconds_native_cpu: 8.841
+      evaluation_seconds_native_cpu: 330.741
+    provenance:
+      result_sha256: "6238979e566fc02127cc8249e94bb5308309c3b02df4d82f5a52f35f28a935e8"
+      script_sha256: "e3e031eeb2b9fbe12d68b981a8ce745f84aaa4a105c1aa522bc1216205b720e7"
+      oracle_sha256: "0433e9f99a77e54e5aa9948831b1646572088f42161f2c8789fec56667959b58"
+      image_sha256: "6260e3f4ea6364c40c91299936b0ddbe5be11038059001d6842666cb5fabf603"
+    verdict: >
+      [V] PASS. One complete DNAGPT-shaped block remains encrypted through output
+      packing and passes the dual 4e-2 oracle gate with one final decrypt only.
+
+  - id: fhe_0p1b_extrapolation_20260724
+    task: "Phase B - derived DNAGPT 0.1b CKKS work boundary"
+    status: "[A/U] derived, not an encrypted 0.1b run"
+    target: {layers: 12, dimension: 768, heads: 12, sequence_length: 512}
+    inputs:
+      - "results/runs/fhe_toy_block.json"
+      - "results/runs/fhe_bootstrap_d8_20260724.json"
+    derived:
+      linear_evaluations: 73728
+      linear_rotations: 3981312
+      score_plus_value_ciphertext_products: 37822464
+      optimistic_critical_path_refresh_lower_bound: 56
+      minimum_fresh_activation_coefficient_bytes: 629145600
+    verdict: >
+      [A/U] Work counts and storage/depth lower bounds only. No full-model latency,
+      total bootstrap count, or practicality claim is inferred.
+
+  - id: fhe_local_optimizations_20260724
+    task: "FHE - local correctness/depth screens for GPU-targeted schedules"
+    status: "[V] PASS"
+    backend: "OpenFHE CKKS, HEStd_128_classic"
+    environment: "Docker linux/amd64 under Apple Silicon emulation [emu-directional]"
+    metrics:
+      matmul:
+        naive_rotations: 15
+        bsgs_rotations: 6
+        hoisted_modeled_decompositions: 4
+        rel_inf_max: 9.19e-13
+      attention:
+        materialized_softmax_levels: 9
+        numerator_first_levels: 7
+        numerator_first_rel_inf: 1.96e-6
+      gelu_degree_5:
+        domain: [-2.0, 2.0]
+        levels: 4
+        rel_inf: 4.26e-3
+    provenance:
+      result_sha256: "ba11faddb612577dcf62382cceb82d6108b39cac724e141cd0433b81dad7071e"
+      script_sha256: "fa0eacb997ada766dfd8c4ab452ed7c91821eb66c932dd77b45a5c2d0db3f9df"
+    verdict: >
+      [V] PASS. BSGS, hoisted rotations, numerator-first attention, and lower-degree
+      GELU candidates preserve isolated-circuit correctness. Full-block/GPU gates remain.
+
+  - id: fhe_runtime_projection_20260724
+    task: "FHE - DNAGPT 0.1b runtime planning boundary"
+    status: "[A/U] derived, not an encrypted 0.1b benchmark"
+    target: {layers: 12, dimension: 768, heads: 12, sequence_length: 512}
+    derived:
+      rejected_toy_cpu_layout_years: 9.91
+      unoptimized_gpu_primitive_subtotal_hours: 12.95
+      optimized_gpu_resident_working_range_hours: [0.5, 4]
+    provenance:
+      result_sha256: "a87c229dbe609c71ace52bbb05f22fd3be9586094c07319d580b1b8d28abb489"
+      work_count_sha256: "d04cde0a07298cd4356d653bb3290477f61678968be219f0f3ba23b08da66373"
+      toy_block_sha256: "6238979e566fc02127cc8249e94bb5308309c3b02df4d82f5a52f35f28a935e8"
+    verdict: >
+      [A/U] The per-token CPU and unoptimized GPU schedules are rejected. The broad
+      optimized range must be replaced by D=768, T=8/16 GPU measurements.
+
+  - id: fhe_gpu_asymmetric_chebyshev_prepatch_20260724
+    task: "FIDESlib GPU asymmetric Chebyshev backend gate"
+    status: "[V] FAIL"
+    backend: "FIDESlib 786c760 CKKS/CUDA, unpatched, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB [gpu]"
+    config: {domain: [0.03, 0.9], function: inverse_sqrt, degree: 27}
+    metrics: {rel_inf: 0.292889, tol: 0.04}
+    provenance:
+      result_sha256: "4967a35701ddfba2781bc83bf2a0a3a4d4b7320d93fd420e82fd3a2a3435d664"
+      source_sha256: "b09cd6dfd5c2b6730a54c916354f17f56d7eee6305f47470eedc87278d2b94ce"
+    verdict: >
+      [V] FAIL. The upstream asymmetric-interval correction still used half-width
+      instead of midpoint centering and is disqualified for DNAGPT nonlinearities.
+
+  - id: fhe_gpu_asymmetric_chebyshev_asymfix2_20260724
+    task: "Patched FIDESlib GPU asymmetric Chebyshev backend gate"
+    status: "[V] PASS"
+    backend: "FIDESlib 786c760 plus repository asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB [gpu]"
+    config: {domain: [0.03, 0.9], function: inverse_sqrt, degree: 27}
+    metrics: {rel_inf: 1.5282e-5, tol: 0.04, seconds_gpu: 0.1747}
+    provenance:
+      result_sha256: "87a20159ba6eb3613ca1b0367247743f8c42f6bb6d0d1959ea0cb33da9f956ab"
+      source_sha256: "b09cd6dfd5c2b6730a54c916354f17f56d7eee6305f47470eedc87278d2b94ce"
+      patch_sha256: "81b6f6d8f466c67bc4e764c3f43d38ad2f6caec44b807e8fb916fc8b1063e295"
+      image_sha256: "8dfa77fa298472824a86414efdc6a5d14c4fa57bce3447b61b9893fe37d547a4"
+    verdict: "[V] PASS. The corrected GPU polynomial path is inside the 4e-2 gate."
+
+  - id: fhe_fides_toy_a100_asymfix2_20260724
+    task: "Complete encrypted formulaic DNAGPT block on CUDA"
+    status: "[V] PASS"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 7 [gpu]"
+    config: {dimension: 8, sequence_length: 4, heads: 2, ring_dim: 131072}
+    metrics:
+      global_rel_inf: 1.8423e-4
+      worst_token_rel_inf: 4.8125e-4
+      encrypted_evaluation_seconds_gpu: 93.405
+      intermediate_decrypt_attempts: 0
+      final_decrypt_calls: 1
+    provenance:
+      result_sha256: "c11424b279adf5da6ecdb5b852aa3b69044f687123aa42cf44d42f707acfd1ea"
+      source_sha256: "a300f04dff3d20f1cfb257bd914ce1221fe55383c9b2d1eb57cd5920931bf79b"
+      fixture_sha256: "aba06a2ad2540daaa48d347af30032014d5b6203b6c74a9e7162bfc7a2fb5b58"
+    verdict: >
+      [V] PASS. The full toy block remains encrypted through final packing on the
+      A100 and passes the unchanged dual accuracy gate with one final decrypt.
+
+  - id: fhe_fides_real_d768_t2_ln1_a100_asymfix2_20260724
+    task: "Released-weight DNAGPT block-0 encrypted LayerNorm gate"
+    status: "[V] PASS"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 6 [gpu]"
+    config:
+      dimension: 768
+      sequence_length: 2
+      heads: 12
+      batch_slots: 4096
+      ring_dim: 131072
+    metrics:
+      global_rel_inf: 3.8193e-10
+      worst_token_rel_inf: 8.0169e-10
+      encrypted_evaluation_seconds_gpu: 1.779
+      intermediate_decrypt_attempts: 0
+      final_decrypt_calls: 1
+    provenance:
+      result_sha256: "9f40e2b68497444ff8ef9d77653efd56cefa8b29dfdb025c9a8aeb6dea109266"
+      source_sha256: "6fd345268f5715499104b0a47a64c4ce01048a0ab6c7732f94b5f517d480381a"
+      fixture_manifest_sha256: "8d20a2841ee29a7a386171f1bd173b7189144359ce8f91ea5eb21cc60c0a78fe"
+    verdict: >
+      [V] PASS. The first released-weight D=768 gate preserves the encrypted-input
+      and final-only-decrypt contract. Attention and the full MLP remain separate gates.
+
+  - id: fhe_multiblock_plaintext_contract_20260724
+    task: "Released-weight 12-block DNAGPT and GSR-head plaintext/export contract"
+    status: "[V] PASS plaintext contract; not an encrypted run"
+    model: {layers: 12, dimension: 768, heads: 12}
+    config:
+      encrypted_graph_target_tokens: 2
+      full_task_reference_tokens: 103
+      exported_arrays: 392
+      exported_array_bytes: 688322848
+    metrics:
+      block_11_rel_inf: 1.1401e-6
+      head_rel_inf: 1.5380e-6
+      t2_margin_n_minus_a: -4.669534
+      full_prompt_margin_n_minus_a: 12.266602
+      block0_fixed_domains_compose_all_12: false
+      first_domain_failure_block: 1
+    provenance:
+      result_sha256: "e6d092990f07954c1491981176b598469e421368dac6c6c614c449df5d345e86"
+      fixture_manifest_sha256: "3c8d7bbcbfe62d9dc7f3fa89571396b93c3f92cb89563fa5cb4cd7b831bd5e4c"
+      fixture_content_identity_sha256: "a0d7b07ab3c741e068dc4a5391998ace8f95fafcf893996708b1eab340204cd6"
+    verdict: >
+      [V] The independent NumPy lineage matches upstream torch through all 12 blocks
+      and the task head. T=2 is only a graph gate, and block-0 polynomial domains fail
+      beginning at block 1, so encrypted composition requires public per-block range
+      contracts or a separately validated range-control transform.
+
+  - id: fhe_fides_real_d768_t2_attention_a100_asymfix2_20260724
+    task: "Released-weight DNAGPT block-0 encrypted 12-head attention gate"
+    status: "[V] PASS"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 6 [gpu]"
+    config:
+      dimension: 768
+      sequence_length: 2
+      heads: 12
+      batch_slots: 4096
+      ring_dim: 131072
+      rotation_keys: 63
+    metrics:
+      global_rel_inf: 7.0183e-10
+      worst_token_rel_inf: 7.0183e-10
+      encrypted_evaluation_seconds_gpu: 1347.062
+      intermediate_decrypt_attempts: 0
+      final_decrypt_calls: 1
+    provenance:
+      result_sha256: "98189bb1f3458093dcd3402f9842aa0ebf61f99509c2bc2f56bb27b25f058d44"
+      source_sha256: "6fd345268f5715499104b0a47a64c4ce01048a0ab6c7732f94b5f517d480381a"
+      fixture_manifest_sha256: "8d20a2841ee29a7a386171f1bd173b7189144359ce8f91ea5eb21cc60c0a78fe"
+    verdict: >
+      [V] PASS. Released block-0 LayerNorm, QKV, 12-head causal attention,
+      and projection remain encrypted through the packed output and pass the
+      unchanged gate. The MLP/full-block run remains a separate gate.
+
+  - id: fhe_range_control_t2_12block_optimized_v2_20260724
+    task: "Plaintext-first fixed nonlinear schedule through 12 released DNAGPT blocks and GSR head"
+    status: "[V] PASS simulation; [A] one-fixture domains; not an FHE run"
+    config:
+      layers: 12
+      dimension: 768
+      heads: 12
+      sequence_length: 2
+      clipping: false
+      private_query_adaptation: false
+    metrics:
+      domain_violations: 0
+      worst_block_global_rel_inf: 1.05995e-3
+      worst_block_worst_token_rel_inf: 8.11735e-3
+      worst_head_stage_global_rel_inf: 6.18486e-3
+      classification_label_preserved: true
+      nonlinear_depth_proxy_range: [14, 24]
+    provenance:
+      result_sha256: "cc2af734bbe7ca924e447f5a315bb7a50745ce4cc415741055b30e93913935b0"
+      full_diagnostic_sha256: "b148e30b42c430405a0a2c41401ab295701e0e1c3655ef00f06984ff9f8faba2"
+      fixture_manifest_sha256: "3c8d7bbcbfe62d9dc7f3fa89571396b93c3f92cb89563fa5cb4cd7b831bd5e4c"
+    verdict: >
+      [V] On the fixed public T=2 fixture, stable sigmoid attention,
+      public-scaled LayerNorm, and full-domain GELU preserve all 12 block
+      outputs and the task-head label inside the 4e-2 gate. [U] This must
+      still be realized with CKKS levels/refreshes and calibrated on broader
+      public data before private task inference.
+
+  - id: fhe_fides_real_d768_t2_block0_depth43_FAIL_20260724
+    task: "Released-weight DNAGPT block-0 full encrypted depth-43 gate"
+    status: "[V] FAIL before final decrypt"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 5 [gpu]"
+    config:
+      dimension: 768
+      sequence_length: 2
+      heads: 12
+      ring_dim: 131072
+      multiplicative_depth: 43
+    observed:
+      attention_projection_levels: [13, 26]
+      ln2_levels: [24, 37]
+      token0_block_output_level: 32
+      process_exit_code: 2
+      final_decrypt_calls: 0
+    provenance:
+      result_sha256: "f7c31d39a47dc26d6327fb0832d8fcd4e1e40843195947ec6be28f5ab28b1f76"
+      remote_log_sha256: "fbc7c1ee4b2490e6c923f68401b917641061dd9dda3daccb7961408ba9de4293"
+      source_sha256: "6fd345268f5715499104b0a47a64c4ce01048a0ab6c7732f94b5f517d480381a"
+    verdict: >
+      [V] The original exp-plus-reciprocal attention schedule exhausts the
+      depth-43 chain on token 1 after LayerNorm2; no oracle decrypt or metric
+      occurred. [A] Replace it with the already validated direct T=2 sigmoid
+      schedule and rerun rather than silently raising the cryptographic profile.
+
+  - id: fhe_measured_t2_attention_boundary_20260724
+    task: "Derived 12-block D768/T2 attention-only runtime boundary"
+    status: "[A] measured-input derivation; not a 12-block encrypted run"
+    input:
+      result: "results/runs/fhe_fides_real_d768_t2_attention_a100_asymfix2_20260724.json"
+      result_sha256: "98189bb1f3458093dcd3402f9842aa0ebf61f99509c2bc2f56bb27b25f058d44"
+      encrypted_evaluation_seconds_gpu: 1347.06238804
+    target:
+      layers: 12
+      dimension: 768
+      heads: 12
+      sequence_length: 2
+    derived:
+      attention_only_repeated_seconds: 16164.74865648
+      attention_only_repeated_hours: 4.49020796013
+    provenance:
+      result_sha256: "a3e222c5d2b11e278e023e95eb25f06f261e52f246cb4899c86c09e1a939eb86"
+    verdict: >
+      [A] Repeating the measured unoptimized block-0 attention gate twelve
+      times gives 4.49 hours before any MLP, refresh, task head, or later-block
+      domain handling. This is a lower boundary for the current T=2 schedule,
+      not a full-pass forecast. [U] T=103 is not extrapolated from this
+      T=2-specialized graph.

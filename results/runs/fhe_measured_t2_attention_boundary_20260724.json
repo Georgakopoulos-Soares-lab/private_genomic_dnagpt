@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "task": "DNAGPT measured D768/T2 12-block attention-only runtime boundary",
+  "derived_at_utc": "2026-07-24T20:10:45.628718+00:00",
+  "status": "[A] derived lower boundary; not a 12-block encrypted run",
+  "input": {
+    "result": "results/runs/fhe_fides_real_d768_t2_attention_a100_asymfix2_20260724.json",
+    "sha256": "98189bb1f3458093dcd3402f9842aa0ebf61f99509c2bc2f56bb27b25f058d44",
+    "measured_gate": "block-0 LayerNorm + QKV + 12-head attention + projection",
+    "encrypted_evaluation_seconds_gpu": 1347.06238804,
+    "environment": "Brev A100-SXM4-80GB physical GPU 6 [gpu]"
+  },
+  "target": {
+    "layers": 12,
+    "dimension": 768,
+    "heads": 12,
+    "sequence_length": 2
+  },
+  "derived": {
+    "attention_only_repeated_seconds": 16164.748656480002,
+    "attention_only_repeated_hours": 4.490207960133334,
+    "qualification": "[A] Repeats the measured block-0 attention gate 12 times. It excludes all MLPs, bootstraps, the classifier head, key setup, and later-block polynomial-domain changes, so it is a lower boundary for this unoptimized T=2 schedule, not a forecast."
+  },
+  "full_task_boundary": {
+    "task_representative_token_count": 103,
+    "current_gpu_schedule_specialized_to_t2": true,
+    "runtime": "[U] not extrapolated",
+    "reason": "A T=103 implementation needs a different packed softmax/layout; linear or quadratic scaling from the T=2 specialization would create false precision."
+  },
+  "next_replacements": [
+    "direct T=2 sigmoid full-block measurement",
+    "native block-boundary bootstrap measurement",
+    "two-block same-lineage measurement",
+    "packed T=8/16 attention measurement before longer sequences"
+  ]
+}

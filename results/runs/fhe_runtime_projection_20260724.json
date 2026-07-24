@@ -1,0 +1,77 @@
+{
+  "schema_version": 1,
+  "task": "DNAGPT 0.1b runtime boundary",
+  "derived_at_utc": "2026-07-24T15:26:05.858362+00:00",
+  "status": "[A/U] planning boundary, not an encrypted 0.1b benchmark",
+  "target": {
+    "layers": 12,
+    "dimension": 768,
+    "heads": 12,
+    "head_dimension": 64,
+    "sequence_length": 512
+  },
+  "inputs": {
+    "work_count_result": "results/runs/fhe_0p1b_extrapolation_20260724.json",
+    "work_count_sha256": "d04cde0a07298cd4356d653bb3290477f61678968be219f0f3ba23b08da66373",
+    "toy_block_result": "results/runs/fhe_toy_block.json",
+    "toy_block_sha256": "6238979e566fc02127cc8249e94bb5308309c3b02df4d82f5a52f35f28a935e8"
+  },
+  "rejected_cpu_layout": {
+    "toy_evaluation_seconds": 330.74058381281793,
+    "causal_pair_ratio": 945561.6,
+    "toy_pair_scaled_seconds": 312735595.6149822,
+    "toy_pair_scaled_years": 9.909993016420202,
+    "qualification": "[A] Multiplies only the measured toy evaluation by the causal-pair ratio. It ignores the D=8 to D=768 widening and is not a forecast. Its purpose is to reject repetition of the toy per-token CPU layout."
+  },
+  "unoptimized_gpu_primitive_substitution": {
+    "published_platform": "FIDESlib RTX 4090",
+    "published_parameter_set": "[N,L,delta,dnum]=[2^16,29,59,4]",
+    "rotations": 3981312,
+    "rotation_seconds": 4407.312384,
+    "ciphertext_multiplications": 37822464,
+    "ciphertext_multiplication_seconds": 40999.550976,
+    "plaintext_multiplications": 56623104,
+    "plaintext_multiplication_seconds": 1230.98628096,
+    "subtotal_seconds": 46637.84964096,
+    "subtotal_hours": 12.9549582336,
+    "excluded": [
+      "LayerNorm, softmax, and GELU polynomial evaluation",
+      "bootstrapping",
+      "key generation and encoding",
+      "host/device transfers",
+      "memory-capacity stalls"
+    ],
+    "qualification": "[A] Directly substitutes published single-primitive timings into the current unoptimized per-token work counts. Parameters and GPU differ from the planned A100. Packing, fusion, hoisting, and concurrency invalidate it as an end-to-end prediction; it is a schedule-rejection diagnostic."
+  },
+  "external_transformer_comparator": {
+    "system": "EncryptedLLM, GPT-2 small",
+    "shape": {
+      "blocks": 12,
+      "dimension": 768,
+      "token_position": 128,
+      "prior_input_processing": "amortized away"
+    },
+    "platform": "NVIDIA A100 80GB PCIe",
+    "reported_result": "over 200x GPU speedup, from several hours to a few minutes",
+    "reported_128bit_bootstrap": "roughly 550 ms to refresh 20 ciphertext levels",
+    "qualification": "[V, external] Relevant evidence that a packed GPU transformer can reach minutes. It is not a DNAGPT T=512 full-input benchmark and does not supply a transferable exact latency."
+  },
+  "working_expectation": {
+    "first_unoptimized_gpu_run": "[A] order of 10+ hours",
+    "optimized_gpu_resident_pass": "[A] roughly 0.5-4 hours",
+    "not_expected": "seconds or interactive latency",
+    "qualification": "This is a deliberately broad engineering planning interval, not a confidence interval. Replace it after the D=768, T=8/16 one-block benchmark and again after T=512 packing measurements."
+  },
+  "primary_sources": [
+    {
+      "title": "FIDESlib paper",
+      "url": "https://arxiv.org/abs/2507.04775",
+      "used_for": "Table V primitive timings and GPU design"
+    },
+    {
+      "title": "EncryptedLLM (ICML 2025)",
+      "url": "https://proceedings.mlr.press/v267/de-castro25a.html",
+      "used_for": "A100 GPT-2 comparator and bootstrap timing"
+    }
+  ]
+}

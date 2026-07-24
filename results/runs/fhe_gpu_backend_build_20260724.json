@@ -1,0 +1,36 @@
+{
+  "schema_version": 1,
+  "task": "Pinned FIDESlib/OpenFHE CUDA backend build and device smoke",
+  "measured_at_utc": "2026-07-24T15:48:00Z",
+  "status": "[V] PASS",
+  "environment": "Brev OCI DGXC, NVIDIA A100-SXM4-80GB",
+  "backend": {
+    "scheme": "CKKS",
+    "fideslib_commit": "786c7600fb2f16b724e0acf73df367b27b8afed6",
+    "openfhe_commit": "dd8d3740604473c1fb0adec3ca1a0fa5f0cf9964",
+    "cuda_release": "13.0",
+    "cuda_compiler": "V13.0.88",
+    "nvidia_driver": "580.105.08",
+    "gpu": "NVIDIA A100-SXM4-80GB",
+    "gpu_memory_mib": 81920
+  },
+  "container": {
+    "tag": "dnagpt-fideslib:786c",
+    "image_digest": "sha256:70c022fa370b5efe74542f1618779c43fc5db2c262782b2735f9531fd4d6827a",
+    "size": "13GB",
+    "target_arch": "sm_80"
+  },
+  "provenance": {
+    "dockerfile": "docker/Dockerfile.fideslib",
+    "dockerfile_sha256": "eedeca9ba40e756e05649302385db0426227c5163b829e9ed9eacc7f8d6ebf60"
+  },
+  "smoke": {
+    "command": "docker run --rm --gpus 'device=3' --entrypoint bash dnagpt-fideslib:786c -lc './build/gpu-test'",
+    "reported_logical_device": 0,
+    "reported_device_name": "NVIDIA A100-SXM4-80GB",
+    "reported_device_count": 1,
+    "exit_code": 0
+  },
+  "passed": true,
+  "qualification": "[V] The pinned CUDA/OpenFHE backend builds and sees one isolated A100. This is environment evidence, not encrypted DNAGPT correctness."
+}

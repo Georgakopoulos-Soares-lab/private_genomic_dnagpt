@@ -1,0 +1,94 @@
+{
+  "schema_version": 1,
+  "task": "FHE toy DNAGPT block (CKKS/OpenFHE), end-to-end, no mid-decrypt",
+  "measured_at_utc": "2026-07-24T14:58:07.946969+00:00",
+  "backend": "OpenFHE CKKS",
+  "security": "HEStd_128_classic",
+  "environment": "Brev OCI DGXC x86_64 CPU, 32-vCPU container [native]",
+  "provenance": {
+    "script_sha256": "e3e031eeb2b9fbe12d68b981a8ce745f84aaa4a105c1aa522bc1216205b720e7",
+    "oracle_sha256": "0433e9f99a77e54e5aa9948831b1646572088f42161f2c8789fec56667959b58",
+    "container_image": "dnagpt-openfhe:20260724@sha256:6260e3f4ea6364c40c91299936b0ddbe5be11038059001d6842666cb5fabf603",
+    "openfhe_version": "1.5.1.0.24.4",
+    "numpy_version": "2.5.1",
+    "python_version": "3.12.3"
+  },
+  "config": {
+    "D": 8,
+    "T": 4,
+    "heads": 2,
+    "ring_dim": 131072,
+    "batch_slots": 32,
+    "mult_depth": 49,
+    "levels_consumed_before_pack": [
+      49,
+      49,
+      49,
+      49
+    ],
+    "packed_output_level": 49,
+    "level_trace": {
+      "ln1": [
+        11,
+        11,
+        11,
+        11
+      ],
+      "qkv": [
+        12,
+        12,
+        12,
+        12,
+        12,
+        12,
+        12,
+        12,
+        12,
+        12,
+        12,
+        12
+      ],
+      "attention_projection": [
+        31,
+        31,
+        31,
+        31
+      ],
+      "residual1": [
+        31,
+        31,
+        31,
+        31
+      ],
+      "ln2": [
+        42,
+        42,
+        42,
+        42
+      ],
+      "block_output": [
+        49,
+        49,
+        49,
+        49
+      ]
+    },
+    "output_packing": "mask folded into final MLP diagonal products; additive pack",
+    "bootstraps": 0,
+    "cheb_deg": {
+      "invsqrt": 27,
+      "exp": 13,
+      "recip": 27,
+      "gelu": 7
+    }
+  },
+  "global_rel_inf": 0.0014908038288383827,
+  "worst_token_rel_inf": 0.002209323610983388,
+  "tol": 0.04,
+  "passed": true,
+  "context_setup_keygen_s": 8.84102663770318,
+  "evaluation_latency_s": 330.74058381281793,
+  "latency_label": "[native-cpu]",
+  "intermediate_decrypt_attempts": 0,
+  "final_decrypt_calls": 1
+}

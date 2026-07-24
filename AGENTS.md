@@ -4,11 +4,10 @@ DNAGPT local performance-baseline project. Full charter: **[CLAUDE.md](CLAUDE.md
 
 ## TL;DR
 
-Goal: evaluate whether **DNAGPT** (arXiv 2307.05628) inference can run under **FHE** (encrypted
-operations) — the DNAGPT counterpart of `../evo2`. **Phase A (current):** measure DNAGPT locally on 3
-tasks (GSR, GUE, mRNA regression) to produce the trustworthy **plaintext oracle** the encrypted path
-must later reproduce. **Phase B:** encrypted operators on the 0.1b backbone. Evidence discipline
-mirrors `../evo2`.
+Goal: evaluate whether **DNAGPT** (arXiv 2307.05628) inference can run under **FHE** with no
+intermediate decryption. **Phase A is complete:** three local tasks provide the plaintext oracle.
+**Phase B is active:** the encrypted toy block passes; optimization is validated locally before the
+C++/CUDA GPU path and real-width 0.1b gates.
 
 ## Conventions
 
@@ -31,4 +30,4 @@ python eval/finetune_gue.py --data data/gue/GUE/prom/prom_300_all --tag gue_prom
 
 ## Where things are
 
-Code `eval/` · upstream `DNAGPT/` · evidence `results/` · docs `docs/` · charter `CLAUDE.md`.
+Code `eval/` and `fhe/` · upstream `DNAGPT/` · evidence `results/` · docs `docs/` · charter `CLAUDE.md`.

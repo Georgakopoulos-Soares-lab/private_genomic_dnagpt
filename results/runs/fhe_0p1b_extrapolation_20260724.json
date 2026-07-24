@@ -1,0 +1,57 @@
+{
+  "schema_version": 1,
+  "task": "DNAGPT 0.1b CKKS work-count extrapolation",
+  "derived_at_utc": "2026-07-24T15:00:37.475044+00:00",
+  "status": "[A/U] derived boundary, not an encrypted 0.1b run",
+  "target": {
+    "layers": 12,
+    "dimension": 768,
+    "heads": 12,
+    "head_dimension": 64,
+    "sequence_length": 512
+  },
+  "measured_inputs": {
+    "toy_block_result": "results/runs/fhe_toy_block.json",
+    "toy_block_result_sha256": "6238979e566fc02127cc8249e94bb5308309c3b02df4d82f5a52f35f28a935e8",
+    "bootstrap_result": "results/runs/fhe_bootstrap_d8_20260724.json",
+    "bootstrap_result_sha256": "e1199a7faee9986b780bcf63847e6004d08322b6694427c7cc6d98ac1abde27d",
+    "toy_block_levels_before_output_pack": 49,
+    "bootstrap_levels_restored": 10,
+    "bootstrap_latency_emu_s": 53.81398902199999
+  },
+  "per_token_layout_work_counts": {
+    "bsgs_plan": {
+      "baby_steps": 32,
+      "giant_steps": 24,
+      "rotations_per_DxD_linear": 54
+    },
+    "linear_evaluations_per_block": 6144,
+    "linear_evaluations_12_blocks": 73728,
+    "linear_rotations_per_block": 331776,
+    "linear_rotations_12_blocks": 3981312,
+    "layernorm_polynomials_12_blocks": 12288,
+    "softmax_rows_12_blocks": 73728,
+    "gelu_polynomials_12_blocks": 24576,
+    "causal_query_key_pairs_per_block": 1575936,
+    "causal_query_key_pairs_12_blocks": 18911232,
+    "score_plus_value_ciphertext_products_12_blocks": 37822464,
+    "causal_pair_count_ratio_vs_one_toy_block": 945561.6
+  },
+  "depth_boundary": {
+    "assumed_sequential_levels_12_blocks": 588,
+    "optimistic_critical_path_bootstrap_lower_bound": 56,
+    "bootstrap_only_emu_time_lower_bound_s": 3013.5833852319993,
+    "qualification": "[A] Multiplies one measured toy-block depth by 12 and treats each standalone refresh as restoring the measured number of levels. A real attention schedule must refresh many parallel ciphertexts, so this is not a total bootstrap count or a latency forecast."
+  },
+  "ciphertext_volume_lower_bound": {
+    "ring_dim": 131072,
+    "maximum_ckks_slots": 65536,
+    "dense_activation_values": 393216,
+    "minimum_ciphertexts_at_ideal_slot_occupancy": 6,
+    "assumed_fresh_q_towers": 50,
+    "coefficient_bytes_per_fresh_ciphertext": 104857600,
+    "minimum_fresh_activation_coefficient_bytes": 629145600,
+    "qualification": "[A] Coefficient-only lower bound. It excludes guard slots, layout constraints, object/serialization overhead, evaluation keys, and live intermediates."
+  },
+  "latency_projection": "[U] No end-to-end 0.1b latency is projected: the toy uses a per-token correctness layout, while any full implementation must pack and parallelize tokens and heads. Multiplying [emu] toy latency would be misleading."
+}

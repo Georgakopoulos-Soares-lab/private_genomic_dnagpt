@@ -1,0 +1,211 @@
+{
+  "schema_version": 1,
+  "created_at": "2026-07-24T15:23:20.967698+00:00",
+  "status": "[V] PASS",
+  "purpose": "local correctness/depth screen for GPU-targeted CKKS optimizations",
+  "backend": {
+    "scheme": "CKKS",
+    "library": "OpenFHE Python",
+    "version": "unknown",
+    "security": "HEStd_128_classic",
+    "scale_bits": 50
+  },
+  "environment": {
+    "description": "Docker linux/amd64 on Apple Silicon [emu-directional]",
+    "latency_label": "[emu-directional]",
+    "python": "3.12.3",
+    "platform": "Linux-7.0.11-orbstack-00360-gc9bc4d96ac70-x86_64-with-glibc2.39"
+  },
+  "gate": {
+    "all_finite": true,
+    "rel_inf_max": 0.04,
+    "note": "The local probes are screening gates. Any selected change must also pass the complete encrypted block oracle before a performance claim."
+  },
+  "probes": {
+    "matmul": {
+      "environment": "Docker linux/amd64 on Apple Silicon [emu-directional]",
+      "keygen_seconds": 0.7880236829987552,
+      "plaintext_encoding_excluded_from_evaluation_timing": true,
+      "rows": [
+        {
+          "variant": "naive_diagonal",
+          "dimension": 16,
+          "bsgs_plan": [
+            4,
+            4
+          ],
+          "ciphertext_rotations": 15,
+          "key_switch_decompositions": 15,
+          "levels_consumed": 1,
+          "rel_inf": 8.614639691044134e-13,
+          "tol": 0.04,
+          "passed": true,
+          "evaluation_seconds": 1.9916072349988099,
+          "latency_label": "[emu-directional]"
+        },
+        {
+          "variant": "bsgs",
+          "dimension": 16,
+          "bsgs_plan": [
+            4,
+            4
+          ],
+          "ciphertext_rotations": 6,
+          "key_switch_decompositions": 6,
+          "levels_consumed": 1,
+          "rel_inf": 7.072411876274111e-13,
+          "tol": 0.04,
+          "passed": true,
+          "evaluation_seconds": 0.8583797299997968,
+          "latency_label": "[emu-directional]"
+        },
+        {
+          "variant": "bsgs_hoisted_baby_rotations",
+          "dimension": 16,
+          "bsgs_plan": [
+            4,
+            4
+          ],
+          "ciphertext_rotations": 6,
+          "key_switch_decompositions": 4,
+          "levels_consumed": 1,
+          "rel_inf": 9.180874666888329e-13,
+          "tol": 0.04,
+          "passed": true,
+          "evaluation_seconds": 1.0305241330006538,
+          "latency_label": "[emu-directional]"
+        }
+      ],
+      "correctness_passed": true,
+      "operation_reduction": {
+        "naive_to_bsgs_rotations": {
+          "from": 15,
+          "to": 6
+        },
+        "bsgs_to_hoisted_decompositions": {
+          "from": 6,
+          "to": 4
+        }
+      }
+    },
+    "attention": {
+      "environment": "Docker linux/amd64 on Apple Silicon [emu-directional]",
+      "keygen_seconds": 15.051643609998791,
+      "input_scope": "encrypted exponentials and encrypted value vectors; the exp polynomial is intentionally held constant outside this schedule comparison",
+      "rows": [
+        {
+          "variant": "materialized_softmax",
+          "levels_consumed": 9,
+          "rel_inf": 1.950711658533149e-06,
+          "evaluation_seconds": 23.05036592000033,
+          "latency_label": "[emu-directional]",
+          "tol": 0.04,
+          "passed": true
+        },
+        {
+          "variant": "numerator_first",
+          "levels_consumed": 7,
+          "rel_inf": 1.9507375573453743e-06,
+          "evaluation_seconds": 28.455340041000454,
+          "latency_label": "[emu-directional]",
+          "tol": 0.04,
+          "passed": true
+        }
+      ],
+      "numerator_first_vs_materialized_rel_inf": 2.589876170411321e-11,
+      "levels_saved": 2,
+      "correctness_passed": true
+    },
+    "gelu": {
+      "environment": "Docker linux/amd64 on Apple Silicon [emu-directional]",
+      "keygen_seconds": 1.2459636309995403,
+      "rows": [
+        {
+          "degree": 3,
+          "public_domain": [
+            -2.0,
+            2.0
+          ],
+          "levels_consumed": 4,
+          "rel_inf": 0.032964622352993904,
+          "tol": 0.04,
+          "passed": true,
+          "evaluation_seconds": 0.7346393860007083,
+          "latency_label": "[emu-directional]"
+        },
+        {
+          "degree": 5,
+          "public_domain": [
+            -2.0,
+            2.0
+          ],
+          "levels_consumed": 4,
+          "rel_inf": 0.004255538038446208,
+          "tol": 0.04,
+          "passed": true,
+          "evaluation_seconds": 1.4999270749995048,
+          "latency_label": "[emu-directional]"
+        },
+        {
+          "degree": 7,
+          "public_domain": [
+            -2.0,
+            2.0
+          ],
+          "levels_consumed": 5,
+          "rel_inf": 0.0005102671580525236,
+          "tol": 0.04,
+          "passed": true,
+          "evaluation_seconds": 1.857828303000133,
+          "latency_label": "[emu-directional]"
+        },
+        {
+          "degree": 9,
+          "public_domain": [
+            -2.0,
+            2.0
+          ],
+          "levels_consumed": 5,
+          "rel_inf": 4.143758020268036e-05,
+          "tol": 0.04,
+          "passed": true,
+          "evaluation_seconds": 2.141450993000035,
+          "latency_label": "[emu-directional]"
+        },
+        {
+          "degree": 13,
+          "public_domain": [
+            -2.0,
+            2.0
+          ],
+          "levels_consumed": 5,
+          "rel_inf": 2.9029763928882e-07,
+          "tol": 0.04,
+          "passed": true,
+          "evaluation_seconds": 2.975197017998653,
+          "latency_label": "[emu-directional]"
+        }
+      ],
+      "lowest_passing_degree_on_sample_grid": 3,
+      "correctness_passed": true,
+      "scope": "sample-grid screen; the complete block oracle remains load-bearing"
+    }
+  },
+  "sources": [
+    {
+      "claim": "hoisted automorphisms reuse digit decomposition",
+      "url": "https://github.com/openfheorg/openfhe-development/blob/main/src/pke/include/cryptocontext.h"
+    },
+    {
+      "claim": "GPU CKKS implementation supports hoisting, fusion, and bootstrapping",
+      "url": "https://github.com/CAPS-UMU/FIDESlib"
+    },
+    {
+      "claim": "parallel BSGS trades packing/parallelism for fewer rotations",
+      "url": "https://eprint.iacr.org/2024/883"
+    }
+  ],
+  "source_sha256": "fa0eacb997ada766dfd8c4ab452ed7c91821eb66c932dd77b45a5c2d0db3f9df",
+  "total_seconds": 92.23631528500118,
+  "passed": true
+}

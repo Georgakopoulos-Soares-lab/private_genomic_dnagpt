@@ -1,0 +1,39 @@
+{
+  "schema_version": 1,
+  "task": "FIDESlib GPU asymmetric-interval Chebyshev inverse-square-root corrected gate",
+  "measured_at_utc": "2026-07-24T18:33:12.686905986Z",
+  "status": "[V] PASS",
+  "backend": {
+    "scheme": "CKKS",
+    "fideslib_commit": "786c7600fb2f16b724e0acf73df367b27b8afed6",
+    "local_patch": "docker/patches/fideslib-asymmetric-chebyshev.patch",
+    "container_image": "dnagpt-fideslib:786c-asymfix2@sha256:8dfa77fa298472824a86414efdc6a5d14c4fa57bce3447b61b9893fe37d547a4",
+    "security": "HEStd_128_classic"
+  },
+  "environment": "Brev A100-SXM4-80GB GPU 6 [gpu]",
+  "config": {
+    "ring_dim": 65536,
+    "slots": 32,
+    "multiplicative_depth": 14,
+    "domain": [0.03, 0.9],
+    "degree": 27,
+    "output_level": 5
+  },
+  "metrics": {
+    "max_abs_error": 8.823118914325079e-05,
+    "rel_inf": 1.5282090240832988e-05,
+    "seconds": 0.174662769,
+    "tol": 0.04,
+    "passed": true
+  },
+  "provenance": {
+    "source": "fhe/gpu/probes/asymmetric_cheb.cpp",
+    "source_sha256": "b09cd6dfd5c2b6730a54c916354f17f56d7eee6305f47470eedc87278d2b94ce",
+    "cmake_sha256": "af4a1018411d486ae9d7d97194af3d0830aa209f58b222b93a40205a17393f5f",
+    "dockerfile_sha256": "a1cba6a5fee86e05f7efc06266294ffa8f7188c90e01a4e9fae61d1c8482f457",
+    "patch_sha256": "81b6f6d8f466c67bc4e764c3f43d38ad2f6caec44b807e8fb916fc8b1063e295",
+    "image_build_log_sha256": "baa2a9dab977dbc3470bfad1bc272fcfa13d7fd0e266623cceb1ef0dd9cf5c38",
+    "remote_log_sha256": "f8361102f12f57ba97f8801a87a7b874327f704a8c4813c3dd21094785b1665c"
+  },
+  "qualification": "[V] The patched GPU nonlinear path reproduces the degree-27 plaintext Chebyshev error and is inside the 4e-2 gate. Complete-block correctness remains a separate gate."
+}

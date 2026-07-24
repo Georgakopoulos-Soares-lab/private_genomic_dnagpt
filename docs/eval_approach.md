@@ -47,8 +47,7 @@ per-task commands + results live in [tasks.md](tasks.md); dataset origins in
 - **Protocol (DNABERT-2-comparable):** full fine-tune, 3 epochs, AdamW lr 3e-5, batch 32, dropout 0.1;
   per-dataset `max_len` sized to the sequence length (32/64/96 for core/300/splice).
 - **Metric:** MCC (GUE primary metric — robust to class imbalance and multi-class) + accuracy + macro-F1.
-- **Scope:** the 3 human promoter/splice datasets named in the brief (3 of 28 GUE datasets). Extending
-  to all 28 is a documented Phase-B/optional step (GPU/Brev).
+- **Scope:** the 3 human promoter/splice datasets named in the brief (3 of 28 GUE datasets).
 
 ## Reproducibility
 
@@ -63,8 +62,8 @@ per-task commands + results live in [tasks.md](tasks.md); dataset origins in
 The encrypted (FHE) DNAGPT path in Phase B must reproduce the **plaintext prediction**, not just the
 metric. So the per-example `results/runs/*_preds.csv` are the frozen acceptance oracle: for a chosen
 task and input, the encrypted output must match the recorded plaintext output within a declared
-tolerance (mirroring `../evo2`'s oracle→encrypted contract). The lightest task (GSR: 600 bp,
-single-token readout) is the natural first encrypted end-to-end target.
+tolerance. The lightest task (GSR: 600 bp, single-token readout) is the natural first encrypted
+end-to-end target.
 
 ## Known limitations (honest boundaries)
 

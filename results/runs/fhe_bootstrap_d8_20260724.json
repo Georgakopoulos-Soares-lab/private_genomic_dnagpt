@@ -1,0 +1,30 @@
+{
+  "schema_version": 1,
+  "task": "OpenFHE CKKS bootstrap refresh",
+  "measured_at_utc": "2026-07-24T14:04:54.902099+00:00",
+  "backend": "OpenFHE CKKS",
+  "security": "HEStd_128_classic",
+  "environment": "Docker linux/amd64 on Apple Silicon [emu]",
+  "config": {
+    "slots": 8,
+    "ring_dim": 131072,
+    "multiplicative_depth": 30,
+    "bootstrap_depth": 20,
+    "level_budget": [
+      3,
+      3
+    ]
+  },
+  "setup_keygen_s": 23.30358802200044,
+  "bootstrap_latency_emu_s": 53.81398902199999,
+  "level_before_bootstrap": 29,
+  "level_after_bootstrap": 19,
+  "levels_restored": 10,
+  "post_bootstrap_levels_consumed": 9,
+  "final_level": 28,
+  "max_abs_err": 1.669489841087113e-05,
+  "rel_inf": 2.5605671523124836e-05,
+  "tol": 0.04,
+  "final_decrypt_calls": 1,
+  "passed": true
+}

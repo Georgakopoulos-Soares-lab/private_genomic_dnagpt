@@ -1,0 +1,68 @@
+{
+  "id": "fhe_range_control_t2_12block_optimized_v2_20260724",
+  "status": "[V] PASS plaintext approximation simulation; [A] one-fixture public domains; not an FHE run",
+  "purpose": "Validate a fixed, ciphertext-evaluable nonlinear schedule through all 12 released DNAGPT blocks and the GSR head before an encrypted composition run.",
+  "config": {
+    "layers": 12,
+    "dimension": 768,
+    "heads": 12,
+    "token_count": 2,
+    "same_released_weights_and_model_semantics": true,
+    "public_domain_source": "one immutable public T=2 fixture with predeclared 1.25x outward margin",
+    "private_query_adaptation": false,
+    "clipping": false,
+    "acceptance_tol": 0.04
+  },
+  "schedule": {
+    "attention": "exact T=2 sigmoid(score_11-score_10) identity, then fixed Chebyshev approximation",
+    "layernorm": "public power-of-two variance scaling followed by fixed inverse-square-root polynomial",
+    "gelu": "full public-domain tanh-GELU polynomial including tails; no clipping",
+    "refresh_candidate": "one public block-boundary refresh after the narrow MLP down-projection/residual",
+    "per_block_nonlinear_depth_proxy_range": [
+      14,
+      24
+    ],
+    "depth_proxy_warning": "Excludes CKKS rescale, plaintext multiplication, rotations, relinearization, and bootstrap."
+  },
+  "metrics": {
+    "all_finite": true,
+    "domain_violation_count": 0,
+    "all_12_blocks_passed": true,
+    "head_passed": true,
+    "worst_block_global_rel_inf": 0.0010599503582224869,
+    "worst_block_global_rel_inf_block": 11,
+    "worst_block_worst_token_rel_inf": 0.00811735207135026,
+    "worst_block_worst_token_rel_inf_block": 11,
+    "worst_head_stage_global_rel_inf": 0.006184863059054598,
+    "reference_margin_n_minus_a": -4.669534131615688,
+    "approx_margin_n_minus_a": -4.650013510357489,
+    "classification_label_preserved": true
+  },
+  "isolated_ablations": {
+    "t2_sigmoid_identity_max_abs_error": 0.0,
+    "sigmoid_polynomial_max_abs_error": 9.72530822597184e-05,
+    "old_attention_denominator_max": 16891.851282969088,
+    "new_attention_probability_codomain": [
+      0.0,
+      1.0
+    ],
+    "public_scaled_inverse_sqrt_worst_relative_error": 2.5787977444291815e-05,
+    "tail_aware_gelu_worst_max_abs_error": 0.006867081073812735,
+    "legacy_gelu_domain_fails_blocks_1_through_11": true
+  },
+  "fixture": {
+    "manifest_sha256": "3c8d7bbcbfe62d9dc7f3fa89571396b93c3f92cb89563fa5cb4cd7b831bd5e4c",
+    "content_identity_sha256": "a0d7b07ab3c741e068dc4a5391998ace8f95fafcf893996708b1eab340204cd6",
+    "checkpoint_sha256": "d63353abdc1adba18e076b8f8b1ee9cc4d55f6948361324a825ea2245caf55f5",
+    "dataset_sha256": "52d046d1fcf0f03bbaa4b971a1baa6b3fdbe29bc576bcdea8fe28f619efd2f11"
+  },
+  "provenance": {
+    "full_result_path": "fhe/range_control/results/range_control_public_fixture_optimized_v2_PASS.json",
+    "full_result_sha256": "b148e30b42c430405a0a2c41401ab295701e0e1c3655ef00f06984ff9f8faba2",
+    "schedule_sha256": "ab5cc950226c9e07aea210d1bd8c08ec1145317db4d9c1cd7a32aa7b04e0a746",
+    "simulate_sha256": "bd5594cccb74eabc2c94089fd1bceb63b890c26783d374beb5d5f8c03f615dcd",
+    "tests_sha256": "c7917daa093468081608beb5d6a9643513ee30a6105ab9caa1f71418bb597f01",
+    "readme_sha256": "f42ea59030cf06c6e5c0363d18cad7d67814e1492779fd352110d352e4d346f5"
+  },
+  "boundary": "[V] The approximation schedule is numerically viable on this public T=2 fixture. [U] Broader public calibration, CKKS level realization, bootstrap composition, and task-representative sequence lengths remain."
+}
