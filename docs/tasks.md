@@ -451,3 +451,71 @@ decrypt/compute/re-encrypt at each boundary, and re-measure against the unchange
 Phase-A oracle and `4e-2` gate, recording round-trip count and the GPU-encrypted vs.
 client-plaintext wall-time split per Scheme B's acceptance contract in
 `docs/roadmap.md`.
+
+### Scheme B toy prototype (2026-07-25)
+
+`fhe/block/toy_block_ckks_scheme_b.py` (D=8, T=4, 2 heads) implements the
+`Client`/`EvalOnlyContext` protocol: the client holds the secret key and
+performs `cross_boundary()` decrypt/exact-compute/re-encrypt at LN1, the
+attention softmax, LN2, and GELU; the server-side context asserts zero
+decrypts. Two real bugs were found and fixed en route: (1) `DEPTH=24` landed
+in a needlessly expensive `ring_dim=131072` bucket for a measured max level of
+only 14-16 — reduced to `DEPTH=20` (`ring_dim=65536`); (2) OpenFHE's
+`EvalSum(ct, n)` is a sliding-window sum, not a per-block broadcast (only slot
+0 holds the true sum) — `sum_bcast()` now isolates slot 0 via a one-hot mask
+and replicates via rotation-doubling.
+
+```bash
+source .venv/bin/activate
+python fhe/block/toy_block_ckks_scheme_b.py
+```
+
+Evidence: `fhe_toy_block_scheme_b_native_cpu_20260725.json` — `[V]` PASS,
+`rel_inf=2.22e-12`, 16 client round trips (168 values crossed total), depth 20,
+`ring_dim=65536` (vs. Scheme A's toy at depth 49/`ring_dim=131072`). The
+1433s wall time is native CPU on a **heavily contended shared Brev host**
+(concurrently observed load average 1000-1460 throughout this session) and is
+explicitly not used as a GPU-extrapolation input.
+
+### Scheme B real D=768/T=2 GPU gate (2026-07-25)
+
+`fhe/gpu_real_scheme_b/src/real_dnagpt_fides_scheme_b.cpp` forks
+`fhe/gpu_real_sigmoid`'s FIDESlib source and replaces the three
+`EvalChebyshevSeries` calls (LN1/LN2 invsqrt, attention sigmoid, GELU x4) with
+genuine `Client::cross_boundary()` round trips, using the exact elementwise
+function instead of a calibrated-domain polynomial. Same released fixture,
+same packing, same `4e-2` oracle gate as Scheme A's `gpu_real_sigmoid` gates.
+No public per-block domain contract is needed (the client computes the exact
+function on the true decrypted value, whatever its magnitude).
+
+```bash
+FIDESLIB_ARCH=80-real BUILD_JOBS=4 fhe/gpu_real_scheme_b/build_in_fideslib.sh
+
+FIDES_CONTAINER_IMAGE=dnagpt-fideslib:786c-asymfix2 \
+FIDES_RUN_ENVIRONMENT='Brev A100-SXM4-80GB [gpu]' \
+fhe/gpu_real_scheme_b/run_scheme_b.sh 0 ln1 "$FIXTURE" \
+  /work/results/runs/fhe_fides_real_d768_t2_ln1_scheme_b_a100_20260725.json
+```
+
+Evidence: `fhe_fides_real_d768_t2_ln1_scheme_b_a100_20260725.json` — `[V]` PASS,
+`rel_inf=2.35e-10`, 2 round trips, `ring_dim=65536` at `multiplicative_depth=16`
+(vs. Scheme A's `ring_dim=131072` at depth 43 — LN1's segment level_max is only
+2, far below either budget, but Scheme B never needs to reserve depth for the
+*rest* of the block since every nonlinearity resets to level 0). The 2.41s
+`encrypted_evaluation_seconds_gpu` splits into `server_linear_algebra_seconds`
+(1.04s, GPU BSGS/mean/variance ops) and `client_boundary_seconds_total` (1.37s,
+2x decrypt+invsqrt+re-encrypt of a `SLOTS=4096` vector) — this split is the key
+input for reasoning about how much of Scheme B's cost is server-GPU vs.
+client-CPU-boundary work.
+
+`[U]` The `attention` and `full` gates were attempted the same session but the
+run was killed after 8.5+ minutes of CPU-bound rotation-key generation
+stalling under extreme host contention (load average ~1000-1127 on this
+255-core shared machine; the GPU itself was idle at 1% utilization) — for
+comparison, Scheme A's equivalent keygen took 25.9s on a presumably quieter
+host. `fhe/gpu_real_scheme_b/wait_and_run_scheme_b.sh` now runs detached on the
+Brev host, polling load average and GPU occupancy every 60s, and will launch
+both remaining gates unattended once capacity is available (log at
+`gpu_real_scheme_b_v1/fhe/gpu_real_scheme_b/scheme_b_orchestrator.log` on the
+host). The full-block-0-to-e2e Scheme B extrapolation is blocked on those two
+results — LN1 alone is too small a fraction of one block to extrapolate from.

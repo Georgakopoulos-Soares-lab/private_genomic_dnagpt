@@ -49,6 +49,8 @@ real, and it is what the paper cites.
 | `fhe_fides_gpu_multiblock_bisect_depth50_FAIL_20260724` | same two-block gate, depth 64->50 diagnostic bisection | `[V]` explicit CUDA OOM at `81131/81920 MiB`; supersedes the depth-64 diagnosis -- footprint doesn't fit one A100 regardless of depth |
 | `fhe_fides_gpu_multiblock_bisect_depth58_backtrace_FAIL_20260724` | same two-block gate, depth=58 symbolized backtrace + digits=2 side-experiment | `[V]` crash traced to `AddBootstrapPlaintexts -> GPUmalloc`, same code path as the depth-50 OOM; unifies all observed failure modes as one GPU-memory-footprint cause |
 | `fhe_fides_gpu_multiblock_multigpu_2gpu_sigsegv_setupconstants_FAIL_20260725` | two-block gate, first real 2-GPU sharding attempt | `[V]` fails closed with a distinct SIGSEGV inside FIDESlib's own multi-GPU `SetupConstants`/`ContextData` path (not OOM, not the depth50/58 code path); confirmed via `cuda-gdb` backtrace |
+| `fhe_toy_block_scheme_b_native_cpu_20260725` | Scheme B (hybrid) toy complete block | `[V]` pass, global `2.22e-12`, 16 client round trips, depth 20/`ring_dim` 65536 (vs Scheme A toy's depth 49/131072); `1433.4 s [native-cpu]` on a heavily contended shared host, not used for GPU extrapolation |
+| `fhe_fides_real_d768_t2_ln1_scheme_b_a100_20260725` | Scheme B (hybrid) real block-0 D768 LayerNorm | `[V]` pass, global `2.35e-10`, 2 client round trips, depth 16/`ring_dim` 65536 (vs Scheme A's depth 43/131072); `2.407 s [gpu]` total = `1.037 s` server GPU linear algebra + `1.370 s` client boundary crossings |
 
 The CPU and CUDA toy-block results are the current complete-graph arithmetic anchors.
 Their encrypted inputs begin after embedding, and their one final decrypt exists only
