@@ -83,18 +83,49 @@ gates are validated in isolation on the same activation fixture, not yet chained
 end-to-end from one continuous ciphertext.
 
 The `gpu_multiblock` CUDA module (block 0 -> public conditioning -> native encrypted
-bootstrap -> block 1, one lineage, one final decrypt, `multiplicative_depth=64`) is
-compiled, its fixture staged, and its own fail-closed launcher/scheduler now exist
-(`fhe/gpu_multiblock/launch_brev_multiblock.sh`, `schedule_multiblock_when_free.sh`).
-The first run crashes (`SIGSEGV`, exit 139) before its own first log line, i.e. inside
-context creation, bootstrap setup, or key generation at the deeper depth — before any
-encryption, decrypt, or evidence file
-(`fhe_fides_gpu_multiblock_blocks0_1_refresh_FAIL_20260724.json`). `[A]` The leading
-hypothesis is GPU memory pressure from the larger ring dimension a depth-64 context
-needs versus the depth-43 context that already succeeds for one block; this is not
-confirmed. `[U]` Instrumenting the module to log after each setup call (or running it
-under `cuda-memcheck`) to localize the crash is the next concrete step before retrying
-the two-block gate. After the two-block gate passes, increase sequence length.
+bootstrap -> block 1, one lineage, one final decrypt, `multiplicative_depth=64`,
+`large_digits=4` HYBRID key switching) is compiled, its fixture staged, and its own
+fail-closed launcher/scheduler now exist (`fhe/gpu_multiblock/launch_brev_multiblock.sh`,
+`schedule_multiblock_when_free.sh`). The first run crashes (`SIGSEGV`, exit 139) before
+its own first log line (`fhe_fides_gpu_multiblock_blocks0_1_refresh_FAIL_20260724.json`).
+
+Root-caused through a sequence of diagnostics, all on uncommitted local edits reverted
+after each test:
+
+1. Per-call setup logging (`std::unitbuf` plus a print after each of
+   `GenCryptoContext`/`Enable`/`EvalBootstrapSetup`/`KeyGen`/`EvalMultKeyGen`/
+   `EvalRotateKeyGen`/`EvalBootstrapKeyGen`/`LoadContext`/`Synchronize`) localized the
+   crash to inside `LoadContext`.
+2. `compute-sanitizer` memcheck reported zero device-memory errors, ruling out an
+   illegal GPU access; `strace`/`gdb`-based tracing is not viable on this binary
+   (CUDA's driver-internal signal handling produces a runaway `SIGSEGV` storm under
+   `ptrace`).
+3. Lowering `multiplicative_depth` to 50 (same `batch_slots=4096`, 63 rotation keys,
+   `large_digits=4`) got much further into `LoadContext` and failed with an explicit
+   CUDA allocation error at `81131/81920 MiB`
+   (`fhe_fides_gpu_multiblock_bisect_depth50_FAIL_20260724.json`).
+4. Lowering `large_digits` to 2 instead was an independent dead end: it crashed at the
+   same early point as the original `depth=64`/`large_digits=4` failure, at *both*
+   depth 64 and depth 50 -- `large_digits=2` is itself broken/incompatible with this
+   rotation-key configuration on this FIDESlib build, unrelated to memory.
+5. At `multiplicative_depth=58` (`large_digits=4`), `addr2line` on the crash backtrace
+   pinpointed the exact call chain: `AddBootstrapPlaintexts -> Plaintext::load ->
+   RNSPoly::loadConstant -> LimbPartition::generateLimbConstant -> Limb -> VectorGPU ->
+   GPUmalloc` (`fhe_fides_gpu_multiblock_bisect_depth58_backtrace_FAIL_20260724.json`)
+   -- the same bootstrap-precomputation-plaintext-loading code path that step 3 reached
+   and failed in cleanly.
+
+Unified conclusion: every failure across `multiplicative_depth` in `{50, 58, 64}` and
+`large_digits` in `{2, 4}` traces back to GPU memory exhaustion during rotation-key or
+bootstrap-precomputation-plaintext loading inside `LoadContext`. Which specific
+allocation fails first -- and whether FIDESlib reports it as a clean CUDA
+out-of-memory exception or crashes on an unchecked `GPUmalloc` -- depends on the exact
+configuration, but the underlying cause is the same: this context's total GPU memory
+footprint does not fit in one A100's 80GB. Tuning `multiplicative_depth` or
+`large_digits` alone cannot fix it. `[U]` A real fix needs fewer `batch_slots` and/or
+fewer rotation keys (the two levers that directly shrink the number/size of
+GPU-resident keys and plaintexts), or splitting the computation across multiple GPUs --
+none attempted yet. After the two-block gate passes, increase sequence length.
 
 The first full attempt is measured and retained as a failure: exp-plus-reciprocal
 attention creates a 13-level causal-branch gap, so token 1 needs packed level 46

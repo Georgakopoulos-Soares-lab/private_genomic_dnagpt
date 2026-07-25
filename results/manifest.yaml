@@ -542,6 +542,116 @@ runs:
       `EvalRotateKeyGen`/`EvalBootstrapKeyGen`) or a `cuda-memcheck` run
       before the two-block gate can be retried.
 
+  - id: fhe_fides_gpu_multiblock_bisect_depth50_FAIL_20260724
+    task: "Diagnostic bisection of the two-block gate crash: same context, multiplicative_depth lowered 64->50"
+    status: "[V] FAIL: explicit CUDA out-of-memory (not a silent crash)"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 4 [gpu]"
+    config:
+      multiplicative_depth: 50
+      batch_slots: 4096
+      rotation_keys: 63
+      note: "diagnostic-only source edit, not a pinned/committed configuration; committed depth=64 source was restored and redeployed immediately after"
+    observed:
+      failure_message: "Cuda failure /opt/FIDESlib/src/CudaUtils.cu:400: 'out of memory'"
+      gpu_memory_used_at_failure_mib: 81131
+      gpu_memory_total_mib: 81920
+    provenance:
+      result_sha256: "c0a77cbad20444a9aab9c9b6aa97ae722ac2bae8265d662fef61c86ae0e376a0"
+      log_sha256: "a3136a6aadae32b16000b50855f0196a8ecc22c1d93d123d4ce08078c63ced5d"
+      committed_source_sha256_restored_after_test: "605f5b8d1b7c64842524a7f7fc48ee8716524be5870b2fe8cb0a08d666431d92"
+      container_image_sha256: "8dfa77fa298472824a86414efdc6a5d14c4fa57bce3447b61b9893fe37d547a4"
+    verdict: >
+      [V] This supersedes the diagnosis in
+      fhe_fides_gpu_multiblock_blocks0_1_refresh_FAIL_20260724, which ruled out
+      GPU memory exhaustion from a ~2GB peak-usage measurement at depth=64.
+      That measurement was real but misleading: the depth=64 run's SIGSEGV
+      happens so early that it never reaches the expensive allocations. At
+      depth=50, the identical context (batch_slots=4096, 63 rotation keys,
+      dnum=2 HYBRID key switching) gets much further into `LoadContext` and
+      fails with an explicit, cleanly-checked CUDA allocation error at ~81GB
+      used out of 81920 MiB total. The corrected root cause: this two-block
+      context's GPU memory footprint does not fit in one A100's 80GB
+      regardless of depth in the 50-64 range; lowering multiplicative_depth
+      alone is not a fix. `[U]` Fitting it requires cutting batch_slots
+      and/or the rotation-key count, changing key-switching digits, or
+      splitting the computation across multiple GPUs -- none attempted yet.
+
+  - id: fhe_fides_gpu_multiblock_bisect_depth58_backtrace_FAIL_20260724
+    task: "Second bisection point for the two-block gate crash: depth=58 symbolized backtrace, plus a LARGE_DIGITS=2 side-experiment"
+    status: "[V] FAIL: unified root cause confirmed"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 4 [gpu]"
+    config:
+      multiplicative_depth: 58
+      batch_slots: 4096
+      rotation_keys: 63
+      large_digits: 4
+      note: "diagnostic-only source edits, not a pinned/committed configuration; committed depth=64/large_digits=4 source was restored and redeployed after"
+    observed:
+      failure_message: "munmap_chunk(): invalid pointer"
+      crash_call_chain: "AddBootstrapPlaintexts -> Plaintext::load -> RNSPoly::loadConstant -> LimbPartition::generateLimbConstant -> Limb -> VectorGPU -> GPUmalloc"
+    provenance:
+      result_sha256: "cd3b23b7f2cb8b5abcc14fd78a37ce8c6eb7296dd2dc318ae11e8531a25b1f19"
+      committed_source_sha256_restored_after_test: "605f5b8d1b7c64842524a7f7fc48ee8716524be5870b2fe8cb0a08d666431d92"
+      container_image_sha256: "8dfa77fa298472824a86414efdc6a5d14c4fa57bce3447b61b9893fe37d547a4"
+    verdict: >
+      [V] addr2line-symbolized backtrace shows the depth=58 crash happens in
+      FIDESlib's AddBootstrapPlaintexts -> ... -> GPUmalloc chain, the exact
+      code path that fhe_fides_gpu_multiblock_bisect_depth50_FAIL_20260724
+      reached and failed in cleanly (explicit CUDA out-of-memory at
+      81131/81920 MiB). A LARGE_DIGITS 4->2 side-experiment at both depth 64
+      and depth 50 crashed at the same earlier point as depth=64/digits=4 in
+      both cases, and is independently broken (abandoned as a lever). Unified
+      conclusion across every configuration tested (depth in {50, 58, 64},
+      large_digits in {2, 4}): all failures trace back to GPU memory
+      exhaustion during rotation-key or bootstrap-precomputation-plaintext
+      loading inside LoadContext. Which exact allocation fails first (and
+      whether FIDESlib reports it cleanly or crashes on an unchecked
+      GPUmalloc) depends on the specific configuration, but the underlying
+      cause is the same: this context's total memory footprint does not fit
+      one A100's 80GB. `[U]` A real fix needs fewer batch_slots and/or fewer
+      rotation keys, or multi-GPU sharding; depth/digit tuning alone cannot
+      resolve it.
+
+  - id: fhe_fides_gpu_multiblock_multigpu_2gpu_sigsegv_setupconstants_FAIL_20260725
+    task: "First real test of FIDESlib multi-GPU device sharding as a lever for the two-block gate; --gpu extended to accept a comma-separated device list"
+    status: "[V] FAIL: symbolized SIGSEGV inside FIDESlib's own multi-GPU ContextData/SetupConstants construction path"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPUs 5,6 (container-relative 0,1) [gpu]"
+    config:
+      multiplicative_depth: 64
+      batch_slots: 4096
+      rotation_keys: 63
+      large_digits: 4
+      gpu_count: 2
+      note: "committed single-GPU configuration unchanged; only --gpu given a 2-element device list"
+    observed:
+      failure_message: "SIGSEGV, exit 139; peak ~8.7 GiB/GPU at crash time (not OOM)"
+      crash_call_chain: "main -> LoadContext -> GenCryptoContextGPU -> ContextData::ContextData(devices) -> SetupConstants -> cudaMemcpy -> cuMemcpyHtoD_v2"
+    provenance:
+      result_sha256: "a9760f5c9986e763c7aa988686fb0f386b3ceeb75ecefba85f58276ee88b964a"
+      committed_source_sha256: "5c7570ef57844b5b604cb0f20d803295bad8662bc581f26066e6734998394a67"
+      container_image_sha256: "8dfa77fa298472824a86414efdc6a5d14c4fa57bce3447b61b9893fe37d547a4"
+    verdict: >
+      [V] Not GPU memory exhaustion (only ~8.7 GiB/GPU in use) and not the same
+      code path as the single-GPU depth50/depth58 OOM/heap-corruption
+      diagnoses (AddBootstrapPlaintexts -> ... -> GPUmalloc). This is a
+      distinct, earlier SIGSEGV inside FIDESlib::SetupConstants, called from
+      the multi-device ContextData constructor during a cudaMemcpyHostToDevice,
+      confirmed via a clean cuda-gdb backtrace (cuda-gdb succeeded where plain
+      gdb/strace previously did not, per the depth58 run's ptrace-SIGSEGV-storm
+      note). Consistent with the prior risk flag that FIDESlib's own examples
+      and tests only ever use devices={0}: this is a genuine, previously
+      unexercised bug or unmet precondition in FIDESlib's multi-GPU
+      device-context setup itself, not a DNAGPT configuration or sizing
+      problem. `[U]` Root-causing the exact faulting cudaMemcpy needs a debug
+      FIDESlib build for line-level symbols or a compute-sanitizer pass,
+      neither attempted yet. Multi-GPU sharding is not a usable lever for the
+      two-block gate until this is fixed or worked around upstream; reducing
+      batch_slots/rotation-key count on a single GPU remains the more
+      tractable path.
+
   - id: fhe_measured_t2_attention_boundary_20260724
     task: "Derived 12-block D768/T2 attention-only runtime boundary"
     status: "[A] measured-input derivation; not a 12-block encrypted run"

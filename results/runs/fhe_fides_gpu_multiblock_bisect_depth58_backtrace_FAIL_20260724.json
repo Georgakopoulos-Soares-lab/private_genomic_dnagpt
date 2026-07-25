@@ -1,0 +1,44 @@
+{
+  "id": "fhe_fides_gpu_multiblock_bisect_depth58_backtrace_FAIL_20260724",
+  "status": "[V] FAIL: symbolized heap-corruption crash, same allocation path as the depth=50 clean OOM",
+  "task": "Second diagnostic bisection point for fhe_fides_gpu_multiblock_blocks0_1_refresh_FAIL_20260724 -- same two-block module and fixture, multiplicative_depth=58 (between the working-past-LoadContext depth=50 and the immediately-crashing depth=64), plus a LARGE_DIGITS=2 side-experiment at depth=64 and depth=50",
+  "backend": "FIDESlib CKKS/CUDA asymfix2",
+  "environment": "Brev A100-SXM4-80GB physical GPU 4 [gpu]",
+  "config": {
+    "dimension": 768,
+    "sequence_length": 2,
+    "multiplicative_depth": 58,
+    "scale_bits": 59,
+    "first_mod_bits": 60,
+    "batch_slots": 4096,
+    "rotation_keys": 63,
+    "large_digits": 4,
+    "note": "Not a pinned/committed configuration. dnagpt_two_block_fides.cpp was locally edited (MULT_DEPTH 64 -> 58) for this test, rebuilt, run, then reverted; the committed source (multiplicative_depth=64, large_digits=4) was restored and redeployed immediately after."
+  },
+  "observed": {
+    "failure_message": "munmap_chunk(): invalid pointer",
+    "backtrace_symbolized_via_addr2line": [
+      "FIDESlib::GPUmalloc(int, int, CUstream_st*, bool)",
+      "FIDESlib::VectorGPU<unsigned long>::VectorGPU(FIDESlib::Stream&, int, int, unsigned long const*)",
+      "FIDESlib::CKKS::Limb<unsigned long>::Limb(FIDESlib::CKKS::ContextData&, int, FIDESlib::Stream&, int, bool)",
+      "FIDESlib::CKKS::LimbPartition::generate(...)",
+      "FIDESlib::CKKS::LimbPartition::generateLimbConstant()",
+      "FIDESlib::CKKS::RNSPoly::grow(int, bool, bool)",
+      "FIDESlib::CKKS::RNSPoly::loadConstant(...)",
+      "FIDESlib::CKKS::Plaintext::load(FIDESlib::CKKS::RawPlainText const&)",
+      "FIDESlib::CKKS::Plaintext::Plaintext(std::shared_ptr<FIDESlib::CKKS::ContextData>&, FIDESlib::CKKS::RawPlainText const&)",
+      "FIDESlib::CKKS::AddBootstrapPlaintexts(...)"
+    ]
+  },
+  "auxiliary_experiment": {
+    "description": "LARGE_DIGITS lowered 4 -> 2 at both multiplicative_depth=64 and multiplicative_depth=50, as a separate lower-memory attempt",
+    "depth_64_digits_2": "crashed at the exact same early point as depth=64/digits=4 (SIGSEGV, ~2.4GB peak, no bootstrap-precomputation progress line)",
+    "depth_50_digits_2": "crashed at that same early point too (~27.6GB peak, still no bootstrap-precomputation progress line), unlike depth_50/digits_4 which got past that point entirely",
+    "conclusion": "LARGE_DIGITS=2 is independently broken/incompatible with this rotation-key configuration on this FIDESlib build and was abandoned as a lever; reverted to the committed large_digits=4."
+  },
+  "verdict": "[V] AddBootstrapPlaintexts -> Plaintext::load -> RNSPoly::loadConstant -> LimbPartition::generateLimbConstant -> Limb construction -> VectorGPU -> GPUmalloc is the exact call chain that fails, at depth=58, via heap corruption (munmap_chunk) rather than a clean CUDA error. This is the SAME code path (bootstrap-precomputation plaintext loading) that fhe_fides_gpu_multiblock_bisect_depth50_FAIL_20260724 reached and failed in cleanly (an explicit 'Cuda failure ... out of memory' at 81131/81920 MiB). Combined with the depth=64 SIGSEGV (which dies even earlier, before this stage, at only ~2GB peak) and the LARGE_DIGITS=2 side-experiment (independently broken, unrelated to this analysis), the unified picture is: every failure mode observed across depth in {50, 58, 64} and large_digits in {2, 4} traces back to GPU memory exhaustion somewhere in the rotation-key or bootstrap-precomputation-plaintext loading sequence inside LoadContext. Which specific allocation call fails first -- and whether FIDESlib's error handling at that exact call site produces a clean 'out of memory' exception or an unchecked GPUmalloc failure that corrupts the heap -- depends on the exact depth/digit/slot configuration, but the underlying cause is the same: this two-block context's total GPU memory footprint does not fit in one A100's 80GB. [U] A real fix requires reducing batch_slots and/or the rotation-key count (the two levers that directly shrink the number and size of GPU-resident keys/plaintexts), or splitting the computation across multiple GPUs. Lowering multiplicative_depth alone, or lowering large_digits alone, does not resolve it and in the large_digits=2 case introduces its own separate breakage.",
+  "provenance": {
+    "committed_source_sha256_restored_after_test": "605f5b8d1b7c64842524a7f7fc48ee8716524be5870b2fe8cb0a08d666431d92",
+    "container_image_sha256": "8dfa77fa298472824a86414efdc6a5d14c4fa57bce3447b61b9893fe37d547a4"
+  }
+}

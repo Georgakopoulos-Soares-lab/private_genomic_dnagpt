@@ -1,0 +1,39 @@
+{
+  "id": "fhe_fides_gpu_multiblock_multigpu_2gpu_sigsegv_setupconstants_FAIL_20260725",
+  "status": "[V] FAIL: symbolized SIGSEGV inside FIDESlib's own multi-GPU ContextData/SetupConstants construction path",
+  "task": "First real test of FIDESlib multi-GPU device sharding as a lever for the two-block gate (fhe_fides_gpu_multiblock_blocks0_1_refresh_FAIL_20260724 and its single-GPU OOM/heap-corruption diagnoses in the depth50/depth58 bisection runs). CLI, launcher, and scheduler were extended to accept a comma-separated GPU list (--gpu N[,N...], SetDevices({N,...})) and reserve/launch on 2 physical GPUs atomically; this run exercises that path for the first time on real hardware.",
+  "backend": "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic",
+  "environment": "Brev A100-SXM4-80GB physical GPUs 5,6 (container-relative 0,1) [gpu]",
+  "config": {
+    "dimension": 768,
+    "sequence_length": 2,
+    "multiplicative_depth": 64,
+    "scale_bits": 59,
+    "first_mod_bits": 60,
+    "batch_slots": 4096,
+    "rotation_keys": 63,
+    "large_digits": 4,
+    "gpu_count": 2,
+    "note": "Committed source unchanged from the pinned single-GPU configuration; only --gpu was given a 2-element device list. No depth/digit/slot tuning in this run."
+  },
+  "observed": {
+    "setup_progress": "GenCryptoContext, Enable(...), EvalBootstrapSetup, KeyGen, EvalMultKeyGen, EvalRotateKeyGen (63 keys), EvalBootstrapKeyGen all completed; both GPU 0 and GPU 1 device banners printed (both physical devices enumerated correctly) before the crash",
+    "failure_message": "SIGSEGV, exit code 139 (via nohup wrapper); peak VRAM only ~8.7 GiB per GPU at time of crash, ruling out OOM",
+    "backtrace_symbolized_via_cuda_gdb": [
+      "main()",
+      "fideslib::CryptoContextImpl<unsigned int>::LoadContext(std::shared_ptr<fideslib::PublicKeyImpl<unsigned int>> const&)",
+      "FIDESlib::CKKS::GenCryptoContextGPU(FIDESlib::CKKS::Parameters const&, std::vector<int> const&)",
+      "FIDESlib::CKKS::ContextData::ContextData(FIDESlib::CKKS::Parameters const&, std::vector<int> const&, int)",
+      "FIDESlib::SetupConstants<FIDESlib::CKKS::Parameters>(...)",
+      "cudaMemcpy() -> cuMemcpyHtoD_v2() [libcuda.so.1]"
+    ],
+    "diagnostic_method": "cuda-gdb --batch -ex run -ex 'thread apply all bt', invoked directly against the rebuilt multi-GPU binary inside the pinned dnagpt-fideslib:786c-asymfix2 container with --gpus '\"device=5,6\"'. Plain gdb/strace were previously reported non-viable on this binary (SIGSEGV storm under ptrace, per fhe_fides_gpu_multiblock_bisect_depth58_backtrace_FAIL_20260724's task note); cuda-gdb worked cleanly and produced one clean SIGSEGV with a stable, reproducible backtrace on the main thread among ~291 total threads (OpenMP worker pool)."
+  },
+  "verdict": "[V] The crash is not GPU memory exhaustion (only ~8.7 GiB/GPU in use, far below 80GB) and is not the same code path as the single-GPU depth50/depth58 OOM/heap-corruption diagnoses (AddBootstrapPlaintexts -> ... -> GPUmalloc). It is a distinct, earlier failure inside FIDESlib::SetupConstants, called from the multi-device ContextData constructor with a 2-element devices vector, during a cudaMemcpyHostToDevice. This is consistent with the prior risk assessment that FIDESlib's own examples and test suite only ever exercise devices={0} and never a real multi-GPU device list -- this is a genuine, previously-unexercised bug or unmet precondition in FIDESlib's multi-GPU device-context setup itself, not a configuration or memory-sizing problem on the DNAGPT side. `[U]` Root-causing the exact faulting cudaMemcpy call requires either a debug (non-Release) FIDESlib build for line-level symbols, or a `compute-sanitizer`/`cuda-memcheck` pass, neither attempted yet. Multi-GPU sharding is not a usable lever for the two-block gate until this is fixed upstream or worked around (e.g. explicit per-device stream/context serialization around SetupConstants); reverting to reducing batch_slots/rotation-key count remains the more tractable single-GPU-only path.",
+  "provenance": {
+    "committed_source_sha256": "5c7570ef57844b5b604cb0f20d803295bad8662bc581f26066e6734998394a67",
+    "container_image_sha256": "8dfa77fa298472824a86414efdc6a5d14c4fa57bce3447b61b9893fe37d547a4",
+    "fideslib_commit": "786c7600fb2f16b724e0acf73df367b27b8afed6",
+    "docker_gpus_flag_note": "Docker 29.3.1 / nvidia-container-toolkit 1.18.1 rejects a bare '--gpus device=5,6' with 'cannot set both Count and DeviceIDs on device request'; requires nested-quoted '--gpus \"\\\"device=5,6\\\"\"' so Docker's own CSV parser treats the comma-separated list as one value. launch_brev_multiblock.sh was fixed accordingly before this run."
+  }
+}

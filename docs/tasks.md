@@ -324,14 +324,64 @@ fhe/gpu_multiblock/schedule_multiblock_when_free.sh \
 ```
 
 Result: `fhe_fides_gpu_multiblock_blocks0_1_refresh_FAIL_20260724.json` — `[V]` FAIL.
-The module crashes (`SIGSEGV`, exit `139`) strictly between the CUDA device banner and
-its own first log line — i.e. inside context creation, bootstrap setup, or key
-generation at `multiplicative_depth=64` — before any encryption, decrypt, or evidence
-write. `dmesg`/`journalctl` on the host show no OOM-killer or Xid entry at the crash
-time. `[A]` The leading hypothesis is GPU memory pressure from the larger ring
-dimension a depth-64 context needs, since the depth-43 context for one block already
-succeeds on the same hardware; this is not confirmed. `[U]` Localizing the crash needs
-per-call instrumentation or a `cuda-memcheck` run before retrying.
+The module crashed (`SIGSEGV`, exit `139`) strictly between the CUDA device banner and
+its own first log line.
+
+Root-caused via a sequence of diagnostics, all uncommitted local edits reverted after
+each test: (1) per-call setup logging (`std::unitbuf` plus a print after each of
+`GenCryptoContext`/`Enable`/`EvalBootstrapSetup`/`KeyGen`/`EvalMultKeyGen`/
+`EvalRotateKeyGen`/`EvalBootstrapKeyGen`/`LoadContext`/`Synchronize`) localized the
+crash to inside `LoadContext`, reproducibly; (2) `compute-sanitizer --tool memcheck`
+reported zero device-memory errors, ruling out an illegal GPU access; (3) lowering
+`multiplicative_depth` to 50 (`large_digits=4` unchanged) got much further into
+`LoadContext` and failed with an explicit `Cuda failure ... 'out of memory'` at
+`81131/81920 MiB` — see `fhe_fides_gpu_multiblock_bisect_depth50_FAIL_20260724.json`;
+(4) lowering `large_digits` to 2 instead was an independent dead end — it crashed at
+the same early point as the original failure at *both* depth 64 and depth 50, i.e.
+`large_digits=2` is itself broken/incompatible with this rotation-key configuration,
+unrelated to memory; (5) at `multiplicative_depth=58` (`large_digits=4`), `addr2line`
+on the crash backtrace pinpointed the exact call chain —
+`AddBootstrapPlaintexts -> Plaintext::load -> RNSPoly::loadConstant ->
+LimbPartition::generateLimbConstant -> Limb -> VectorGPU -> GPUmalloc` — the same
+bootstrap-precomputation-plaintext-loading path that step (3) reached and failed in
+cleanly. See
+`fhe_fides_gpu_multiblock_bisect_depth58_backtrace_FAIL_20260724.json`.
+
+This supersedes the original record's "GPU memory pressure, unconfirmed" hypothesis:
+the depth=64 run's ~2GB peak-usage measurement was real but misleading, since it
+crashes before reaching the expensive allocations at all. The confirmed root cause is
+that this context's memory footprint (`batch_slots=4096`, 63 rotation keys,
+`large_digits=4` HYBRID key switching) does not fit in one A100's 80GB regardless of
+depth in the 50-64 range or digit count; tuning `multiplicative_depth` or
+`large_digits` alone does not fix it. Plain `strace`/`gdb` was not viable on this
+binary (`ptrace` fights CUDA's driver-internal signal handling and produces a runaway
+`SIGSEGV` storm); `cuda-gdb` (below) does not have this problem. `[U]` Fitting the
+gate on one GPU needs fewer `batch_slots` and/or fewer rotation keys, or multi-GPU
+sharding.
+
+**Multi-GPU sharding attempt (2026-07-25):** `--gpu` was extended end-to-end
+(CLI parsing, `SetDevices`, the launcher, and the scheduler) to accept a
+comma-separated device list and reserve/launch on N GPUs atomically. The first
+real run on 2 physical A100s (`fhe_fides_gpu_multiblock_multigpu_2gpu_sigsegv_setupconstants_FAIL_20260725.json`)
+got further than every single-GPU attempt — both device banners printed, i.e.
+per-device context enumeration succeeded — then crashed with a **different**
+`SIGSEGV`, confirmed via a clean `cuda-gdb --batch -ex run -ex 'thread apply all
+bt'` backtrace: `main -> LoadContext -> GenCryptoContextGPU ->
+ContextData::ContextData(devices) -> FIDESlib::SetupConstants -> cudaMemcpy ->
+cuMemcpyHtoD_v2`, at only ~8.7 GiB/GPU (not OOM, and not the
+`AddBootstrapPlaintexts` path above). This matches the standing risk flag that
+FIDESlib's own examples and tests never exercise a real multi-GPU device list —
+`SetupConstants`'s multi-device construction path itself appears to have a
+genuine, previously-unexercised bug. `[U]` Multi-GPU sharding is not usable as
+a lever until this is root-caused (needs a debug FIDESlib build or
+`compute-sanitizer`) or worked around upstream; reducing `batch_slots`/rotation
+keys on a single GPU remains the more tractable path for now.
+
+**Docker CLI note:** Docker 29.3.1 / nvidia-container-toolkit 1.18.1 rejects a
+bare `--gpus device=5,6` with `"cannot set both Count and DeviceIDs on device
+request"`; it requires the value nested in a literal extra quote pair
+(`--gpus '"device=5,6"'`) so Docker's own CSV parser treats the whole
+comma-separated list as one value. `launch_brev_multiblock.sh` encodes this.
 
 ### Native GPU bootstrap refresh gate
 

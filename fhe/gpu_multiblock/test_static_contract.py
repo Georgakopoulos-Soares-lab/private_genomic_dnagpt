@@ -118,13 +118,13 @@ class TwoBlockStaticContractTests(unittest.TestCase):
         self.assertIn("run_two_block.sh", launcher)
         self.assertIn('"_blocks0_1_refresh_"', launcher)
         self.assertIn("--query-compute-apps=gpu_uuid", launcher)
-        self.assertIn("COMPUTE_PROCESS_COUNT != 0", launcher)
+        self.assertIn("compute_process_count != 0", launcher)
         self.assertIn("refusing to overwrite", launcher)
         self.assertIn("--query-compute-apps=gpu_uuid", scheduler)
         self.assertIn("REQUIRED_STABLE_POLLS=2", scheduler)
         self.assertIn("memory_mib < 100", scheduler)
         self.assertIn("/tmp/dnagpt-fhe-gpu-${gpu}.lock", scheduler)
-        self.assertIn("trap cleanup_lock EXIT", scheduler)
+        self.assertIn("trap cleanup_locks EXIT", scheduler)
         self.assertIn("launch_brev_multiblock.sh", scheduler)
 
 

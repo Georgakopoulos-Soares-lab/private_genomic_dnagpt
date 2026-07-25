@@ -1,0 +1,30 @@
+{
+  "id": "fhe_fides_gpu_multiblock_bisect_depth50_FAIL_20260724",
+  "status": "[V] FAIL: explicit CUDA out-of-memory, not a silent crash",
+  "task": "Diagnostic bisection of fhe_fides_gpu_multiblock_blocks0_1_refresh_FAIL_20260724 -- same two-block module and fixture, multiplicative_depth temporarily lowered from 64 to 50 to test whether the crash is depth-dependent",
+  "backend": "FIDESlib CKKS/CUDA asymfix2",
+  "environment": "Brev A100-SXM4-80GB physical GPU 4 [gpu]",
+  "config": {
+    "dimension": 768,
+    "sequence_length": 2,
+    "multiplicative_depth": 50,
+    "scale_bits": 59,
+    "first_mod_bits": 60,
+    "batch_slots": 4096,
+    "rotation_keys": 63,
+    "note": "Not a pinned/committed configuration. dnagpt_two_block_fides.cpp was locally edited (MULT_DEPTH 64 -> 50), rebuilt, and run purely as a diagnostic; the committed source (multiplicative_depth=64) was restored and redeployed immediately after this test."
+  },
+  "observed": {
+    "setup_stage_reached": "past EvalBootstrapKeyGen; into LoadContext's bootstrap-precomputation upload ('Adding bootstrap precomputation to GPU for 4096 slots.', 'Plaintexts loaded: 120 ~ 13080MB')",
+    "failure_message": "Cuda failure /opt/FIDESlib/src/CudaUtils.cu:400: 'out of memory'",
+    "gpu_memory_used_at_failure_mib": 81131,
+    "gpu_memory_total_mib": 81920,
+    "process_exit_signal": "none (clean C++ exception path, unlike the depth=64 SIGSEGV)"
+  },
+  "verdict": "[V] At multiplicative_depth=50 the same two-block context (batch_slots=4096, 63 rotation keys, dnum=2 HYBRID key switching) reaches much further into FIDESlib's LoadContext than at depth=64 -- it prints its own bootstrap-precomputation-loading progress lines and then fails with an explicit, cleanly-checked CUDA allocation error at ~81GB used (of 81920 MiB total), rather than the unexplained SIGSEGV seen at depth=64 (fhe_fides_gpu_multiblock_blocks0_1_refresh_FAIL_20260724.json). This supersedes that record's diagnosis, which had ruled out GPU memory exhaustion based on a peak-usage measurement of only ~2GB during the depth=64 run: that measurement was real but misleading, because the depth=64 run crashes so much earlier (before any of LoadContext's own progress output) that it never reaches the large allocations at all. The corrected diagnosis: this two-block context's GPU memory footprint -- driven by batch_slots=4096 and 63 rotation keys under HYBRID key switching with dnum=2 -- does not fit in one A100's 80GB regardless of exact depth in the 50-64 range tested. Lowering multiplicative_depth alone is not a fix. [U] Reducing the memory footprint requires cutting batch_slots and/or the rotation-key count (e.g. a smaller BSGS rotation set), switching key-switching technique/digit count, or splitting the computation across multiple GPUs -- not yet attempted.",
+  "provenance": {
+    "log_sha256": "a3136a6aadae32b16000b50855f0196a8ecc22c1d93d123d4ce08078c63ced5d",
+    "committed_source_sha256_restored_after_test": "605f5b8d1b7c64842524a7f7fc48ee8716524be5870b2fe8cb0a08d666431d92",
+    "container_image_sha256": "8dfa77fa298472824a86414efdc6a5d14c4fa57bce3447b61b9893fe37d547a4"
+  }
+}

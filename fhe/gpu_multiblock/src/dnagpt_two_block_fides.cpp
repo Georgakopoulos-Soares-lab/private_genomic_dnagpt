@@ -168,8 +168,21 @@ std::string json_escape(std::string_view value) {
     return out.str();
 }
 
+std::string json_int_array(const std::vector<int>& values) {
+    std::ostringstream out;
+    out << "[";
+    for (std::size_t i = 0; i < values.size(); ++i) {
+        if (i) {
+            out << ", ";
+        }
+        out << values[i];
+    }
+    out << "]";
+    return out.str();
+}
+
 struct Options {
-    int gpu = 0;
+    std::vector<int> gpus = {0};
     std::filesystem::path fixture_dir;
     std::filesystem::path output;
     std::string backend_commit = std::string(PINNED_FIDES_COMMIT);
@@ -184,11 +197,27 @@ struct Options {
 [[noreturn]] void usage_error(const std::string& message) {
     throw std::invalid_argument(
         message +
-        "\nusage: dnagpt_two_block_fides --gpu N "
+        "\nusage: dnagpt_two_block_fides --gpu N[,N...] "
         "--fixture-dir PATH --output PATH --fixture-manifest-sha256 SHA "
         "--range-control-sha256 SHA "
         "[--backend-commit SHA] [--container-image NAME] [--environment TEXT] "
         "[--source-sha256 SHA] [--fixture-contract-sha256 SHA]");
+}
+
+std::vector<int> parse_gpu_list(const std::string& value) {
+    std::vector<int> gpus;
+    std::stringstream stream(value);
+    std::string token;
+    while (std::getline(stream, token, ',')) {
+        if (token.empty()) {
+            usage_error("--gpu has an empty entry in '" + value + "'");
+        }
+        gpus.push_back(std::stoi(token));
+    }
+    if (gpus.empty()) {
+        usage_error("--gpu must list at least one device");
+    }
+    return gpus;
 }
 
 Options parse_options(int argc, char** argv) {
@@ -202,7 +231,7 @@ Options parse_options(int argc, char** argv) {
             return argv[i];
         };
         if (arg == "--gpu") {
-            options.gpu = std::stoi(next());
+            options.gpus = parse_gpu_list(next());
         } else if (arg == "--fixture-dir") {
             options.fixture_dir = next();
         } else if (arg == "--output") {
@@ -222,7 +251,7 @@ Options parse_options(int argc, char** argv) {
         } else if (arg == "--source-sha256") {
             options.source_sha256 = next();
         } else if (arg == "--help" || arg == "-h") {
-            std::cout << "usage: dnagpt_two_block_fides --gpu N "
+            std::cout << "usage: dnagpt_two_block_fides --gpu N[,N...] "
                          "--fixture-dir PATH --output PATH "
                          "--fixture-manifest-sha256 SHA "
                          "--range-control-sha256 SHA\n";
@@ -231,8 +260,10 @@ Options parse_options(int argc, char** argv) {
             usage_error("unknown option: " + arg);
         }
     }
-    if (options.gpu < 0) {
-        usage_error("--gpu must be non-negative");
+    for (const int gpu : options.gpus) {
+        if (gpu < 0) {
+            usage_error("--gpu entries must be non-negative");
+        }
     }
     if (options.fixture_dir.empty() || options.output.empty()) {
         usage_error("--fixture-dir and --output are required");
@@ -947,7 +978,7 @@ std::string make_json(const Options& options, std::uint32_t ring,
         << "  \"container_image\": \"" << json_escape(options.container_image)
         << "\",\n"
         << "  \"environment\": \"" << json_escape(options.environment) << "\",\n"
-        << "  \"gpu\": " << options.gpu << ",\n"
+        << "  \"gpu\": " << json_int_array(options.gpus) << ",\n"
         << "  \"security\": \"HEStd_128_classic\",\n"
         << "  \"source_sha256\": \"" << json_escape(options.source_sha256)
         << "\",\n"
@@ -1151,7 +1182,7 @@ int main(int argc, char** argv) {
         parameters.SetKeySwitchTechnique(HYBRID);
         parameters.SetNumLargeDigits(LARGE_DIGITS);
         parameters.SetBatchSize(SLOTS);
-        parameters.SetDevices({options.gpu});
+        parameters.SetDevices(std::vector(options.gpus));
         parameters.SetPlaintextAutoload(false);
         parameters.SetCiphertextAutoload(true);
 
@@ -1186,7 +1217,7 @@ int main(int argc, char** argv) {
         std::cout << "[context] security=HEStd_128_classic ring=" << ring
                   << " depth=" << MULT_DEPTH << " slots=" << SLOTS
                   << " rotation_keys=" << rotation_keys.size()
-                  << " gpu=" << options.gpu << '\n';
+                  << " gpu=" << json_int_array(options.gpus) << '\n';
 
         const auto encryption_start = Clock::now();
         std::array<Ct, T> encrypted_inputs{};
