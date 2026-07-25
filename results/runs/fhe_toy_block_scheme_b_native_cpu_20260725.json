@@ -1,0 +1,151 @@
+{
+  "schema_version": 1,
+  "scheme": "B",
+  "task": "FHE toy DNAGPT block (CKKS/OpenFHE), hybrid client-assisted",
+  "measured_at_utc": "2026-07-25T11:05:26.789777+00:00",
+  "backend": "OpenFHE CKKS",
+  "security": "HEStd_128_classic",
+  "environment": "Brev A100 host, native x86_64 CPU (dnagpt-openfhe:20260724)",
+  "provenance": {
+    "script_sha256": "73475eacb03ea36b057a52f84ace40dd8895c8cadfebe743725eabf1e0e9e30f",
+    "oracle_sha256": "fe1c12a76a67ff7628fc09bf6424f1aa0a19ca612f487d27970c1dfa98088027",
+    "container_image": "dnagpt-openfhe:20260724",
+    "openfhe_version": "1.5.1.0.24.4",
+    "numpy_version": "2.5.1",
+    "python_version": "3.12.3"
+  },
+  "config": {
+    "D": 8,
+    "T": 4,
+    "heads": 2,
+    "ring_dim": 65536,
+    "batch_slots": 32,
+    "mult_depth": 20,
+    "levels_before_readout": [
+      12,
+      12,
+      12,
+      12
+    ],
+    "level_trace": {
+      "ln1": [
+        4,
+        4,
+        4,
+        4
+      ],
+      "attention_projection": [
+        12,
+        12,
+        12,
+        12
+      ],
+      "residual1": [
+        12,
+        12,
+        12,
+        12
+      ],
+      "ln2": [
+        16,
+        16,
+        16,
+        16
+      ],
+      "mlp_projection": [
+        3,
+        3,
+        3,
+        3
+      ],
+      "block_output": [
+        12,
+        12,
+        12,
+        12
+      ]
+    },
+    "bootstraps": 0,
+    "chebyshev_calls": 0
+  },
+  "protocol": {
+    "round_trips": 16,
+    "boundary_log": [
+      {
+        "name": "ln1_token0",
+        "values_crossed": 1
+      },
+      {
+        "name": "ln1_token1",
+        "values_crossed": 1
+      },
+      {
+        "name": "ln1_token2",
+        "values_crossed": 1
+      },
+      {
+        "name": "ln1_token3",
+        "values_crossed": 1
+      },
+      {
+        "name": "attention_softmax_token0",
+        "values_crossed": 8
+      },
+      {
+        "name": "attention_softmax_token1",
+        "values_crossed": 8
+      },
+      {
+        "name": "attention_softmax_token2",
+        "values_crossed": 8
+      },
+      {
+        "name": "attention_softmax_token3",
+        "values_crossed": 8
+      },
+      {
+        "name": "ln2_token0",
+        "values_crossed": 1
+      },
+      {
+        "name": "ln2_token1",
+        "values_crossed": 1
+      },
+      {
+        "name": "ln2_token2",
+        "values_crossed": 1
+      },
+      {
+        "name": "ln2_token3",
+        "values_crossed": 1
+      },
+      {
+        "name": "gelu_token0",
+        "values_crossed": 32
+      },
+      {
+        "name": "gelu_token1",
+        "values_crossed": 32
+      },
+      {
+        "name": "gelu_token2",
+        "values_crossed": 32
+      },
+      {
+        "name": "gelu_token3",
+        "values_crossed": 32
+      }
+    ],
+    "total_values_crossed_to_client": 168,
+    "note": "Client is the data owner and already holds the secret key; it decrypts only ciphertexts derived from its own query, at these pre-declared boundaries, and re-encrypts. The server role (EvalOnlyContext) never receives the secret key and made zero decrypt attempts (asserted)."
+  },
+  "global_rel_inf": 2.2166170477801455e-12,
+  "worst_token_rel_inf": 3.08716299348654e-12,
+  "tol": 0.04,
+  "passed": true,
+  "context_setup_keygen_s": 2.018065258860588,
+  "evaluation_latency_s": 1433.351527011022,
+  "latency_label": "[native-cpu]",
+  "server_decrypt_attempts": 0,
+  "final_readout_decrypt_calls": 4
+}

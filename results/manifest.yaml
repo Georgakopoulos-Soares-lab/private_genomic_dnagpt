@@ -675,3 +675,87 @@ runs:
       domain handling. This is a lower boundary for the current T=2 schedule,
       not a full-pass forecast. [U] T=103 is not extrapolated from this
       T=2-specialized graph.
+
+  - id: fhe_toy_block_scheme_b_native_cpu_20260725
+    task: "Phase B - Scheme B (hybrid client-assisted CKKS) toy-scale complete block"
+    status: "[V] PASS"
+    backend: "OpenFHE CKKS 1.5.1.0.24.4, HEStd_128_classic"
+    environment: "Brev A100 host, native x86_64 CPU, shared/multi-tenant (dnagpt-openfhe:20260724) [native]"
+    config:
+      dimension: 8
+      sequence_length: 4
+      heads: 2
+      ring_dim: 65536
+      multiplicative_depth: 20
+      encrypted_input: "embedded numeric vectors"
+      bootstraps: 0
+    metrics:
+      global_rel_inf: 2.2166e-12
+      worst_token_rel_inf: 3.0872e-12
+      round_trips: 16
+      total_values_crossed_to_client: 168
+      server_decrypt_attempts: 0
+      final_readout_decrypt_calls: 4
+      context_setup_keygen_seconds_native_cpu: 2.018
+      evaluation_seconds_native_cpu: 1433.352
+    provenance:
+      result_sha256: "7e5c4b5e9bbd646424e5ec2273121298a8b80fba939cbd588892062ae54eda4e"
+      script_sha256: "73475eacb03ea36b057a52f84ace40dd8895c8cadfebe743725eabf1e0e9e30f"
+      oracle_sha256: "fe1c12a76a67ff7628fc09bf6424f1aa0a19ca612f487d27970c1dfa98088027"
+    verdict: >
+      [V] PASS. First working Scheme B (hybrid client-assisted CKKS) prototype:
+      the three nonlinearity classes are pre-declared client decrypt/exact-compute
+      /re-encrypt boundaries instead of Chebyshev series, at far lower depth
+      (20 vs Scheme A toy's 49) since level resets to 0 at every boundary. The
+      1433s wall time is native CPU on a *heavily contended shared host*
+      (concurrently observed load average ~1000-1460 on this 255-core machine
+      throughout this session) and is not a clean/dedicated-hardware number;
+      it is not used for GPU extrapolation. round_trips=16 is the honest,
+      complete count of client decrypts for this toy graph (T=4, D=8, 2 heads).
+
+  - id: fhe_fides_real_d768_t2_ln1_scheme_b_a100_20260725
+    task: "Released-weight DNAGPT block-0 Scheme B (hybrid) encrypted LayerNorm gate"
+    status: "[V] PASS"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 7 [gpu]"
+    config:
+      dimension: 768
+      sequence_length: 2
+      heads: 12
+      batch_slots: 4096
+      ring_dim: 65536
+      multiplicative_depth: 16
+    metrics:
+      global_rel_inf: 2.3500e-10
+      worst_token_rel_inf: 6.8399e-10
+      round_trips: 2
+      client_boundary_seconds_total: 1.3697
+      server_linear_algebra_seconds: 1.0369
+      encrypted_evaluation_seconds_gpu: 2.4066
+      intermediate_decrypt_attempts: 0
+      declared_client_boundary_crossings: 2
+      final_decrypt_calls: 1
+    provenance:
+      result_sha256: "a23da44b8a08a0950acbfb6cd178baaf44dc05e74f94f8a5be4eaf8ac9d086af"
+      source_sha256: "25dcc045df8ec3ca7cecd8d386854ec6571b5092b4c9b64eafee434db9c4b941"
+      fixture_manifest_sha256: "8d20a2841ee29a7a386171f1bd173b7189144359ce8f91ea5eb21cc60c0a78fe"
+    verdict: >
+      [V] PASS. First real D=768/T=2 GPU evidence for Scheme B, built by
+      forking fhe/gpu_real_sigmoid's FIDESlib source and replacing the LN1
+      invsqrt Chebyshev call with a genuine client cross_boundary()
+      decrypt/exact-invsqrt/re-encrypt round trip (2 calls, one per token).
+      Same released fixture, same packing, same 4e-2 oracle gate as Scheme A's
+      ln1 gate (fhe_fides_real_d768_t2_ln1_a100_asymfix2_20260724). Landed at
+      ring_dim=65536 (vs Scheme A's 131072 at depth 43) since the shallow LN1
+      segment (level_max=2) needs far less budget than the depth-43 whole-chain
+      Chebyshev schedule. Total encrypted_evaluation_seconds_gpu (2.41s) splits
+      into server_linear_algebra_seconds (1.04s, GPU BSGS/mean/variance ops)
+      and client_boundary_seconds_total (1.37s, 2x decrypt+invsqrt+re-encrypt
+      of a SLOTS=4096 vector) -- this split is the key input for extrapolating
+      how much of Scheme B's cost is server-GPU vs client-CPU-boundary work.
+      [U] attention and full gates were attempted the same session but the
+      run was killed after 8.5+ minutes of CPU-bound rotation-key generation
+      stalling under extreme host contention (load average ~1000-1127 on a
+      255-core shared machine, GPU itself idle at 1% util); deferred until
+      host load drops. Context-keygen time here is therefore not reported as
+      a clean number and setup_seconds is omitted from metrics above.
