@@ -31,6 +31,21 @@ valid — never tune to force a pass.
 Encrypted operators on the 0.1b backbone → encrypted end-to-end on a task, matching the Phase-A
 oracle within a declared tolerance. See `docs/roadmap.md`.
 
+Two architectures are tracked, per
+`docs/feasibility/05_architecture_options.md`:
+
+- **Scheme A (frozen baseline):** pure non-interactive CKKS, one uninterrupted ciphertext
+  lineage, zero intermediate decrypt. Proven to close one full real-weight block; proven to hit
+  a root-caused GPU memory wall at chained multi-block composition. Kept as-is for the paper's
+  ablation/baseline; no further Scheme A runs planned unless needed to re-establish the boundary.
+- **Scheme B (active path):** hybrid client-assisted CKKS. Server keeps all linear algebra
+  (FIDESlib GPU, unchanged) in one encrypted lineage; the client — the data owner, who already
+  holds the secret key — decrypts only ciphertexts derived from its own query at pre-declared
+  nonlinearity boundaries (LayerNorm, attention nonlinearity, GELU), evaluates exactly in
+  plaintext, and re-encrypts. The untrusted compute provider never observes plaintext, a partial
+  decrypt, or the secret key. See `docs/feasibility/05_architecture_options.md` for the full
+  comparison against Scheme A and a deferred Scheme C (CKKS↔FHEW scheme switching).
+
 **In scope:** the DNAGPT model graph as the FHE target; plaintext baseline harnesses; dataset
 provenance; measured metrics; the evidence trail feeding the paper.
 **Out of scope (for now):** wet-lab/clinical claims; encrypted token-index embedding

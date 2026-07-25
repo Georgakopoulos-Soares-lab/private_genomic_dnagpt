@@ -3,7 +3,16 @@
 ## Question
 
 Can DNAGPT evaluate encrypted embedded genomic-token vectors and return encrypted
-outputs without decrypting any intermediate value?
+outputs so an untrusted compute provider never sees plaintext DNA?
+
+Two architectures are tracked as of 2026-07-25
+(see [05_architecture_options.md](05_architecture_options.md) for the full comparison):
+
+- **Scheme A (frozen baseline):** pure non-interactive CKKS, one uninterrupted
+  ciphertext lineage, zero intermediate decrypt.
+- **Scheme B (active path):** hybrid client-assisted CKKS — linear algebra stays
+  encrypted end to end on GPU; only the data-owning client (already the secret-key
+  holder) decrypts, at pre-declared nonlinearity boundaries, its own data only.
 
 The current answer is deliberately split:
 
@@ -21,7 +30,10 @@ The current answer is deliberately split:
 - `[V]` Local screens validate rotation/depth-reducing schedules without changing the
   encrypted result.
 - `[U]` The rest of the real-width block, multi-block composition, and task-level
-  encrypted inference have not yet closed.
+  encrypted inference have not yet closed under Scheme A; Scheme A is now frozen as the
+  paper's non-interactive baseline/ablation after three chained-composition attempts
+  failed closed on a root-caused GPU memory wall (not accuracy). Work continues under
+  Scheme B.
 - `[U]` Encrypted token-index embedding lookup is outside the current backbone input
   boundary.
 
@@ -82,6 +94,8 @@ version preserves T=2 softmax exactly as a single sigmoid of the score differenc
 which removes the reciprocal polynomial and is expected to fit within depth 43.
 
 See [roadmap.md](../roadmap.md) for the gate definitions,
-[01_backend_selection.md](01_backend_selection.md) for the backend decision, and
-[02_operator_matrix.md](02_operator_matrix.md) for primitive measurements. The passing
-block and derived 0.1b boundary are in [03_measurements.md](03_measurements.md).
+[01_backend_selection.md](01_backend_selection.md) for the backend decision,
+[02_operator_matrix.md](02_operator_matrix.md) for primitive measurements, and
+[05_architecture_options.md](05_architecture_options.md) for the Scheme A/B/C
+comparison and the active Scheme B decision. The passing block and derived 0.1b
+boundary are in [03_measurements.md](03_measurements.md).

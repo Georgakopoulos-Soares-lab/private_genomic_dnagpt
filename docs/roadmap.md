@@ -7,10 +7,23 @@ arithmetic on a slower or irrelevant path. An optimization is retained only when
 passes the unchanged oracle and improves measured wall time, peak memory, ciphertext
 count, rotation count, or multiplicative depth.
 
-Every encrypted correctness run uses `HEStd_128_classic`, one uninterrupted ciphertext
-lineage, no intermediate decryption feeding evaluation, finite output, and global plus
-worst-token `rel_inf <= 4e-2`. Every retained result gets a new immutable run JSON and
-manifest entry.
+Two architectures are tracked (`docs/feasibility/05_architecture_options.md`):
+
+- **Scheme A (frozen baseline):** every encrypted correctness run uses
+  `HEStd_128_classic`, one uninterrupted ciphertext lineage, no intermediate decryption
+  feeding evaluation, finite output, and global plus worst-token `rel_inf <= 4e-2`. No
+  further Scheme A runs are planned; its existing evidence stands as the paper's
+  non-interactive ablation.
+- **Scheme B (active):** every encrypted correctness run uses `HEStd_128_classic`,
+  keeps linear algebra in one uninterrupted encrypted GPU lineage, and permits decrypt
+  only at pre-declared nonlinearity boundaries performed solely by the data-owning
+  client (secret-key holder) on its own data. Boundaries are fixed before the run, never
+  chosen adaptively from decrypted content. Same `4e-2` oracle gate as Scheme A, plus
+  recorded round-trip count and a wall-time split between GPU-encrypted and client-side
+  plaintext compute.
+
+Every retained result gets a new immutable run JSON and manifest entry, tagged with its
+scheme.
 
 ## Verified foundation
 
@@ -177,11 +190,38 @@ Input scope remains explicit:
 - `[U]` Production key custody, transport, and client-only final decryption need a
   deployment harness after arithmetic closure.
 
+## Scheme B: hybrid client-assisted CKKS
+
+Adopted 2026-07-25 after three independent chained-composition failures
+(`multiplicative_depth` in `{50, 58, 64}`) all traced to GPU memory exhaustion during
+rotation-key/bootstrap-plaintext loading, not accuracy — i.e. the "measured GPU
+correctness failure" condition below is met. Full comparison and rationale in
+`docs/feasibility/05_architecture_options.md`. Plan:
+
+1. Reuse the existing real-weight block-0 CKKS/FIDESlib graph unchanged for every linear
+   op (Q/K/V projection, attention matmul, output projection, FFN, residual adds).
+2. Remove `EvalChebyshevFunction` calls for LayerNorm invsqrt, the T=2 sigmoid attention
+   identity, and GELU. Replace each with an explicit decrypt (client, secret-key holder,
+   own data only) -> exact plaintext function -> re-encrypt boundary.
+3. Re-measure against the unchanged Phase-A oracle and `4e-2` gate; record round-trip
+   count and the GPU-encrypted vs. client-plaintext wall-time split.
+4. Because Scheme B removes the bootstrap-driven depth requirement, re-derive the
+   minimum viable `multiplicative_depth`/`batch_slots` before assuming depth 43 is still
+   needed; a smaller context may clear the exact memory wall that blocked Scheme A.
+5. Scale sequence length and block count only after one Scheme B block gate passes,
+   mirroring the "Scale and optimize" and "Compose only after one block scales" order
+   above.
+
 ## Explicit skips
 
 - no full twelve-layer Python/OpenFHE CPU run;
 - no duplicate “CPU container” full pass after one complete block has closed;
 - no custom CUDA cryptography while current FIDESlib supplies the operation;
-- no CPU/GPU hybrid milestone unless a measured GPU correctness failure forces it;
+- `[done, 2026-07-25]` no CPU/GPU hybrid milestone unless a measured GPU correctness
+  failure forces it — three independent chained-composition failures traced to GPU
+  memory exhaustion (not accuracy) forced the Scheme B pivot; see
+  `docs/feasibility/05_architecture_options.md`. This unblocks explicit client-side
+  decrypt boundaries under Scheme B's own contract above, not a silent change to
+  Scheme A;
 - no multi-GPU work until single-GPU memory or throughput is measured;
 - no task-scale twelve-block run before a real-width block and a two-block refresh gate pass.

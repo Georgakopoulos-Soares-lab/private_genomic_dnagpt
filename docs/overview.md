@@ -2,15 +2,20 @@
 
 ## Purpose
 
-Evaluate whether **DNAGPT** (arXiv 2307.05628) inference can run under **FHE**: encrypted embedded
-numeric genomic-token vectors, compute-provider-side evaluation, encrypted output, and no
-intermediate decryption. Encrypted token-index embedding lookup remains a separate `[U]` boundary.
+Evaluate whether **DNAGPT** (arXiv 2307.05628) inference can run under **FHE** so a compute
+provider never sees plaintext DNA. Two architectures are tracked as of 2026-07-25
+(`docs/feasibility/05_architecture_options.md`): **Scheme A**, pure non-interactive CKKS with zero
+intermediate decryption, now frozen as the paper's baseline/ablation after closing one full block
+and then hitting a root-caused GPU memory wall at chained composition; and **Scheme B**, the active
+path — hybrid client-assisted CKKS, where server-side linear algebra stays encrypted end to end and
+only the data-owning client (already the secret-key holder) decrypts at pre-declared nonlinearity
+boundaries. Encrypted token-index embedding lookup remains a separate `[U]` boundary for both
+schemes.
 
 **Phase A is complete:** DNAGPT passes three local downstream-task gates and its
 per-example predictions are frozen as plaintext oracles. **Phase B is active:** toy
-arithmetic and CUDA backend parity are complete; work is closing a released-weight
-real-width block, refresh/composition, and then sequence scaling (see
-[roadmap.md](roadmap.md)).
+arithmetic and CUDA backend parity are complete under Scheme A; work is now shifting to
+Scheme B's hybrid block gate, then sequence scaling (see [roadmap.md](roadmap.md)).
 
 ## What DNAGPT ships
 
@@ -47,7 +52,13 @@ See [tasks.md](tasks.md) for methods/commands and [data_provenance.md](data_prov
 - `[V]` Local probes validate BSGS rotation reduction, numerator-first attention, and
   lower-degree GELU candidates without changing the correctness gate.
 - `[U]` The optimized real-width MLP/full block, encrypted refresh/composition,
-  broader public calibration, and a task-valid encrypted sequence remain.
+  broader public calibration, and a task-valid encrypted sequence remain under Scheme A;
+  Scheme A is now frozen as the paper's non-interactive baseline/ablation.
+- `[V]` Three independent chained-composition attempts (`multiplicative_depth` in
+  `{50, 58, 64}`, plus a 2-GPU variant) all fail closed on GPU memory exhaustion during
+  rotation-key/bootstrap-plaintext loading, not accuracy — root-caused via a symbolized
+  backtrace. This forced a pivot to **Scheme B** (hybrid client-assisted CKKS): see
+  [feasibility/05_architecture_options.md](feasibility/05_architecture_options.md).
 
 The full twelve-layer CPU route is not a planned stage: after a complete block closes,
 it adds no new arithmetic claim. Performance work moves to C++/CUDA with current

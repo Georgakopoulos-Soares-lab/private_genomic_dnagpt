@@ -1,15 +1,19 @@
 # Backend selection
 
-The requirement is stricter than ordinary private inference: embedded input encrypted,
-block output encrypted, and no intermediate decryption anywhere in the arithmetic pass.
-DNAGPT's block contains LayerNorm, causal softmax attention, GELU, linear maps, and
-residual additions (`DNAGPT/dna_gpt/model/gpt.py`).
+Scheme A's requirement was stricter than ordinary private inference: embedded input
+encrypted, block output encrypted, and no intermediate decryption anywhere in the
+arithmetic pass. DNAGPT's block contains LayerNorm, causal softmax attention, GELU,
+linear maps, and residual additions (`DNAGPT/dna_gpt/model/gpt.py`). Scheme B (the
+active path since 2026-07-25, see
+[05_architecture_options.md](05_architecture_options.md)) relaxes only the
+zero-intermediate-decrypt clause, and only for the data-owning client at pre-declared
+nonlinearity boundaries; the backend selection below is unchanged for both schemes.
 
 ## Decision
 
 | Evaluated path | Verdict | Reason |
 |---|---|---|
-| Concrete ML hybrid LLM | Rejected for this requirement | Its documented LLM protocol runs linear layers on the FHE server and nonlinear layers on the client. That requires intermediate client processing rather than one uninterrupted encrypted lineage. |
+| Concrete ML hybrid LLM | Rejected as a backend | Its documented LLM protocol runs linear layers on the FHE server and nonlinear layers on the client, same *shape* now adopted as Scheme B — but its TFHE-rs backend only reports 1.2-2x GPU speedup and 2.2-18MB/token ciphertext expansion, far weaker than FIDESlib CKKS's proven GPU numbers. Scheme B keeps FIDESlib/OpenFHE CKKS end to end and adds the same client-decrypt-boundary shape without changing backend. |
 | TenSEAL CKKS | Not selected | Its public API does not expose the bootstrap and nonlinear-function path needed for repeated transformer blocks. |
 | OpenFHE CKKS | Selected correctness backend | It exposes encrypted rotations, Chebyshev function evaluation, division, and approximate CKKS bootstrapping in one context. The complete local block passes. |
 | FIDESlib CKKS | Selected performance backend | Current FIDESlib supplies CUDA CKKS operations, hoisted rotation, bootstrap, OpenFHE interop, and optional multi-GPU execution. |
@@ -24,9 +28,11 @@ states that the client executes nonlinear layers, including attention and activa
 while the server executes linear layers. It reports about 300 seconds per GPT-2 token on
 CPU and about 11 seconds on GPU for that hybrid path. `[V]`
 
-That protocol can protect data from the server, but it does not satisfy this project's
-explicit zero-intermediate-decryption condition. The rejection applies to the documented
-hybrid LLM route, not to TFHE as a mathematical scheme. Concrete ML can implement
+That protocol can protect data from the server, but it did not satisfy Scheme A's
+explicit zero-intermediate-decryption condition. The rejection applies to the Concrete
+ML/TFHE-rs *backend* — weak measured GPU speedup, Boolean/integer-only arithmetic, large
+ciphertext expansion — not to the client-decrypt-boundary *protocol shape*, which
+Scheme B now adopts on top of FIDESlib/OpenFHE CKKS instead. Concrete ML can implement
 nonlinear functions as programmable-bootstrapped table lookups in other circuits.
 
 ## TenSEAL

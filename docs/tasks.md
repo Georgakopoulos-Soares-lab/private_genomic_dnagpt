@@ -422,3 +422,32 @@ Evidence: `fhe_multiblock_plaintext_contract_20260724.json` and
 `fhe_range_control_t2_12block_optimized_v2_20260724.json`. The latter is a
 plaintext approximation preflight on one public T=2 fixture, not an encrypted
 or task-representative run.
+
+## Architecture pivot: Scheme A frozen, Scheme B active (2026-07-25)
+
+Three independent chained-composition attempts above
+(`fhe_fides_gpu_multiblock_bisect_depth50_FAIL_20260724`,
+`..._bisect_depth58_backtrace_FAIL_20260724`,
+`..._multigpu_2gpu_sigsegv_setupconstants_FAIL_20260725`) all fail closed on GPU memory
+exhaustion, not accuracy, and all trace to the same root cause: block 0's single
+end-of-block bootstrap buying back 35 levels for all of block 1 in one shot, driven by
+degree-13 Chebyshev approximation of LayerNorm invsqrt, the attention sigmoid identity,
+and GELU. Full comparison of alternatives in
+[`05_architecture_options.md`](feasibility/05_architecture_options.md).
+
+**Decision:** freeze pure non-interactive CKKS (**Scheme A**) as the paper's baseline —
+its existing evidence (complete real-weight block 0, refresh gate, the three failures
+above) stands unchanged. Active development moves to **Scheme B**: hybrid
+client-assisted CKKS. Server-side linear algebra (FIDESlib GPU) stays in one encrypted
+lineage; only the data-owning client (already the secret-key holder) decrypts, at
+pre-declared nonlinearity boundaries (LayerNorm, attention nonlinearity, GELU), its own
+data, then re-encrypts. This removes the Chebyshev-driven depth pressure that caused
+every Scheme A composition failure, while keeping the untrusted compute provider fully
+blind to plaintext at every step.
+
+**Next concrete step (not yet run):** reuse the existing real-weight block-0
+CKKS/FIDESlib graph, delete the three `EvalChebyshevFunction` calls, add
+decrypt/compute/re-encrypt at each boundary, and re-measure against the unchanged
+Phase-A oracle and `4e-2` gate, recording round-trip count and the GPU-encrypted vs.
+client-plaintext wall-time split per Scheme B's acceptance contract in
+`docs/roadmap.md`.

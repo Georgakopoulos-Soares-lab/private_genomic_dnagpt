@@ -4,10 +4,14 @@ DNAGPT local performance-baseline project. Full charter: **[CLAUDE.md](CLAUDE.md
 
 ## TL;DR
 
-Goal: evaluate whether **DNAGPT** (arXiv 2307.05628) inference can run under **FHE** with no
-intermediate decryption. **Phase A is complete:** three local tasks provide the plaintext oracle.
-**Phase B is active:** the encrypted toy block passes; optimization is validated locally before the
-C++/CUDA GPU path and real-width 0.1b gates.
+Goal: evaluate whether **DNAGPT** (arXiv 2307.05628) inference can run under **FHE** so an untrusted
+compute provider never sees plaintext DNA. **Phase A is complete:** three local tasks provide the
+plaintext oracle. **Phase B is active:** the encrypted toy block and a full real-weight block pass
+under pure non-interactive CKKS (**Scheme A**, now frozen as baseline); chained multi-block
+composition hit a root-caused GPU memory wall, so the active path is **Scheme B**, hybrid
+client-assisted CKKS — server-side linear algebra stays encrypted on GPU, only the data-owning
+client (who already holds the secret key) decrypts at pre-declared nonlinearity boundaries. See
+`docs/feasibility/05_architecture_options.md`.
 
 ## Conventions
 
