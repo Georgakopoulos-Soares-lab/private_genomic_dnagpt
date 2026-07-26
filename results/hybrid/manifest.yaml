@@ -212,7 +212,7 @@ runs:
       source_sha256: "d88f1a0919a003a539e746aaf33e5d283c28810c2805a1af4b05dffac43e08df"
       fixture_manifest_sha256: "8d20a2841ee29a7a386171f1bd173b7189144359ce8f91ea5eb21cc60c0a78fe"
       fixture_contract_sha256: "b35651110c5e45efc53c7ab39066f1ad455cd53dfbb05959a8ffb8835bd382d8"
-      batching_contract_test_sha256: "60787dd5fab55ce617ee6de527fd46f5b30d3d6acdd5d135983693939f655e76"
+      batching_contract_test_sha256: "e1b4f6c88b5113f8012f195b2b1d815b3610600eeebce10e103d0ea87157647b"
     verdict: >
       [V] PASS correctness/protocol gate. The 12 T=2 attention-head deltas
       occupy disjoint 64-slot spans in one ciphertext and cross one exact
@@ -258,7 +258,7 @@ runs:
       source_sha256: "d88f1a0919a003a539e746aaf33e5d283c28810c2805a1af4b05dffac43e08df"
       fixture_manifest_sha256: "8d20a2841ee29a7a386171f1bd173b7189144359ce8f91ea5eb21cc60c0a78fe"
       fixture_contract_sha256: "b35651110c5e45efc53c7ab39066f1ad455cd53dfbb05959a8ffb8835bd382d8"
-      batching_contract_test_sha256: "60787dd5fab55ce617ee6de527fd46f5b30d3d6acdd5d135983693939f655e76"
+      batching_contract_test_sha256: "e1b4f6c88b5113f8012f195b2b1d815b3610600eeebce10e103d0ea87157647b"
     verdict: >
       [V] PASS correctness/protocol gate. The complete real-weight block
       batches all 12 attention sigmoids into one crossing and four GELU

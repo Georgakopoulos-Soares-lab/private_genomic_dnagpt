@@ -213,7 +213,7 @@ python3 fhe/gpu_real_scheme_b/test_batching_contract.py -v
 
 `[V]` All three tests pass without changing `TOL=4e-2` (source: command above,
 `fhe/gpu_real_scheme_b/test_batching_contract.py`, SHA-256
-`60787dd5fab55ce617ee6de527fd46f5b30d3d6acdd5d135983693939f655e76`).
+`e1b4f6c88b5113f8012f195b2b1d815b3610600eeebce10e103d0ea87157647b`).
 
 `[V]` The immutable GPU evidence was produced by the capacity-aware remote orchestrator.
 The command below is the exact launch configuration used; immutable guards make it
