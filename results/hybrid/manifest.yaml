@@ -180,3 +180,94 @@ runs:
       attention identity does not generalize; scaling to real downstream
       sequence lengths needs a general causal-attention Scheme B circuit
       that has not been designed or measured) or the task-head compute.
+
+  - id: fhe_fides_real_d768_t2_attention_batched_scheme_b_a100_20260726
+    task: "Released-weight DNAGPT block-0 Scheme B batched LN1 + 12-head attention correctness gate"
+    status: "[V] PASS"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 0 [gpu] (preflight_confirmed mem=445MiB util=0%)"
+    config:
+      dimension: 768
+      sequence_length: 2
+      heads: 12
+      batch_slots: 4096
+      ring_dim: 65536
+      multiplicative_depth: 16
+      physical_attention_batches: 1
+      explicit_ciphertext_ciphertext_multiplications: 29
+      explicit_ciphertext_plaintext_multiplications: 8260
+    metrics:
+      global_rel_inf: 2.1795e-10
+      worst_token_rel_inf: 2.1795e-10
+      max_abs_error: 3.6296e-09
+      round_trips: 3
+      logical_boundary_instances: 14
+      intermediate_decrypt_attempts: 0
+      declared_client_boundary_crossings: 3
+      declared_logical_boundary_instances: 14
+      final_decrypt_calls: 1
+      timing_status: "[U] excluded from performance comparison due post-launch shared-host load surge"
+    provenance:
+      result_sha256: "4df29c742506811ef6b118491be327258b5f4dfdea1f5b6742ac20293f1c9a6f"
+      source_sha256: "d88f1a0919a003a539e746aaf33e5d283c28810c2805a1af4b05dffac43e08df"
+      fixture_manifest_sha256: "8d20a2841ee29a7a386171f1bd173b7189144359ce8f91ea5eb21cc60c0a78fe"
+      fixture_contract_sha256: "b35651110c5e45efc53c7ab39066f1ad455cd53dfbb05959a8ffb8835bd382d8"
+      batching_contract_test_sha256: "60787dd5fab55ce617ee6de527fd46f5b30d3d6acdd5d135983693939f655e76"
+    verdict: >
+      [V] PASS correctness/protocol gate. The 12 T=2 attention-head deltas
+      occupy disjoint 64-slot spans in one ciphertext and cross one exact
+      client sigmoid boundary, reducing physical crossings from 14 to 3
+      while retaining 14 explicitly recorded logical boundary instances.
+      The unchanged 4e-2 oracle gate passes at global/worst-token
+      rel_inf=2.18e-10; the evaluator records zero intermediate decrypts and
+      has no private key. [U] Raw timing fields remain in the immutable JSON,
+      but no speedup is claimed: shared-host load surged to roughly 750-840
+      after the confirmed-idle launch, making this run incomparable with the
+      serial timing anchor (source: Brev host
+      gpu_real_scheme_b_batched_v2/fhe/scheme_b_orchestrator.log).
+
+  - id: fhe_fides_real_d768_t2_block0_batched_scheme_b_a100_20260726
+    task: "Released-weight DNAGPT block-0 Scheme B batched complete-block correctness gate"
+    status: "[V] PASS"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 0 [gpu] (preflight_confirmed mem=747MiB util=0%)"
+    config:
+      dimension: 768
+      sequence_length: 2
+      heads: 12
+      batch_slots: 4096
+      ring_dim: 65536
+      multiplicative_depth: 16
+      physical_attention_batches: 1
+      physical_gelu_batches: 2
+      explicit_ciphertext_ciphertext_multiplications: 33
+      explicit_ciphertext_plaintext_multiplications: 24666
+    metrics:
+      global_rel_inf: 3.5139e-10
+      worst_token_rel_inf: 3.5139e-10
+      max_abs_error: 5.5360e-09
+      round_trips: 7
+      logical_boundary_instances: 24
+      intermediate_decrypt_attempts: 0
+      declared_client_boundary_crossings: 7
+      declared_logical_boundary_instances: 24
+      final_decrypt_calls: 1
+      timing_status: "[U] excluded from performance comparison due post-launch shared-host load surge"
+    provenance:
+      result_sha256: "07ad381e8395452035e9825d24acfc020c6a0884a1755e07e904c6ab12a715d4"
+      source_sha256: "d88f1a0919a003a539e746aaf33e5d283c28810c2805a1af4b05dffac43e08df"
+      fixture_manifest_sha256: "8d20a2841ee29a7a386171f1bd173b7189144359ce8f91ea5eb21cc60c0a78fe"
+      fixture_contract_sha256: "b35651110c5e45efc53c7ab39066f1ad455cd53dfbb05959a8ffb8835bd382d8"
+      batching_contract_test_sha256: "60787dd5fab55ce617ee6de527fd46f5b30d3d6acdd5d135983693939f655e76"
+    verdict: >
+      [V] PASS correctness/protocol gate. The complete real-weight block
+      batches all 12 attention sigmoids into one crossing and four GELU
+      chunks into one crossing per token. Physical crossings fall from 24
+      to 7 while all 24 logical nonlinearity instances remain explicitly
+      recorded. The unchanged 4e-2 oracle gate passes at global/worst-token
+      rel_inf=3.51e-10; the evaluator records zero intermediate decrypts and
+      has no private key. [U] Raw timing fields remain in the immutable JSON,
+      but no speedup is claimed: shared-host load surged to roughly 350-1100
+      after the confirmed-idle launch, making this run incomparable with the
+      serial timing anchor (source: Brev host
+      gpu_real_scheme_b_batched_v2/fhe/scheme_b_orchestrator.log).

@@ -68,6 +68,8 @@ real, and it is what the paper cites.
 | `fhe_fides_real_d768_t2_ln1_scheme_b_a100_20260725` | Scheme B (hybrid) real block-0 D768 LayerNorm | `[V]` pass, global `2.35e-10`, 2 client round trips, depth 16/`ring_dim` 65536 (vs Scheme A's depth 43/131072); `2.407 s [gpu]` total = `1.037 s` server GPU linear algebra + `1.370 s` client boundary crossings |
 | `fhe_fides_real_d768_t2_attention_scheme_b_a100_20260725` | Scheme B (hybrid) real block-0 D768 LN1+12-head attention | `[V]` pass, global `2.87e-10`, 14 client round trips; `240.29 s [gpu]` total = `236.61 s` server + `3.68 s` client boundary |
 | `fhe_fides_real_d768_t2_block0_scheme_b_a100_20260725` | Scheme B (hybrid) real complete block-0 (LN1+attention+MLP+LN2+pack) | `[V]` pass, global `3.32e-10`, 24 client round trips; `372.27 s [gpu]` total = `365.78 s` server + `6.49 s` client boundary (vs Scheme A equivalent `2461.8 s`) |
+| `fhe_fides_real_d768_t2_attention_batched_scheme_b_a100_20260726` | Scheme B batched real block-0 D768 LN1+12-head attention correctness gate | `[V]` pass, global `2.18e-10`, 3 physical round trips / 14 logical boundary instances, zero intermediate decrypts; `[U]` timing excluded because shared-host load surged after launch |
+| `fhe_fides_real_d768_t2_block0_batched_scheme_b_a100_20260726` | Scheme B batched real complete block-0 correctness gate | `[V]` pass, global `3.51e-10`, 7 physical round trips / 24 logical boundary instances, zero intermediate decrypts; `[U]` timing excluded because shared-host load surged after launch |
 
 The CPU and CUDA toy-block results are the current complete-graph arithmetic anchors.
 Their encrypted inputs begin after embedding, and their one final decrypt exists only

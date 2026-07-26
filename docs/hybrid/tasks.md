@@ -195,14 +195,14 @@ four `PACK_WIDTH=1024` copies, with only the first `D=768` slots active in each 
   the existing BSGS matmul. Eight chunks need two crossings, one per token:
   `8*768=6144` values do not fit in 4096 real slots without changing the packing
   contract (source: the float64 oracle contract below and `replicate_copies()`).
-- `[A]` The planned physical count is therefore seven crossings for the full
+- `[V]` The measured physical count is seven crossings for the full
   gate: four unchanged per-token LN1/LN2 invsqrt crossings, one 12-head attention
   crossing, and two four-chunk GELU crossings. The evidence JSON separately
   records 24 logical nonlinearity instances so batching cannot hide protocol
-  work (source: arithmetic over the declared boundary classes; GPU verification
-  is the evidence gate below).
+  work (source:
+  `fhe_fides_real_d768_t2_block0_batched_scheme_b_a100_20260726.json`).
 
-The correctness-first fixture contract uses the unchanged released-weight oracle,
+`[V]` The correctness-first fixture contract uses the unchanged released-weight oracle,
 checks the attention merge and both tokens' GELU outputs at float64
 `atol=1e-12`, checks padding/copy restoration, and statically asserts that the
 encrypted evaluator contains neither `Decrypt(` nor `secretKey`:
@@ -214,3 +214,56 @@ python3 fhe/gpu_real_scheme_b/test_batching_contract.py -v
 `[V]` All three tests pass without changing `TOL=4e-2` (source: command above,
 `fhe/gpu_real_scheme_b/test_batching_contract.py`, SHA-256
 `60787dd5fab55ce617ee6de527fd46f5b30d3d6acdd5d135983693939f655e76`).
+
+`[V]` The immutable GPU evidence was produced by the capacity-aware remote orchestrator.
+The command below is the exact launch configuration used; immutable guards make it
+skip these tags now that their JSON files exist, so a reproduction must supply new
+tags rather than overwrite them (source:
+`fhe/gpu_real_scheme_b/wait_and_run_scheme_b.sh` and the two evidence JSONs):
+
+```bash
+brev exec awesome-gpu-name -- "env \
+  SCHEME_B_REMOTE_ROOT=/data/christos/private_genomic_ml/dnagpt_fides_asymfix2_20260724 \
+  SCHEME_B_SOURCE_SUBDIR=gpu_real_scheme_b_batched_v2/fhe \
+  SCHEME_B_FIXTURE_SUBDIR=real_fixture/gsr_pos0_block0_t2_d63353abdc1a_52d046d1fcf0 \
+  SCHEME_B_IMAGE=dnagpt-fideslib:786c-asymfix2 \
+  SCHEME_B_ATTENTION_TAG=fhe_fides_real_d768_t2_attention_batched_scheme_b_a100_20260726 \
+  SCHEME_B_FULL_TAG=fhe_fides_real_d768_t2_block0_batched_scheme_b_a100_20260726 \
+  /bin/bash /data/christos/private_genomic_ml/dnagpt_fides_asymfix2_20260724/gpu_real_scheme_b_batched_v2/fhe/wait_and_run_scheme_b.sh"
+```
+
+Evidence:
+
+- `fhe_fides_real_d768_t2_attention_batched_scheme_b_a100_20260726.json` —
+  `[V]` PASS at unchanged `TOL=4e-2`: global/worst-token
+  `rel_inf=2.18e-10`, 3 physical round trips representing 14 logical boundary
+  instances (2 LN1 invsqrts + one ciphertext containing all 12 attention
+  sigmoids), zero intermediate decrypts, and one final oracle decrypt. This
+  verifies the attention crossing reduction from 14 to 3 without changing the
+  exact T=2 attention identity or the plaintext oracle (source: the named JSON,
+  SHA-256
+  `4df29c742506811ef6b118491be327258b5f4dfdea1f5b6742ac20293f1c9a6f`).
+- `fhe_fides_real_d768_t2_block0_batched_scheme_b_a100_20260726.json` —
+  `[V]` PASS at unchanged `TOL=4e-2`: global/worst-token
+  `rel_inf=3.51e-10`, 7 physical round trips representing the same 24 logical
+  boundary instances as the serial protocol (4 LayerNorm + 12 attention + 8
+  GELU), zero intermediate decrypts, and one final oracle decrypt. This verifies
+  the complete round-trip reduction from 24 to 7, including both four-chunk
+  GELU batches (source: the named JSON, SHA-256
+  `07ad381e8395452035e9825d24acfc020c6a0884a1755e07e904c6ab12a715d4`).
+
+`[U]` Do **not** use the batched runs as performance evidence. Although the
+immutable JSONs honestly retain raw `client_boundary_seconds_total` fields
+(attention: serial `3.6813s`, batched `1.3958s`; full: serial `6.4882s`,
+batched `3.2627s`), host load surged after each confirmed-idle preflight and
+reached roughly 750-1100 during evaluation. The batched total evaluation times
+(`743.0s` attention, `1789.4s` full) are therefore not comparable to the clean
+serial anchors. These numbers are registered only as raw, contention-affected
+observations, not speedups (sources: the four serial/batched JSONs and Brev host
+`gpu_real_scheme_b_batched_v2/fhe/scheme_b_orchestrator.log`).
+
+`[U]` No real-network or artificial added-RTT experiment was attempted, so no
+network-latency speedup is claimed. Context/key caching across blocks remains a
+separate follow-up and was not implemented in this prototype (source: scope in
+`docs/hybrid/roadmap.md` and the unchanged per-invocation setup path in
+`real_dnagpt_fides_scheme_b.cpp`).
