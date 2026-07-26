@@ -18,7 +18,7 @@
 //   encrypt inputs and decrypt the final output) decrypts the ciphertext,
 //   applies the exact elementwise function in the plaintext domain, and
 //   re-encrypts a fresh (level-0) ciphertext. See
-//   docs/feasibility/05_architecture_options.md for the acceptance contract:
+//   docs/shared/architecture_options.md for the acceptance contract:
 //   decrypts happen only at these pre-declared boundaries, the round-trip
 //   count is recorded, and the same oracle/tolerance gate applies.
 //
@@ -416,6 +416,12 @@ std::vector<int> required_rotation_keys(const std::string& gate) {
         }
     }
     add_accumulate_keys(indices, static_cast<int>(PACK_WIDTH), 1);
+    if (gate == "full") {
+        indices.insert(canonical_rotation(static_cast<std::int64_t>(PACK_WIDTH)));
+        indices.insert(canonical_rotation(-static_cast<std::int64_t>(PACK_WIDTH)));
+        indices.insert(
+            canonical_rotation(2 * static_cast<std::int64_t>(PACK_WIDTH)));
+    }
     indices.erase(0);
     return {indices.begin(), indices.end()};
 }
@@ -427,6 +433,12 @@ struct EvaluationResult {
     std::size_t ciphertext_plain_matmuls = 0;
     std::size_t ciphertext_ciphertext_multiplications = 0;
     std::size_t ciphertext_plaintext_multiplications = 0;
+};
+
+struct BoundaryEvent {
+    std::string name;
+    double seconds = 0.0;
+    std::size_t logical_instances = 0;
 };
 
 // Client: the only party in this process that holds the secret key. It plays
@@ -443,37 +455,77 @@ class Client {
     Client(Cc cc, Keys& keys) : cc_(std::move(cc)), keys_(keys) {}
 
     Ct cross_boundary(const std::string& name, const Ct& ciphertext,
-                      const std::function<double(double)>& transform) {
+                      const std::function<double(double)>& transform,
+                      std::size_t logical_instances = 1) {
+        return cross_boundary_impl(
+            name, ciphertext,
+            [&transform](std::vector<double>& values) {
+                for (double& value : values) {
+                    value = transform(value);
+                }
+            },
+            logical_instances);
+    }
+
+    Ct cross_boundary_active(const std::string& name, const Ct& ciphertext,
+                             const std::function<double(double)>& transform,
+                             std::size_t logical_instances) {
+        return cross_boundary_impl(
+            name, ciphertext,
+            [&transform](std::vector<double>& values) {
+                std::vector<double> transformed(SLOTS);
+                for (std::size_t copy = 0; copy < COPIES; ++copy) {
+                    const std::size_t start = copy * PACK_WIDTH;
+                    for (std::size_t dim = 0; dim < D; ++dim) {
+                        transformed[start + dim] = transform(values[start + dim]);
+                    }
+                }
+                values = std::move(transformed);
+            },
+            logical_instances);
+    }
+
+    std::size_t round_trips() const { return round_trips_; }
+    std::size_t logical_boundary_instances() const {
+        return logical_boundary_instances_;
+    }
+    double boundary_seconds_total() const { return boundary_seconds_total_; }
+    const std::vector<BoundaryEvent>& boundary_log() const {
+        return boundary_log_;
+    }
+
+  private:
+    Ct cross_boundary_impl(
+        const std::string& name, const Ct& ciphertext,
+        const std::function<void(std::vector<double>&)>& transform,
+        std::size_t logical_instances) {
+        if (logical_instances == 0) {
+            throw std::invalid_argument(
+                "client boundary must represent at least one logical instance");
+        }
         const auto start = Clock::now();
         Ct local = ciphertext;
         Plaintext plaintext;
         cc_->Decrypt(keys_.secretKey, local, &plaintext);
         plaintext->SetLength(SLOTS);
         std::vector<double> values = plaintext->GetRealPackedValue();
-        for (double& value : values) {
-            value = transform(value);
-        }
+        transform(values);
         Plaintext refreshed = cc_->MakeCKKSPackedPlaintext(values, 1, 0, nullptr, SLOTS);
         Ct out = cc_->Encrypt(keys_.publicKey, refreshed);
         ++round_trips_;
+        logical_boundary_instances_ += logical_instances;
         const double seconds = elapsed_seconds(start);
         boundary_seconds_total_ += seconds;
-        boundary_log_.emplace_back(name, seconds);
+        boundary_log_.push_back({name, seconds, logical_instances});
         return out;
     }
 
-    std::size_t round_trips() const { return round_trips_; }
-    double boundary_seconds_total() const { return boundary_seconds_total_; }
-    const std::vector<std::pair<std::string, double>>& boundary_log() const {
-        return boundary_log_;
-    }
-
-  private:
     Cc cc_;
     Keys& keys_;
     std::size_t round_trips_ = 0;
+    std::size_t logical_boundary_instances_ = 0;
     double boundary_seconds_total_ = 0.0;
-    std::vector<std::pair<std::string, double>> boundary_log_;
+    std::vector<BoundaryEvent> boundary_log_;
 };
 
 class EncryptedEvaluator {
@@ -510,53 +562,39 @@ class EncryptedEvaluator {
         }
         record("qkv", query);
 
-        std::array<std::array<Ct, T>, HEADS> value_heads{};
-        for (std::size_t head = 0; head < HEADS; ++head) {
-            std::vector<double> head_mask(D);
-            for (std::size_t dim = head * HEAD_DIM;
-                 dim < (head + 1) * HEAD_DIM; ++dim) {
-                head_mask[dim] = 1.0;
-            }
-            const Plaintext mask = repeated_plain(head_mask);
-            for (std::size_t token = 0; token < T; ++token) {
-                value_heads[head][token] = multiply_plain(value[token], mask);
-            }
-        }
-
         std::array<Ct, T> context{};
+        context[0] = value[0];
         const double score_scale = 1.0 / std::sqrt(static_cast<double>(HEAD_DIM));
+        Ct packed_delta;
         for (std::size_t head = 0; head < HEADS; ++head) {
             std::vector<double> head_mask(D);
             for (std::size_t dim = head * HEAD_DIM;
                  dim < (head + 1) * HEAD_DIM; ++dim) {
                 head_mask[dim] = 1.0;
             }
-
-            // The first causal row has one source, so softmax is exactly one.
-            context[0] =
-                head == 0 ? value_heads[head][0]
-                          : cc_->EvalAdd(context[0], value_heads[head][0]);
 
             const Ct score_10 =
                 attention_score(query[1], key[0], head_mask, score_scale);
             const Ct score_11 =
                 attention_score(query[1], key[1], head_mask, score_scale);
             const Ct delta = cc_->EvalSub(score_11, score_10);
-            Ct weight_1 = client_.cross_boundary(
-                "attention_sigmoid_head" + std::to_string(head), delta,
-                exact_sigmoid);
-
-            // Exact T=2 identity:
-            //   w1 = sigmoid(s11 - s10)
-            //   context = v0 + w1 * (v1 - v0)
-            const Ct value_delta =
-                cc_->EvalSub(value_heads[head][1], value_heads[head][0]);
-            const Ct weighted_delta = multiply(weight_1, value_delta);
-            const Ct head_context =
-                cc_->EvalAdd(value_heads[head][0], weighted_delta);
-            context[1] =
-                head == 0 ? head_context : cc_->EvalAdd(context[1], head_context);
+            const Ct masked_delta =
+                multiply_plain(delta, repeated_plain(head_mask));
+            packed_delta =
+                head == 0 ? masked_delta
+                          : cc_->EvalAdd(packed_delta, masked_delta);
         }
+
+        // All twelve scalar head deltas occupy disjoint 64-slot spans inside
+        // each 1024-slot copy. One client decrypt/sigmoid/re-encrypt therefore
+        // refreshes every head at once. The first causal row has one source, so
+        // its softmax is exactly one and context[0] is the unmodified value.
+        Ct packed_weight = client_.cross_boundary_active(
+            "attention_sigmoid_heads_batched", packed_delta, exact_sigmoid,
+            HEADS);
+        const Ct value_delta = cc_->EvalSub(value[1], value[0]);
+        context[1] =
+            cc_->EvalAdd(value[0], multiply(packed_weight, value_delta));
         record("attention_context", context);
 
         std::array<Ct, T> attention_projection{};
@@ -594,10 +632,27 @@ class EncryptedEvaluator {
             std::array<Ct, 4> hidden{};
             for (std::size_t chunk = 0; chunk < 4; ++chunk) {
                 hidden[chunk] = matmul(fc_baby, fixture_.mlp_fc[chunk]);
-                hidden[chunk] = client_.cross_boundary(
-                    "gelu_token" + std::to_string(token) + "_chunk" +
-                        std::to_string(chunk),
-                    hidden[chunk], exact_gelu);
+            }
+
+            // Temporarily use the four 1024-slot copies as four independent
+            // GELU lanes. Each lane carries one 768-value MLP chunk; after the
+            // single client boundary, restore each chunk to the four identical
+            // copies required by the existing cyclic BSGS matmul.
+            Ct packed_hidden;
+            for (std::size_t chunk = 0; chunk < 4; ++chunk) {
+                const Ct selected =
+                    multiply_plain(hidden[chunk], copy_active_plain(chunk));
+                packed_hidden =
+                    chunk == 0 ? selected
+                               : cc_->EvalAdd(packed_hidden, selected);
+            }
+            Ct packed_activated = client_.cross_boundary_active(
+                "gelu_token" + std::to_string(token) + "_chunks_batched",
+                packed_hidden, exact_gelu, 4);
+            for (std::size_t chunk = 0; chunk < 4; ++chunk) {
+                const Ct selected = multiply_plain(
+                    packed_activated, copy_active_plain(chunk));
+                hidden[chunk] = replicate_copies(selected);
             }
 
             Ct mlp;
@@ -651,6 +706,18 @@ class EncryptedEvaluator {
         std::fill_n(
             packed.begin() +
                 static_cast<std::ptrdiff_t>(token * PACK_WIDTH),
+            D, 1.0);
+        return raw_plain(packed);
+    }
+
+    Plaintext copy_active_plain(std::size_t copy) {
+        if (copy >= COPIES) {
+            throw std::invalid_argument("copy outside COPIES");
+        }
+        std::vector<double> packed(SLOTS);
+        std::fill_n(
+            packed.begin() +
+                static_cast<std::ptrdiff_t>(copy * PACK_WIDTH),
             D, 1.0);
         return raw_plain(packed);
     }
@@ -716,6 +783,25 @@ class EncryptedEvaluator {
         Ct score = sum_broadcast(products);
         return multiply_plain(score,
                               repeated_plain(std::vector<double>(D, scale)));
+    }
+
+    Ct replicate_copies(const Ct& input) {
+        const std::vector<std::int32_t> indices = {
+            static_cast<std::int32_t>(PACK_WIDTH),
+            -static_cast<std::int32_t>(PACK_WIDTH),
+            static_cast<std::int32_t>(2 * PACK_WIDTH),
+        };
+        const auto rotated = cc_->EvalFastRotation(
+            input, indices, cc_->GetCyclotomicOrder(), nullptr);
+        if (rotated.size() != indices.size()) {
+            throw std::runtime_error(
+                "FIDESlib returned incomplete cross-copy rotations");
+        }
+        Ct output = input;
+        for (const Ct& copy : rotated) {
+            output = cc_->EvalAdd(output, copy);
+        }
+        return output;
     }
 
     BabyRotations baby_rotations(const Ct& input) {
@@ -870,14 +956,20 @@ std::string make_json(const Options& options, std::uint32_t ring,
                       double fixture_seconds, double setup_seconds,
                       double encryption_seconds, double evaluation_seconds,
                       double decrypt_seconds, std::size_t round_trips,
+                      std::size_t logical_boundary_instances,
                       double boundary_seconds_total,
-                      const std::vector<std::pair<std::string, double>>&
-                          boundary_log) {
-    std::map<std::string, std::pair<std::size_t, double>> boundary_summary;
-    for (const auto& [name, seconds] : boundary_log) {
-        auto& entry = boundary_summary[name];
-        entry.first += 1;
-        entry.second += seconds;
+                      const std::vector<BoundaryEvent>& boundary_log) {
+    struct BoundaryAggregate {
+        std::size_t count = 0;
+        std::size_t logical_instances = 0;
+        double seconds = 0.0;
+    };
+    std::map<std::string, BoundaryAggregate> boundary_summary;
+    for (const BoundaryEvent& event : boundary_log) {
+        auto& entry = boundary_summary[event.name];
+        entry.count += 1;
+        entry.logical_instances += event.logical_instances;
+        entry.seconds += event.seconds;
     }
 
     std::ostringstream out;
@@ -885,7 +977,7 @@ std::string make_json(const Options& options, std::uint32_t ring,
     out << "{\n"
         << "  \"schema_version\": 1,\n"
         << "  \"task\": \"FHE real-weight DNAGPT block-0 gate, Scheme B hybrid client-assisted CKKS, FIDESlib GPU\",\n"
-        << "  \"implementation_version\": \"t2-scheme-b-v1\",\n"
+        << "  \"implementation_version\": \"t2-scheme-b-v2-batched\",\n"
         << "  \"scheme\": \"B (hybrid client-assisted CKKS; server-only linear algebra, client-only decrypt at pre-declared nonlinearity boundaries)\",\n"
         << "  \"measured_at_utc\": \"" << utc_now() << "\",\n"
         << "  \"gate\": \"" << json_escape(options.gate) << "\",\n"
@@ -930,7 +1022,8 @@ std::string make_json(const Options& options, std::uint32_t ring,
         << "      \"explicit_ciphertext_plaintext_multiplications\": "
         << evaluation.ciphertext_plaintext_multiplications << "\n"
         << "    },\n"
-        << "    \"attention_schedule\": \"T=2 exact identity: w1=sigmoid(s11-s10); context=v0+w1*(v1-v0); sigmoid computed exactly at the Scheme B client boundary, no Chebyshev approximation\",\n"
+        << "    \"attention_schedule\": \"T=2 exact identity: w1=sigmoid(s11-s10); twelve head deltas occupy disjoint 64-slot spans and cross one exact Scheme B client boundary; context=v0+w1*(v1-v0)\",\n"
+        << "    \"client_boundary_batching\": \"attention: 12 heads in one ciphertext; GELU: four 768-value chunks in one ciphertext per token; LayerNorm remains per token\",\n"
         << "    \"public_domain_contract\": \"not applicable under Scheme B: nonlinearities are computed exactly at the client plaintext boundary, so no calibrated public input range is required\",\n"
         << "    \"depth_guards\": {\"mlp_required_levels\": 4, "
            "\"final_pack_required_levels\": 1, \"fail_closed\": true},\n"
@@ -954,14 +1047,17 @@ std::string make_json(const Options& options, std::uint32_t ring,
         << "  \"passed\": " << (metrics.passed ? "true" : "false") << ",\n"
         << "  \"protocol\": {\n"
         << "    \"round_trips\": " << round_trips << ",\n"
+        << "    \"logical_boundary_instances\": "
+        << logical_boundary_instances << ",\n"
         << "    \"boundary_seconds_total\": " << boundary_seconds_total
         << ",\n"
         << "    \"boundary_summary\": {\n";
     std::size_t summary_index = 0;
-    for (const auto& [name, count_seconds] : boundary_summary) {
+    for (const auto& [name, aggregate] : boundary_summary) {
         out << "      \"" << json_escape(name) << "\": {\"count\": "
-            << count_seconds.first << ", \"total_seconds\": "
-            << count_seconds.second << "}";
+            << aggregate.count << ", \"logical_instances\": "
+            << aggregate.logical_instances << ", \"total_seconds\": "
+            << aggregate.seconds << "}";
         out << (++summary_index == boundary_summary.size() ? "\n" : ",\n");
     }
     out << "    }\n"
@@ -980,6 +1076,8 @@ std::string make_json(const Options& options, std::uint32_t ring,
         << "  \"input_boundary\": \"token plus position embeddings encrypted by client\",\n"
         << "  \"intermediate_decrypt_attempts\": 0,\n"
         << "  \"declared_client_boundary_crossings\": " << round_trips << ",\n"
+        << "  \"declared_logical_boundary_instances\": "
+        << logical_boundary_instances << ",\n"
         << "  \"final_decrypt_calls\": 1,\n"
         << "  \"evaluator_has_private_key\": false\n"
         << "}\n";
@@ -1107,6 +1205,7 @@ int main(int argc, char** argv) {
             options, ring, rotation_keys.size(), evaluation, metrics,
             fixture_seconds, setup_seconds, encryption_seconds,
             evaluation_seconds, decrypt_seconds, client.round_trips(),
+            client.logical_boundary_instances(),
             client.boundary_seconds_total(), client.boundary_log());
         write_exclusive(options.output, evidence);
         std::cout << evidence;

@@ -6,7 +6,7 @@ Can DNAGPT evaluate encrypted embedded genomic-token vectors and return encrypte
 outputs so an untrusted compute provider never sees plaintext DNA?
 
 Two architectures are tracked as of 2026-07-25
-(see [05_architecture_options.md](05_architecture_options.md) for the full comparison):
+(see [architecture_options.md](architecture_options.md) for the full comparison):
 
 - **Scheme A (frozen baseline):** pure non-interactive CKKS, one uninterrupted
   ciphertext lineage, zero intermediate decrypt.
@@ -24,6 +24,12 @@ The current answer is deliberately split:
   decrypt and `93.405 s [gpu]` encrypted evaluation.
 - `[V]` Released DNAGPT block-0 weights pass encrypted `D=768`, `T=2` LayerNorm
   and complete 12-head attention/projection gates.
+- `[V]` Scheme B's own complete real-weight `D=768`, `T=2` block-0 gate (LN1,
+  attention, MLP, LN2, residuals, pack) passes at `ring_dim=65536`/depth 16 --
+  roughly 6.6x faster wall time than Scheme A's equivalent gate on half the ring
+  dimension, since every nonlinearity resets to level 0 at the client boundary
+  instead of consuming Chebyshev depth. Naive 12-block linear extrapolation at
+  `T=2` (not yet scaled to real sequence lengths): `~74.6 min` total.
 - `[V/A]` A fixed, publicly calibrated approximation schedule passes the plaintext
   oracle through all 12 released blocks and the GSR head; broader calibration and
   encrypted composition remain open.
@@ -69,6 +75,7 @@ that final decrypt. `fhe/oracle.py` supplies the plaintext reference and gate.
 | Complete real-width block | Close block 0 (LN1+attention+MLP+LN2+pack) at depth 43 with the sigmoid schedule | `[V]` complete: packed at level 41/43, rel_inf `6.41e-6`, `2461.8 s [gpu]` | `fhe_fides_real_d768_t2_block0_sigmoid13_a100_asymfix2_20260724.json` |
 | Twelve-block nonlinear schedule | Fixed public domains, stable T=2 attention, scaled LayerNorm, and full-domain GELU preserve all blocks/head | `[V/A]` plaintext preflight passes; not FHE | `fhe_range_control_t2_12block_optimized_v2_20260724.json` |
 | Scale and composition | Refreshes, two encrypted blocks, all 12 blocks, and task head close | `[V]` native-GPU refresh gate and the complete block-0 sigmoid gate both pass in isolation; `[V]` the chained two-block (`gpu_multiblock`, depth 64) gate fails closed -- root cause confirmed via a symbolized backtrace (`AddBootstrapPlaintexts -> GPUmalloc`) as GPU memory footprint (batch_slots=4096, 63 rotation keys) exceeding one A100's 80GB, not depth- or digit-count-specific; `[U]` 12-block closure remains | `fhe_fides_refresh_d768_t2_native_a100_asymfix2_20260724.json`, `fhe_fides_real_d768_t2_block0_sigmoid13_a100_asymfix2_20260724.json`, `fhe_fides_gpu_multiblock_blocks0_1_refresh_FAIL_20260724.json`, `fhe_fides_gpu_multiblock_bisect_depth50_FAIL_20260724.json`, `fhe_fides_gpu_multiblock_bisect_depth58_backtrace_FAIL_20260724.json` |
+| Scheme B complete real-width block | Close block 0 (LN1+attention+MLP+LN2+pack) under hybrid client-assisted CKKS | `[V]` complete: `rel_inf=3.32e-10`, 24 client round trips, `372.27s [gpu]` (`365.78s` server + `6.49s` client boundary) at `ring_dim=65536`/depth 16 -- vs Scheme A's `2461.8s` at `ring_dim=131072`/depth 43; `[A]` naive 12-block T=2 extrapolation `~74.6 min`; `[U]` T>2 scaling blocked on a general causal-attention circuit | `fhe_fides_real_d768_t2_ln1_scheme_b_a100_20260725.json`, `fhe_fides_real_d768_t2_attention_scheme_b_a100_20260725.json`, `fhe_fides_real_d768_t2_block0_scheme_b_a100_20260725.json` |
 
 A twelve-layer CPU run is intentionally skipped: it would repeat arithmetic already
 established by the complete block while measuring a rejected performance path.
@@ -94,8 +101,8 @@ version preserves T=2 softmax exactly as a single sigmoid of the score differenc
 which removes the reciprocal polynomial and is expected to fit within depth 43.
 
 See [roadmap.md](../roadmap.md) for the gate definitions,
-[01_backend_selection.md](01_backend_selection.md) for the backend decision,
-[02_operator_matrix.md](02_operator_matrix.md) for primitive measurements, and
-[05_architecture_options.md](05_architecture_options.md) for the Scheme A/B/C
+[backend_selection.md](backend_selection.md) for the backend decision,
+[../pure/operator_matrix.md](../pure/operator_matrix.md) for primitive measurements, and
+[architecture_options.md](architecture_options.md) for the Scheme A/B/C
 comparison and the active Scheme B decision. The passing block and derived 0.1b
-boundary are in [03_measurements.md](03_measurements.md).
+boundary are in [../pure/measurements.md](../pure/measurements.md).

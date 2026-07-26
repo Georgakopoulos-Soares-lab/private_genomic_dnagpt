@@ -54,7 +54,7 @@ docker/          pinned OpenFHE Python and patched FIDESlib C++/CUDA environment
 - Per-task method + commands + verdicts: [docs/tasks.md](docs/tasks.md)
 - Dataset origins (incl. Internet-Archive recovery of the dead Xpresso host): [docs/data_provenance.md](docs/data_provenance.md)
 - Path to encrypted DNAGPT: [docs/roadmap.md](docs/roadmap.md)
-- Phase-B evidence and boundary: [docs/feasibility/00_overview.md](docs/feasibility/00_overview.md)
+- Phase-B evidence and boundary: [docs/shared/feasibility_overview.md](docs/shared/feasibility_overview.md)
 
 ## Phase B status
 

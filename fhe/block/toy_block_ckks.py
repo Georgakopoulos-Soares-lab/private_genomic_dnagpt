@@ -11,7 +11,7 @@ Layout: per-token ciphertexts with each D-slot token repeated across T blocks. T
 config (D=8, T=4, 2 heads) keeps it runnable under linux/amd64 emulation on a Mac while
 exercising multi-head causal attention. The T encrypted outputs are masked into one
 packed ciphertext and decrypted with one final Decrypt call. Latency here is [emu], not
-representative — see docs/feasibility.
+representative — see docs/pure/.
 
 Run (from repo root):
   docker run --rm --platform linux/amd64 -v "$PWD":/work -w /work dnagpt-openfhe \

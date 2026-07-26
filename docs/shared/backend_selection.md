@@ -5,7 +5,7 @@ encrypted, block output encrypted, and no intermediate decryption anywhere in th
 arithmetic pass. DNAGPT's block contains LayerNorm, causal softmax attention, GELU,
 linear maps, and residual additions (`DNAGPT/dna_gpt/model/gpt.py`). Scheme B (the
 active path since 2026-07-25, see
-[05_architecture_options.md](05_architecture_options.md)) relaxes only the
+[architecture_options.md](architecture_options.md)) relaxes only the
 zero-intermediate-decrypt clause, and only for the data-owning client at pre-declared
 nonlinearity boundaries; the backend selection below is unchanged for both schemes.
 

@@ -1,0 +1,124 @@
+# DNAGPT local performance evaluation - run provenance
+# Tags: [V] verified/measured, [U] unresolved/blocked, [A] assumption
+# Shared: Phase-A plaintext baseline evals + plaintext FHE-adjacent scaffolding (not scheme-specific).
+# See ../pure/manifest.yaml (Scheme A) and ../hybrid/manifest.yaml (Scheme B) for FHE correctness runs.
+model_repo: TencentAILabHealthcare/DNAGPT   # arXiv 2307.05628
+host: MacBook (darwin arm64), Python 3.12, torch 2.13.0, device=mps/cpu
+weights_dir: checkpoints/                    # 0.1b only (user decision); not committed
+
+runs:
+  - id: gsr_aataaa_human_full
+    task: "Task 1 - Genomic Signal & Region Recognition"
+    status: "[V] measured"
+    weight: checkpoints/classification.pth   # fine-tuned dna_gpt0.1b_m
+    dataset:
+      source: "DeepGSR (Kalkatawi et al. 2019), Zenodo record 1117159, Data.zip"
+      files: "data/gsr/Data/Human/PAS/hs_AATAAA_polyA.fa (pos), hs_negAATAAA_polyA.fa (neg)"
+      format: "606 bp records; central AATAAA motif (idx 300:306) stripped -> 600 bp (DNAGPT format)"
+      n: 22604   # 11302 real + 11302 fake, full balanced set
+    device: mps
+    metrics:
+      accuracy: 0.9124
+      precision: 0.8810
+      recall: 0.9535
+      f1: 0.9158
+      confusion_[true][pred]: [[9846, 1456], [525, 10777]]
+    reference: "DeepGSR human AATAAA test accuracy ~0.916"
+    verdict: "[V] Reliable. Matches published accuracy within ~0.4 pts on the full test set."
+    seconds: 140
+
+  - id: mrna_xpresso_human_1ktest
+    task: "Task 3 - Human mRNA Abundance Regression"
+    status: "[V] PASS"
+    weight: checkpoints/regression.pth        # fine-tuned dna_gpt0.1b_h (max_len 4096)
+    dataset:
+      source: "Xpresso human (Agarwal & Shendure 2020), recovered via Internet Archive"
+      recovery: "krishna.gs.washington.edu offline -> Wayback Roadmap_...pM10Kb.txt.gz snapshot 20240420"
+      build: "eval/build_mrna_testset.py (py3 port of setup_training_files.py); 18377 genes, last 1000 = test"
+      window: "promoter[3000:13500] = 10.5kb (7kb up + 3.5kb down of TSS)"
+      n: 1000
+    device: mps
+    metrics: {r2: 0.5616, pearson_r: 0.7532, spearman_r: 0.7454}
+    reference: "DNAGPT paper r2 ~0.62 (Xpresso 0.59)"
+    verdict: >
+      [V] PASS. Pearson 0.753, r2 within ~0.05 of paper. Residual gap likely from non-identical
+      test-split reproduction (pandas sample rs=1) + float32. See docs/data_provenance.md.
+
+  - id: mrna_smoke_regression_sh
+    task: "Task 3 - mRNA pipeline check"
+    status: "[V] pipeline verified"
+    dataset: {source: "scripts/regression.sh (2 author examples)", n: 2}
+    metrics:
+      example1: {gt: -1.1045, pred: -1.0637, abs_err: 0.041}
+      example2: {gt: 0.1831,  pred: 0.1481,  abs_err: 0.035}
+
+  - id: gue_prom_core_all / gue_prom_300_all / gue_splice_reconstructed
+    task: "Task 2 - GUE (human promoters & splice sites)"
+    status: "[V] PASS"
+    dataset:
+      source: "DNABERT-2 GUE (gdrive 1uOrwlf07qGQuruXqGXWMpPn8avBoW7T-, HF leannmlindsey/GUE)"
+      datasets: "prom_core_all, prom_300_all, splice/reconstructed"
+    method: "eval/finetune_gue.py: dna_gpt0.1b_m backbone + linear head, full fine-tune 3 epochs, MCC"
+    device: mps
+    metrics:
+      prom_core_all: {mcc: 0.680, acc: 0.840, f1: 0.840, classes: 2}
+      prom_300_all:  {mcc: 0.897, acc: 0.948, f1: 0.948, classes: 2}
+      splice_reconstructed: {mcc: 0.831, acc: 0.895, f1: 0.892, classes: 3}
+    reference: "DNABERT-2 GUE MCC ~0.69 / ~0.87 / ~0.85 [A] approximate"
+    verdict: >
+      [V] PASS. DNAGPT 0.1b (locally fine-tuned) competitive with DNABERT-2 on the human
+      promoter/splice GUE subset. Covers 3 of 28 GUE datasets (the ones named in the brief).
+
+  - id: fhe_multiblock_plaintext_contract_20260724
+    task: "Released-weight 12-block DNAGPT and GSR-head plaintext/export contract"
+    status: "[V] PASS plaintext contract; not an encrypted run"
+    model: {layers: 12, dimension: 768, heads: 12}
+    config:
+      encrypted_graph_target_tokens: 2
+      full_task_reference_tokens: 103
+      exported_arrays: 392
+      exported_array_bytes: 688322848
+    metrics:
+      block_11_rel_inf: 1.1401e-6
+      head_rel_inf: 1.5380e-6
+      t2_margin_n_minus_a: -4.669534
+      full_prompt_margin_n_minus_a: 12.266602
+      block0_fixed_domains_compose_all_12: false
+      first_domain_failure_block: 1
+    provenance:
+      result_sha256: "e6d092990f07954c1491981176b598469e421368dac6c6c614c449df5d345e86"
+      fixture_manifest_sha256: "3c8d7bbcbfe62d9dc7f3fa89571396b93c3f92cb89563fa5cb4cd7b831bd5e4c"
+      fixture_content_identity_sha256: "a0d7b07ab3c741e068dc4a5391998ace8f95fafcf893996708b1eab340204cd6"
+    verdict: >
+      [V] The independent NumPy lineage matches upstream torch through all 12 blocks
+      and the task head. T=2 is only a graph gate, and block-0 polynomial domains fail
+      beginning at block 1, so encrypted composition requires public per-block range
+      contracts or a separately validated range-control transform.
+
+  - id: fhe_range_control_t2_12block_optimized_v2_20260724
+    task: "Plaintext-first fixed nonlinear schedule through 12 released DNAGPT blocks and GSR head"
+    status: "[V] PASS simulation; [A] one-fixture domains; not an FHE run"
+    config:
+      layers: 12
+      dimension: 768
+      heads: 12
+      sequence_length: 2
+      clipping: false
+      private_query_adaptation: false
+    metrics:
+      domain_violations: 0
+      worst_block_global_rel_inf: 1.05995e-3
+      worst_block_worst_token_rel_inf: 8.11735e-3
+      worst_head_stage_global_rel_inf: 6.18486e-3
+      classification_label_preserved: true
+      nonlinear_depth_proxy_range: [14, 24]
+    provenance:
+      result_sha256: "cc2af734bbe7ca924e447f5a315bb7a50745ce4cc415741055b30e93913935b0"
+      full_diagnostic_sha256: "b148e30b42c430405a0a2c41401ab295701e0e1c3655ef00f06984ff9f8faba2"
+      fixture_manifest_sha256: "3c8d7bbcbfe62d9dc7f3fa89571396b93c3f92cb89563fa5cb4cd7b831bd5e4c"
+    verdict: >
+      [V] On the fixed public T=2 fixture, stable sigmoid attention,
+      public-scaled LayerNorm, and full-domain GELU preserve all 12 block
+      outputs and the task-head label inside the 4e-2 gate. [U] This must
+      still be realized with CKKS levels/refreshes and calibrated on broader
+      public data before private task inference.

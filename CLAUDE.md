@@ -31,20 +31,27 @@ valid — never tune to force a pass.
 Encrypted operators on the 0.1b backbone → encrypted end-to-end on a task, matching the Phase-A
 oracle within a declared tolerance. See `docs/roadmap.md`.
 
-Two architectures are tracked, per
-`docs/feasibility/05_architecture_options.md`:
+**Default architecture: hybrid client-assisted CKKS** (internal tag `Scheme B`, code in
+`fhe/gpu_real_scheme_b/`). Server keeps all linear algebra (FIDESlib GPU, unchanged) in one
+encrypted lineage; the client — the data owner, who already holds the secret key — decrypts only
+ciphertexts derived from its own query at pre-declared nonlinearity boundaries (LayerNorm,
+attention nonlinearity, GELU), evaluates exactly in plaintext, and re-encrypts. The untrusted
+compute provider never observes plaintext, a partial decrypt, or the secret key. This is the only
+architecture with active/planned work.
 
-- **Scheme A (frozen baseline):** pure non-interactive CKKS, one uninterrupted ciphertext
-  lineage, zero intermediate decrypt. Proven to close one full real-weight block; proven to hit
-  a root-caused GPU memory wall at chained multi-block composition. Kept as-is for the paper's
-  ablation/baseline; no further Scheme A runs planned unless needed to re-establish the boundary.
-- **Scheme B (active path):** hybrid client-assisted CKKS. Server keeps all linear algebra
-  (FIDESlib GPU, unchanged) in one encrypted lineage; the client — the data owner, who already
-  holds the secret key — decrypts only ciphertexts derived from its own query at pre-declared
-  nonlinearity boundaries (LayerNorm, attention nonlinearity, GELU), evaluates exactly in
-  plaintext, and re-encrypts. The untrusted compute provider never observes plaintext, a partial
-  decrypt, or the secret key. See `docs/feasibility/05_architecture_options.md` for the full
-  comparison against Scheme A and a deferred Scheme C (CKKS↔FHEW scheme switching).
+Two alternatives were evaluated and are **not** the default; full justification in
+`docs/shared/architecture_options.md`:
+
+- **Pure non-interactive CKKS** (internal tag `Scheme A`, frozen baseline/ablation): one
+  uninterrupted ciphertext lineage, zero intermediate decrypt. Closed one full real-weight block,
+  then hit a root-caused GPU memory wall at chained multi-block composition. Kept only as the
+  paper's ablation; no further Scheme A runs planned.
+- **CKKS↔FHEW scheme switching** (internal tag `Scheme C`, deferred): fully non-interactive,
+  exact nonlinearities via LUT, but no GPU-accelerated implementation exists to build on. Not
+  rejected, just deferred.
+
+Concrete ML's TFHE-rs backend was also evaluated and rejected (weak GPU speedup, large
+ciphertext expansion) — see `docs/shared/backend_selection.md`.
 
 **In scope:** the DNAGPT model graph as the FHE target; plaintext baseline harnesses; dataset
 provenance; measured metrics; the evidence trail feeding the paper.
@@ -69,7 +76,8 @@ lookup; a production client/server key-custody and transport service.
 2. **Every dataset gets provenance** in `docs/data_provenance.md`: exact source URL, retrieval date,
    any recovery route (e.g. Internet Archive), preprocessing, and license. No silent data.
 3. **Every result is an immutable run** under `results/runs/<tag>.json` (+ `_preds.csv` when
-   applicable) and one row in `results/manifest.yaml`. Never rewrite an old run; add a new tag.
+   applicable) and one row in the appropriate `results/{pure,hybrid,shared}/manifest.yaml`.
+   Never rewrite an old run; add a new tag.
 4. **Separate measured facts from claims.** Tag load-bearing statements `[V]` (verified/measured),
    `[U]` (unresolved/blocked), or `[A]` (assumption) with a source.
 5. **Reproducibility:** every reported number has a single exact command in `docs/tasks.md` that
@@ -85,8 +93,10 @@ lookup; a production client/server key-custody and transport service.
 | Evaluation methodology & design (why these metrics, harness design, oracle) | `docs/eval_approach.md` |
 | Dataset origins, recovery, licenses | `docs/data_provenance.md` |
 | Next steps toward FHE | `docs/roadmap.md` |
-| Phase-B backend, operator, block, and Brev evidence | `docs/feasibility/` |
-| Run provenance | `results/manifest.yaml`, `results/runs/` |
+| Phase-B rationale shared by both schemes (backend choice, architecture comparison) | `docs/shared/` |
+| Phase-B Scheme A (pure, frozen) evidence | `docs/pure/` |
+| Phase-B Scheme B (hybrid, active) evidence | `docs/hybrid/` |
+| Run provenance | `results/{pure,hybrid,shared}/manifest.yaml`, `results/runs/` |
 | Evidence acceptance rules | `results/README.md` |
 
 ## Repository layout
@@ -98,10 +108,25 @@ data/{gsr,mrna,gue}/  datasets (gitignored; see docs/data_provenance.md)
 eval/              common.py + eval_gsr.py + eval_mrna.py + build_mrna_testset.py + finetune_gue.py
 fhe/               OpenFHE oracle plus FIDESlib CUDA toy/real-width gates
 docker/            pinned OpenFHE Python and patched FIDESlib CUDA environments
-results/           manifest.yaml + runs/ (immutable evidence) + README.md
-docs/              overview, tasks, eval_approach, data_provenance, roadmap
+results/           runs/ (immutable evidence) + README.md + pure/, hybrid/, shared/ manifests
+docs/              overview, tasks, eval_approach, data_provenance, roadmap + pure/, hybrid/, shared/
 requirements.txt   pinned Phase-A dependencies
 ```
+
+## Scheduling a Scheme B job (Brev)
+
+To run the remaining Scheme B gates unattended on the shared Brev host once capacity frees up:
+
+```bash
+fhe/gpu_real_scheme_b/wait_and_run_scheme_b.sh
+```
+
+Polls host load average (`LOAD_THRESHOLD`, default 250) and per-GPU idle state
+(`POLL_SECONDS`, default 60s) until capacity is available, then launches the next missing
+gate (`ln1` → `attention` → `full`) via `launch_brev_scheme_b.sh`. Safe to re-run — skips any
+gate whose evidence JSON already exists and never overwrites an existing log/done/output
+file. Survives SSH/session disconnects (runs detached on the host). Log:
+`.../scheme_b_orchestrator.log` on the host. Full detail: `docs/hybrid/brev_runbook.md`.
 
 ## Base validation
 

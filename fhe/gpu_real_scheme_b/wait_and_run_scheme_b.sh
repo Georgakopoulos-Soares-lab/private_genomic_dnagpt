@@ -11,12 +11,14 @@
 # is fail-closed on that already).
 set -uo pipefail
 
-readonly REMOTE_ROOT="/data/christos/private_genomic_ml/dnagpt_fides_asymfix2_20260724"
-readonly SOURCE_SUBDIR="gpu_real_scheme_b_v1/fhe/gpu_real_scheme_b"
+readonly REMOTE_ROOT="${SCHEME_B_REMOTE_ROOT:-/data/christos/private_genomic_ml/dnagpt_fides_asymfix2_20260724}"
+readonly SOURCE_SUBDIR="${SCHEME_B_SOURCE_SUBDIR:-gpu_real_scheme_b_v1/fhe/gpu_real_scheme_b}"
 readonly SOURCE_DIR="${REMOTE_ROOT}/${SOURCE_SUBDIR}"
-readonly FIXTURE_SUBDIR="real_fixture/gsr_pos0_block0_t2_d63353abdc1a_52d046d1fcf0"
-readonly IMAGE="dnagpt-fideslib:786c-asymfix2"
-readonly DATE_TAG="20260725"
+readonly FIXTURE_SUBDIR="${SCHEME_B_FIXTURE_SUBDIR:-real_fixture/gsr_pos0_block0_t2_d63353abdc1a_52d046d1fcf0}"
+readonly IMAGE="${SCHEME_B_IMAGE:-dnagpt-fideslib:786c-asymfix2}"
+readonly DATE_TAG="${SCHEME_B_DATE_TAG:-20260725}"
+readonly ATTENTION_TAG="${SCHEME_B_ATTENTION_TAG:-fhe_fides_real_d768_t2_attention_scheme_b_a100_${DATE_TAG}}"
+readonly FULL_TAG="${SCHEME_B_FULL_TAG:-fhe_fides_real_d768_t2_block0_scheme_b_a100_${DATE_TAG}}"
 
 # 1-minute load average threshold below which we consider the host usable.
 # This machine has 255 cores; a load average this high still leaves the GPU
@@ -57,14 +59,25 @@ wait_for_capacity() {
     load1="${load1// /}"
     load1_int="${load1%.*}"
     gpu="$(pick_idle_gpu)"
-    log "poll: load1=${load1} threshold=${LOAD_THRESHOLD} idle_gpu=${gpu:-none}"
+    # NOTE: this log call MUST go to stderr, not stdout. wait_for_capacity's
+    # only stdout output should be the final `echo "${gpu}"` on success --
+    # the caller captures it via `gpu="$(wait_for_capacity)"`. log() uses
+    # `tee` internally, which also writes to its own stdout; without this
+    # `>&2` redirect, every poll line printed during the wait loop gets
+    # concatenated into the captured $gpu value, corrupting it into a
+    # multi-line string. This exact bug caused a real production failure on
+    # 2026-07-25 (exit 125: `--gpus device=<corrupted multi-line string>`
+    # produced "unresolvable CDI devices"), when a wait spanning multiple
+    # polls fed its accumulated log text into $gpu before the orchestrator
+    # ever launched anything.
+    log "poll: load1=${load1} threshold=${LOAD_THRESHOLD} idle_gpu=${gpu:-none}" >&2
     if [[ -n "${gpu}" ]] && (( load1_int < LOAD_THRESHOLD )); then
       echo "${gpu}"
       return 0
     fi
     now_ts=$(date +%s)
     if (( now_ts - start_ts > MAX_WAIT_SECONDS )); then
-      log "giving up: no capacity within ${MAX_WAIT_SECONDS}s"
+      log "giving up: no capacity within ${MAX_WAIT_SECONDS}s" >&2
       return 1
     fi
     sleep "${POLL_SECONDS}"
@@ -100,8 +113,8 @@ run_gate() {
 main() {
   log "orchestrator starting (pid $$)"
   local specs=(
-    "attention:fhe_fides_real_d768_t2_attention_scheme_b_a100_${DATE_TAG}"
-    "full:fhe_fides_real_d768_t2_block0_scheme_b_a100_${DATE_TAG}"
+    "attention:${ATTENTION_TAG}"
+    "full:${FULL_TAG}"
   )
   local spec gate tag gpu rc
   for spec in "${specs[@]}"; do

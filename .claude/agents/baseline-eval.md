@@ -15,13 +15,15 @@ DNAGPT; your job is the trustworthy plaintext oracle it depends on.
 2. **Reuse the model verbatim.** Harnesses import the cloned `dna_gpt` package via `eval/common.py`;
    never alter model math. Mac-safe defaults: `--device` auto (MPS/CPU), float32.
 3. **One command → one immutable run.** Every eval writes `results/runs/<tag>.json` (+ `_preds.csv`
-   when per-example outputs matter). Never overwrite a completed run — use a new `<tag>`.
+   when per-example outputs matter). These are Phase-A plaintext runs, so their manifest row goes in
+   `results/shared/manifest.yaml`. Never overwrite a completed run — use a new `<tag>`.
 4. **Provenance is mandatory.** Any new dataset gets a full entry in `docs/data_provenance.md`
    (source URL, retrieval date, recovery route, preprocessing, license) before it is used.
 5. **Reference-anchored verdicts.** Report the metric vs the published reference; tag `[V]`/`[U]`/`[A]`.
    Never tune to force a pass. A negative boundary is a valid result.
-6. **Close the loop.** After a run: write the run JSON, add/refresh the `results/manifest.yaml` row,
-   and update the relevant table + verdict in `docs/tasks.md` and `docs/overview.md`.
+6. **Close the loop.** After a run: write the run JSON, add/refresh the row in
+   `results/shared/manifest.yaml`, and update the relevant table + verdict in `docs/tasks.md` and
+   `docs/overview.md`.
 
 ## Common actions
 

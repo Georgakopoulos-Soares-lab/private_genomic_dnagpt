@@ -77,7 +77,7 @@ Each isolated operator also has its own entry point:
 `matmul_ckks.py`, `layernorm_ckks.py`, `softmax_ckks.py`, and `gelu_ckks.py`.
 
 The complete toy block's canonical correctness run is native x86-64 CPU on the existing
-Brev node; see [the Brev runbook](../docs/feasibility/04_brev_runbook.md). The OpenFHE
+Brev node; see [the Brev runbook](../docs/pure/brev_runbook.md). The OpenFHE
 Python wheel is CPU-only, so assigning an A100 does not accelerate it.
 
 The GPU path is under `fhe/gpu/`, `fhe/gpu_real/`, and `fhe/gpu_bootstrap/`.
@@ -91,7 +91,7 @@ The canonical block passed with global rel-inf `1.49e-3`, worst-token rel-inf
 `2.21e-3`, zero intermediate decrypt attempts, one final decrypt, and
 `330.741 s [native-cpu]` evaluation. See
 `results/runs/fhe_toy_block.json` and
-`docs/feasibility/03_measurements.md`.
+`docs/pure/measurements.md`.
 
 The corresponding CUDA block passes with global rel-inf `1.8423e-4`, worst-token
 rel-inf `4.8125e-4`, and `93.405 s [gpu]` encrypted evaluation. Released-weight

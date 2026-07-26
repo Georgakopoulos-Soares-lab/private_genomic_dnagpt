@@ -61,7 +61,7 @@ what is driving GPU memory past the point that fits on one card.**
   removes that wall by relocating nonlinear evaluation off the encrypted lineage."
 
 This reverses, for the hybrid *protocol shape* only, the earlier rejection in
-[01_backend_selection.md](01_backend_selection.md) of "Concrete ML hybrid LLM." That
+[backend_selection.md](backend_selection.md) of "Concrete ML hybrid LLM." That
 rejection was specific to the Concrete ML/TFHE-rs *backend* (Boolean/integer-only,
 no CKKS, ~1.2–2x GPU speedup, 2.2–18MB/token ciphertext expansion) and to using it as a
 silent, undocumented shortcut. Scheme B keeps OpenFHE/FIDESlib CKKS as the sole

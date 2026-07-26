@@ -4,7 +4,7 @@
 Companion/contrast to ``toy_block_ckks.py`` (Scheme A, frozen baseline). Same toy
 config (D=8, T=4, 2 heads) and the same plaintext oracle (``oracle.block_forward``),
 so results are directly comparable. See
-``docs/feasibility/05_architecture_options.md`` for the full architecture rationale.
+``docs/shared/architecture_options.md`` for the full architecture rationale.
 
 Protocol change from Scheme A: linear algebra (LayerNorm centering/variance, QKV/
 projection/MLP matmuls, residual adds) stays in one uninterrupted CKKS ciphertext

@@ -4,13 +4,11 @@
 
 Evaluate whether **DNAGPT** (arXiv 2307.05628) inference can run under **FHE** so a compute
 provider never sees plaintext DNA. Two architectures are tracked as of 2026-07-25
-(`docs/feasibility/05_architecture_options.md`): **Scheme A**, pure non-interactive CKKS with zero
-intermediate decryption, now frozen as the paper's baseline/ablation after closing one full block
-and then hitting a root-caused GPU memory wall at chained composition; and **Scheme B**, the active
-path — hybrid client-assisted CKKS, where server-side linear algebra stays encrypted end to end and
-only the data-owning client (already the secret-key holder) decrypts at pre-declared nonlinearity
-boundaries. Encrypted token-index embedding lookup remains a separate `[U]` boundary for both
-schemes.
+(`docs/shared/architecture_options.md`): **Scheme A** (pure non-interactive CKKS, frozen
+baseline/ablation, evidence in `docs/pure/`) and **Scheme B** (hybrid client-assisted CKKS, active
+path, evidence in `docs/hybrid/`). See `docs/shared/architecture_options.md` for the full
+comparison and decision rationale. Encrypted token-index embedding lookup remains a separate `[U]`
+boundary for both schemes.
 
 **Phase A is complete:** DNAGPT passes three local downstream-task gates and its
 per-example predictions are frozen as plaintext oracles. **Phase B is active:** toy
@@ -44,26 +42,28 @@ See [tasks.md](tasks.md) for methods/commands and [data_provenance.md](data_prov
   with global rel-inf `1.49e-3`, zero intermediate decrypts, and one final decrypt.
 - `[V]` The complete toy graph passes the C++/CUDA A100 gate. Released-weight
   `D=768`, `T=2` LayerNorm and 12-head attention/projection gates also pass.
-- `[V]` The original full-block depth-43 schedule fails closed from deterministic
-  level exhaustion before any final decrypt; the exact T=2 sigmoid reformulation
-  is the active replacement.
-- `[V/A]` The fixed plaintext nonlinear schedule passes all 12 released blocks
-  and the GSR head on the public T=2 fixture.
-- `[V]` Local probes validate BSGS rotation reduction, numerator-first attention, and
-  lower-degree GELU candidates without changing the correctness gate.
-- `[U]` The optimized real-width MLP/full block, encrypted refresh/composition,
-  broader public calibration, and a task-valid encrypted sequence remain under Scheme A;
-  Scheme A is now frozen as the paper's non-interactive baseline/ablation.
-- `[V]` Three independent chained-composition attempts (`multiplicative_depth` in
-  `{50, 58, 64}`, plus a 2-GPU variant) all fail closed on GPU memory exhaustion during
-  rotation-key/bootstrap-plaintext loading, not accuracy — root-caused via a symbolized
-  backtrace. This forced a pivot to **Scheme B** (hybrid client-assisted CKKS): see
-  [feasibility/05_architecture_options.md](feasibility/05_architecture_options.md).
+- `[V]` Under Scheme A, three independent chained-composition attempts
+  (`multiplicative_depth` in `{50, 58, 64}`, plus a 2-GPU variant) all fail closed on
+  GPU memory exhaustion during rotation-key/bootstrap-plaintext loading, not accuracy —
+  root-caused via a symbolized backtrace. This forced a pivot to **Scheme B** (hybrid
+  client-assisted CKKS), now the active path. Scheme A is frozen as the paper's
+  non-interactive baseline/ablation; full history in [pure/roadmap.md](pure/roadmap.md)
+  and [pure/tasks.md](pure/tasks.md).
+- `[V]` Scheme B's own complete real-weight `D=768`/`T=2` block-0 gate (LN1, attention,
+  MLP, LN2, residuals, pack) passes at `ring_dim=65536`/depth 16 — roughly 6.6x faster
+  wall time than Scheme A's equivalent gate on half the ring dimension, since every
+  nonlinearity resets to level 0 at the client boundary instead of consuming Chebyshev
+  depth. Naive 12-block `T=2` linear extrapolation (not yet scaled to real sequence
+  lengths): `~74.6 min` total. Full evidence in [hybrid/roadmap.md](hybrid/roadmap.md)
+  and [hybrid/tasks.md](hybrid/tasks.md).
+- `[U]` Real sequence-length scaling (`T>2`), multi-block composition, and a
+  task-valid encrypted sequence remain open under Scheme B.
 
-The full twelve-layer CPU route is not a planned stage: after a complete block closes,
-it adds no new arithmetic claim. Performance work moves to C++/CUDA with current
-FIDESlib/OpenFHE interoperability. The ordered gates and skip rules are documented in
-[roadmap.md](roadmap.md).
+See [shared/architecture_options.md](shared/architecture_options.md) for why Scheme B
+was adopted. The full twelve-layer CPU route is not a planned stage: after a complete
+block closes, it adds no new arithmetic claim. Performance work moves to C++/CUDA with
+current FIDESlib/OpenFHE interoperability. The ordered gates and skip rules are
+documented in [roadmap.md](roadmap.md).
 
 ## Environment
 

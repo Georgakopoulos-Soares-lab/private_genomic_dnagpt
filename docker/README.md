@@ -45,7 +45,7 @@ These are accuracy and depth measurements. Their latency is `[emu]`.
 
 The complete toy block uses the same Dockerfile built natively on the existing x86-64
 Brev node. The exact staging, build, launch, evidence-copy, and inspection commands are
-in [docs/feasibility/04_brev_runbook.md](../docs/feasibility/04_brev_runbook.md).
+in [docs/pure/brev_runbook.md](../docs/pure/brev_runbook.md).
 It is a CPU correctness anchor: the OpenFHE Python wheel does not use the A100s.
 The canonical run passed in `330.741 s [native-cpu]` with global rel-inf
 `1.49e-3`; see `results/runs/fhe_toy_block.json`.
