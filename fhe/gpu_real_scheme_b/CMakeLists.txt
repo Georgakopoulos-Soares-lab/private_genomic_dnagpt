@@ -26,3 +26,16 @@ set_target_properties(real_dnagpt_fides_scheme_b PROPERTIES
     CUDA_RESOLVE_DEVICE_SYMBOLS ON
     CUDA_SEPARABLE_COMPILATION ON
     POSITION_INDEPENDENT_CODE ON)
+
+add_executable(real_dnagpt_fides_scheme_b_cached src/real_dnagpt_fides_scheme_b_cached.cpp)
+set_source_files_properties(src/real_dnagpt_fides_scheme_b_cached.cpp PROPERTIES LANGUAGE CUDA)
+target_link_libraries(real_dnagpt_fides_scheme_b_cached PRIVATE
+    fideslib::fideslib
+    OpenMP::OpenMP_CXX)
+target_compile_options(real_dnagpt_fides_scheme_b_cached PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>
+    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wall,-Wextra,-Wpedantic>)
+set_target_properties(real_dnagpt_fides_scheme_b_cached PROPERTIES
+    CUDA_RESOLVE_DEVICE_SYMBOLS ON
+    CUDA_SEPARABLE_COMPILATION ON
+    POSITION_INDEPENDENT_CODE ON)

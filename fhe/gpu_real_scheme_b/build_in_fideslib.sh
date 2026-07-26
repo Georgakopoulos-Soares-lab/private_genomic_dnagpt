@@ -26,5 +26,7 @@ cmake \
   -DFIDESLIB_ARCH="${FIDESLIB_ARCH:-80-real}" \
   -DCMAKE_CUDA_ARCHITECTURES="${FIDESLIB_ARCH:-80-real}"
 cmake --build "${BUILD_DIR}" --target real_dnagpt_fides_scheme_b --parallel "${JOBS}"
+cmake --build "${BUILD_DIR}" --target real_dnagpt_fides_scheme_b_cached --parallel "${JOBS}"
 
 echo "[build] ${BUILD_DIR}/real_dnagpt_fides_scheme_b"
+echo "[build] ${BUILD_DIR}/real_dnagpt_fides_scheme_b_cached"

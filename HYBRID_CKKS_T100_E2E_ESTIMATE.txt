@@ -1,0 +1,79 @@
+T=100 END-TO-END HYBRID CKKS ESTIMATE
+Updated: 2026-07-27
+
+---
+
+OVERVIEW
+
+Running DNAGPT privately with 100 input tokens appears possible, but it has not yet been demonstrated end to end.
+
+Our planning estimate is 1 to 3 hours for one inference on a dedicated system with eight A100 GPUs. A near-ideal implementation might reach 30 to 75 minutes. These are projections, not measured T=100 results. Seconds-level inference is not realistic with the current approach.
+
+---
+
+HOW PRIVACY IS PRESERVED
+
+The client encrypts the DNA input and keeps the secret key. The GPU server performs the model's linear algebra on encrypted data and cannot see the DNA or intermediate plaintext values.
+
+For operations such as softmax and GELU, values return to the client for decryption, exact calculation, and re-encryption.
+
+---
+
+WHAT HAS ALREADY BEEN MEASURED
+
+I have run one complete real-weight DNAGPT block with two input tokens.
+
+- It passed the accuracy check.
+- The server never decrypted an intermediate value.
+- One block took 372.27 seconds on one A100 GPU.
+- Encrypted server computation used 365.78 seconds; client-side nonlinear operations used 6.49 seconds.
+- Batching reduced the number of client/server crossings per block from 24 to 7 while preserving accuracy.
+
+Later runs on a busy shared host confirmed correctness and fewer crossings, but did not provide trustworthy performance comparisons.
+
+---
+
+T=100 TIME ESTIMATE
+
+For all 12 DNAGPT backbone blocks:
+
+- Current design on one A100 GPU: at least 2.6 days.
+- Optimized design with realistic multi-GPU scaling: approximately 1 to 3 hours.
+- Near-ideal eight-GPU implementation: approximately 30 to 75 minutes.
+
+The task-specific output head is not included.
+
+---
+
+WHAT THE ESTIMATE ASSUMES
+
+The 1-to-3-hour estimate assumes that I can:
+
+- Pack many tokens into each ciphertext.
+- Extend attention and client-side softmax to 100 tokens.
+- Reuse encryption contexts and keys across all 12 model blocks.
+- Divide the work efficiently across eight A100 GPUs.
+- Batch nonlinear operations into a small number of network exchanges.
+
+---
+
+WHAT IS NOT YET PROVEN
+
+- No T=100 encrypted run has been completed.
+- Attention and token packing beyond two tokens are not implemented.
+- A complete encrypted 12-block driver does not yet exist.
+- Multi-GPU execution and a physically separate client/server deployment have not been measured.
+
+---
+
+CONCLUSION
+
+A 100-token hybrid CKKS inference is plausible as an offline workload if the required optimizations work as expected.
+
+For planning, use 1 to 3 hours per inference on a dedicated eight-A100 system. Treat this as an estimate until 8-, 16-, and 32-token runs are measured.
+
+Evidence and calculation basis:
+
+- results/hybrid/manifest.yaml
+- docs/hybrid/roadmap.md
+- docs/hybrid/tasks.md

@@ -267,3 +267,116 @@ network-latency speedup is claimed. Context/key caching across blocks remains a
 separate follow-up and was not implemented in this prototype (source: scope in
 `docs/hybrid/roadmap.md` and the unchanged per-invocation setup path in
 `real_dnagpt_fides_scheme_b.cpp`).
+
+### Scheme B context/key caching: scoping + in-process prototype (2026-07-27)
+
+The 12-block, T=2 extrapolation above assumes context/key setup
+(`context_keygen_load`, `~6.9s`) is a one-time cost amortized across 12 block
+evaluations. Nothing in the repo had ever actually reused a context/key
+lineage across more than one evaluation before this session -- that
+assumption was `[A]`, not `[V]`. Scoped and prototyped this session; **no GPU
+evidence yet** (that is the pending next step, see below).
+
+**Scoping, sourced directly from the pinned FIDESlib commit
+(`786c7600fb2f16b724e0acf73df367b27b8afed6`, `api/CryptoContext.cpp`/`.hpp`,
+`api/Serialize.hpp`/`.cpp`, cloned and read directly) plus vanilla OpenFHE
+example code:**
+
+1. `[V]` In-process context/key reuse across many operations is the standard
+   OpenFHE pattern (e.g. `openfhe-development/src/pke/examples/advanced-real-numbers.cpp`
+   calls `KeyGen`/`EvalMultKeyGen`/`EvalRotateKeyGen` once, then runs many
+   `Encrypt`/`Eval*` calls against the same context). Nothing FIDESlib-specific
+   forbids this for the linear-algebra ops our evaluator uses.
+2. `[V]` Hard FIDESlib constraint: `EvalMultKeyGen`/`EvalRotateKeyGen` both
+   `OPENFHE_THROW` if called after the context is loaded
+   (`api/CryptoContext.cpp:307-330`, `"...must be called before LoadContext"`).
+   `LoadContext` itself is idempotent -- it returns immediately, a no-op, if
+   `this->loaded` is already true (`api/CryptoContext.cpp:199-202`).
+   Consequence: every rotation key any evaluation in a run will ever need must
+   be generated in one batch before the single `LoadContext` call -- no
+   incremental/lazy key generation afterward.
+3. `[V]` One rotation-key set already covers every gate: reading
+   `required_rotation_keys()` (`real_dnagpt_fides_scheme_b.cpp:408-427`),
+   `full`'s key set is a strict superset of `attention`'s, which is a strict
+   superset of `ln1`'s (BSGS + accumulate keys, plus 3 extra `full`-only
+   rotations). Generating `full`'s set once therefore suffices for any gate
+   mix -- no separate union computation needed.
+4. `[V]` The GPU-side context persists in-process automatically once loaded:
+   `LoadContext` populates `this->gpu` (a `FIDESlib::CKKS::Context`) once;
+   every later `Eval*` call reads that same object, freed only in
+   `~CryptoContextImpl` (`DeregisterCryptoContextGPU`,
+   `api/CryptoContext.cpp:126-135`). No per-evaluation GPU reconstruction is
+   needed within one process once loaded.
+5. `[U]` Cross-process caching is architecturally possible but not
+   implemented or measured here. FIDESlib's own `Serialize.hpp`/`.cpp` expose
+   `SerializeToFile`/`DeserializeFromFile` for `CryptoContext`/`PublicKey`/
+   `PrivateKey` (cereal, delegating to vanilla OpenFHE) plus static
+   `SerializeEvalMultKey`/`SerializeEvalAutomorphismKey` for the actual
+   keyswitching key material -- meaning the CPU-bound `KeyGen`/
+   `EvalRotateKeyGen` cost (the same cost that stalled 8.5+ minutes under host
+   contention in the 2026-07-25 session, see above) could in principle be
+   computed once and reloaded by a later process. But `LoadContext`'s
+   GPU-side context is never serialized; every new process still needs one
+   `GenCryptoContextGPU` + `LoadContext` call from the (possibly
+   deserialized) keys. This remains blocked/not yet implemented -- flagged
+   here as the concrete next step, not claimed as done.
+6. A repeated-gate harness that runs the same block-0 `full` gate N times
+   against the same fixture, sharing one context/key setup, proves the cache
+   *lifecycle* (setup-once, evaluate-many, no state leakage) without claiming
+   two repetitions equal two distinct DNAGPT blocks -- must be labeled as
+   such everywhere it appears.
+
+**Prototype implemented:** new sibling file
+`fhe/gpu_real_scheme_b/src/real_dnagpt_fides_scheme_b_cached.cpp` (the
+frozen, hash-pinned single-shot `real_dnagpt_fides_scheme_b.cpp` is
+untouched -- confirmed unchanged, `shasum -a 256` still
+`d88f1a0919a003a539e746aaf33e5d283c28810c2805a1af4b05dffac43e08df`). The new
+binary: loads the fixture once; requests `required_rotation_keys("full")`
+once (finding 3); runs one `GenCryptoContext`/`KeyGen`/`EvalMultKeyGen`/
+`EvalRotateKeyGen`/`LoadContext`/`Synchronize` setup, timed as
+`context_keygen_load_seconds`; then loops `--repeats N` (fail-closed below
+2) evaluations of the complete `full` gate against the same released-weight
+fixture, constructing a **new** `Client`/`EncryptedEvaluator` each iteration
+so every iteration's round-trip/logical-boundary counters start at zero by
+construction (the checkable "no state leakage" property), each measured
+independently against the unchanged `4e-2` oracle gate. The evidence schema
+separates a one-time `setup` block from a per-iteration `iterations` array,
+plus an explicit `label` field stating this is an in-process cache-lifecycle
+proof, not multi-block or cross-process evidence. Same safety invariants as
+the original: `O_EXCL` immutable-output guard, pinned FIDESlib-commit check,
+pinned fixture-manifest hash check.
+
+Build/run plumbing added, additive only (no existing target changed):
+`CMakeLists.txt` gained a second `add_executable`;
+`build_in_fideslib.sh` now builds both targets; new
+`run_scheme_b_cached.sh`/`launch_brev_scheme_b_cached.sh` mirror the existing
+scripts' guard structure, with output tags required to contain both
+`_scheme_b_` and `_cached_`.
+
+```bash
+python3 fhe/gpu_real_scheme_b/test_caching_contract.py -v
+python3 fhe/gpu_real_scheme_b/test_batching_contract.py -v
+shasum -a 256 fhe/gpu_real_scheme_b/src/real_dnagpt_fides_scheme_b.cpp
+```
+
+`[V]` All 9 new static/text contract tests pass (one-time setup calls;
+rotation keys requested once, before the repeat loop; fresh `Client`/
+`EncryptedEvaluator` per iteration; `--repeats < 2` rejected; evidence schema
+separates `setup` from `iterations`; `EncryptedEvaluator` still contains
+neither `Decrypt(` nor `secretKey`). The existing 3-test
+`test_batching_contract.py` still passes unchanged, and the frozen source
+hash is confirmed unchanged -- both run today on this Mac, no FIDESlib/CUDA
+build required (same style as the existing contract test: source-text and
+float64-oracle checks, not a compiled binary).
+
+`[U]` No GPU evidence exists yet for this prototype. Pending: build on Brev
+(`FIDESLIB_ARCH=80-real BUILD_JOBS=4 fhe/gpu_real_scheme_b/build_in_fideslib.sh`),
+one interactive sanity run of `real_dnagpt_fides_scheme_b_cached`, then a
+capacity-aware launch via `launch_brev_scheme_b_cached.sh` with a tag
+containing `_scheme_b_` and `_cached_` (e.g.
+`fhe_fides_real_d768_t2_full_cached2x_scheme_b_a100_<date>.json`). Until that
+run exists, per `results/README.md`'s "a number without a run file does not
+exist" rule: no `results/hybrid/manifest.yaml` row yet, and setup reuse is
+`[V]` proven **in-process only, by source-level construction** -- not yet
+proven on real GPU hardware, and not proven to survive a process restart
+(finding 5, cross-process reload, remains `[U]`).
