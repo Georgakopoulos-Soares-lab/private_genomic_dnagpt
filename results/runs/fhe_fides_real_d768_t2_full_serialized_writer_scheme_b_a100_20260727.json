@@ -1,0 +1,34 @@
+{
+  "schema_version": 1,
+  "task": "Scheme B (hybrid) cross-process context/key serialization prototype -- WRITER phase",
+  "implementation_version": "t2-scheme-b-serialized-writer-v1",
+  "phase": "writer",
+  "label": "process-A: one-time CPU-bound GenCryptoContext/KeyGen/EvalMultKeyGen/EvalRotateKeyGen, then serialize CryptoContext+PublicKey+PrivateKey+EvalMultKey+EvalAutomorphismKey to --state-dir; never calls LoadContext/GenCryptoContextGPU (reader-only) and never evaluates anything",
+  "secret_key_handling": "secret-key file written to --state-dir with chmod 0600; its path and contents are never printed to stdout/stderr or recorded in this JSON; this cross-process split is a testbed simplification of the client role for measurement only, not a production client/server key-custody design (out of scope per CLAUDE.md)",
+  "measured_at_utc": "2026-07-27T09:38:05Z",
+  "backend": "FIDESlib CKKS/CUDA",
+  "backend_commit": "786c7600fb2f16b724e0acf73df367b27b8afed6",
+  "gpu": 0,
+  "security": "HEStd_128_classic",
+  "source_sha256": "ea720f1b6c49524f1b49853b67622307fd55c9fb751317fee4b30c6750f69403",
+  "config": {
+    "D": 768,
+    "pack_width": 1024,
+    "batch_slots": 4096,
+    "ring_dim": 65536,
+    "multiplicative_depth": 16,
+    "rotation_keys": 66,
+    "rotation_key_gate_requested": "full (covers attention and ln1)"
+  },
+  "timings_seconds": {
+    "keygen_seconds": 1.2743636350000001,
+    "serialize_to_disk_seconds": 0.96966754799999999
+  },
+  "serialized_artifacts": [
+    "crypto-context.txt", "crypto-context.txt.dev",
+    "public-key.txt",
+    "eval-mult-key.bin", "eval-automorphism-key.bin",
+    "writer_timing.txt"
+  ],
+  "serialized_artifacts_note": "one additional file (the secret key) was also written to --state-dir with restricted permissions; its filename is intentionally omitted from this list per the secret_key_handling hygiene rule above"
+}

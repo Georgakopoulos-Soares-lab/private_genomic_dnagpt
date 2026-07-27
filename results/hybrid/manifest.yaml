@@ -327,3 +327,106 @@ runs:
       identical setup-shared work; no clean/uncontended re-run has been
       attempted. [U] Cross-process (serialized context/keys reloaded by a
       separate process) reuse remains unimplemented and unmeasured.
+
+  - id: fhe_fides_real_d768_t2_full_serialized_writer_scheme_b_a100_20260727
+    task: "Scheme B (hybrid) cross-process context/key serialization prototype: WRITER phase (builds context/keys, serializes to disk, exits without evaluating)"
+    status: "[V] PASS"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 0 [gpu] (preflight_confirmed mem=0MiB util=0%), launched via host cron (survives session/SSH loss) after load1 dropped from ~840 to ~175 over ~10 minutes"
+    config:
+      dimension: 768
+      batch_slots: 4096
+      ring_dim: 65536
+      multiplicative_depth: 16
+      rotation_keys: 66
+      rotation_key_gate_requested: "full (covers attention and ln1)"
+    metrics:
+      keygen_seconds: 1.2743636350000001
+      serialize_to_disk_seconds: 0.96966754799999999
+    provenance:
+      result_sha256: "fa9c2a4849b24e33583072a2ab5455ebae63583509a8cfd7e90e2852f33e57f7"
+      source_sha256: "ea720f1b6c49524f1b49853b67622307fd55c9fb751317fee4b30c6750f69403"
+    verdict: >
+      [V] PASS. First GPU evidence for the writer half of cross-process
+      context/key caching: GenCryptoContext/KeyGen/EvalMultKeyGen/
+      EvalRotateKeyGen (for the full gate's 66-key rotation set) measured
+      1.27s, then CryptoContext+PublicKey+PrivateKey+EvalMultKey+
+      EvalAutomorphismKey serialized to a state directory in 0.97s.
+      Deliberately never calls LoadContext -- confirmed unnecessary for
+      serialization since the ".dev" sidecar's fields (devices,
+      rotation_indexes, keyDist, slots_bootstrap) are already populated by
+      EvalRotateKeyGen. Secret-key file written with chmod 0600; its
+      filename is intentionally absent from this evidence JSON's
+      serialized_artifacts list (see secret_key_handling field) and was
+      deleted, along with the rest of the state directory, by the
+      orchestrator once the paired reader run below completed.
+
+  - id: fhe_fides_real_d768_t2_full_serialized_reader_scheme_b_a100_20260727
+    task: "Scheme B (hybrid) cross-process context/key serialization prototype: READER phase (deserializes the writer's state, LoadContext, evaluates block-0 full gate)"
+    status: "[V] PASS"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 0 [gpu] (preflight_confirmed mem=0MiB util=0%), same cron-launched orchestrator run as the paired writer above, immediately following it"
+    config:
+      dimension: 768
+      sequence_length: 2
+      heads: 12
+      batch_slots: 4096
+      ring_dim: 65536
+      multiplicative_depth: 16
+      rotation_keys: 66
+    metrics:
+      global_rel_inf: 3.4568602193310918e-10
+      worst_token_rel_inf: 3.4568602193310918e-10
+      round_trips: 7
+      logical_boundary_instances: 24
+      writer_keygen_seconds: 1.2743636350000001
+      writer_serialize_to_disk_seconds: 0.96966754799999999
+      reader_deserialize_seconds: 3.8221294490000002
+      reader_load_context_gpu_seconds: 4.0526407710000001
+      reader_encrypted_evaluation_seconds: 385.98539065199998
+      client_boundary_seconds_total: 1.975645106
+      server_linear_algebra_seconds: 384.00974554599998
+      intermediate_decrypt_attempts: 0
+      final_decrypt_calls: 1
+    provenance:
+      result_sha256: "6327bd8f5f0d93a11e6695448336462bf2f390ca4ec3b6e530c896cef892e90c"
+      source_sha256: "4dbb003fe8407046c852bf10f0c45b23b579cd1bbc7390099966999b6d6ab5d6"
+      fixture_manifest_sha256: "8d20a2841ee29a7a386171f1bd173b7189144359ce8f91ea5eb21cc60c0a78fe"
+      fixture_contract_sha256: "b35651110c5e45efc53c7ab39066f1ad455cd53dfbb05959a8ffb8835bd382d8"
+    verdict: >
+      [V] PASS. First GPU evidence that a genuinely separate process --
+      launched via its own detached `docker run`, sharing only a
+      bind-mounted state directory with the writer above -- can deserialize
+      a CryptoContext/PublicKey/PrivateKey/EvalMultKey/EvalAutomorphismKey
+      lineage and reach the same passing block-0 full-gate result
+      (global/worst-token rel_inf 3.46e-10, well inside the unchanged 4e-2
+      gate; 7 round trips / 24 logical boundary instances, identical
+      protocol shape to every other full-block gate) with ZERO textual
+      occurrences of GenCryptoContext(/EvalMultKeyGen(/EvalRotateKeyGen( in
+      its source (confirmed by test_serialization_contract.py, not just
+      claimed). Answers docs/hybrid/tasks.md finding 5 definitively: yes, a
+      deserializing process can skip key generation entirely.
+
+      [V] Honest cost accounting, NOT tuned to look favorable: this reader's
+      own setup cost is deserialize (3.82s) + LoadContext/GenCryptoContextGPU
+      (4.05s) = 7.88s. That is MORE than the 5.86s one-time
+      GenCryptoContext+KeyGen+EvalMultKeyGen+EvalRotateKeyGen+LoadContext
+      measured in-process in fhe_fides_real_d768_t2_full_cached_2x_scheme_b_a100_20260727,
+      and also more than this same run's own writer-side keygen (1.27s) plus
+      this reader's LoadContext (4.05s) = 5.33s, i.e. a fresh single-process
+      setup would likely have been cheaper than this cross-process reload.
+      The reason: CryptoContext/key deserialization (cereal parsing +
+      repopulating OpenFHE's static key maps) costs more (3.82s) than the
+      thing it replaces (fresh KeyGen+EvalMultKeyGen+EvalRotateKeyGen,
+      1.27s) at this context size. [A] Deserialization cost is expected to be
+      roughly size-invariant per reader while a from-scratch EvalRotateKeyGen
+      is the call known to have stalled 8.5+ minutes under *extreme* host
+      contention (2026-07-25 session) -- so cross-process reload's real value
+      proposition, if any, is likely CPU-contention avoidance for readers on
+      a busy shared host, not raw wall-clock savings, and that has not been
+      tested here (this run's host load had already dropped to ~150-175 by
+      launch time). Do not claim a cross-process speedup from this evidence;
+      this is a valid negative/boundary result, not tuned to force
+      "practical" per CLAUDE.md. [U] Only two processes (one writer, one
+      reader) were exercised; a many-reader scenario reusing one writer's
+      output has not been measured.

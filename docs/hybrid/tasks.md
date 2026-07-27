@@ -433,3 +433,241 @@ contention) yet completed normally at this run's moderate contention level.
 invocation) reuse remains unimplemented and unmeasured -- finding 5 stands as
 scoped, not closed. Setup reuse is `[V]` proven only for multiple evaluations
 sharing one live process.
+
+### Scheme B context/key caching: cross-process serialization prototype (2026-07-27)
+
+Closes the remaining half of finding 5 above: whether a *second, independent
+process* can skip the CPU-bound `KeyGen`/`EvalMultKeyGen`/`EvalRotateKeyGen`
+entirely by deserializing a context/key lineage a prior process wrote to
+disk, versus what every process must still pay regardless.
+
+**Re-verified independently against the pinned FIDESlib commit
+(`786c7600fb2f16b724e0acf73df367b27b8afed6`, cloned fresh and read directly:
+`api/Serialize.hpp`/`.cpp`, `api/CryptoContext.hpp`/`.cpp`,
+`examples/serial/src/serial.cpp`, `examples/resnet/src/controller.cpp`) --
+the prior session's finding 5 summary is confirmed accurate, with more
+precision on the mechanism:**
+
+1. `[V]` `fideslib::Serial::SerializeToFile`/`DeserializeFromFile` for
+   `CryptoContext` (`api/Serialize.cpp:14-72,102-208`) delegate to vanilla
+   OpenFHE cereal serialization of the CPU-side `lbcrypto::CryptoContext`,
+   plus a FIDESlib-specific `.dev` sidecar (plain text) recording
+   `devices`/`auto_load_ciphertexts`/`auto_load_plaintexts`/
+   `rotation_indexes`/`keyDist`/`slots_bootstrap`. `PublicKey`/`PrivateKey`
+   `SerializeToFile`/`DeserializeFromFile` are pure vanilla-OpenFHE
+   delegation, no FIDESlib-specific data.
+2. `[V]` `EvalMultKeyGen`/`EvalRotateKeyGen` only `OPENFHE_THROW` once
+   `this->loaded` is true (`api/CryptoContext.cpp:307-330`, exact message
+   `"...must be called before LoadContext"`) -- so a process that never
+   calls `LoadContext` is free to call them at any time, including *after*
+   it would otherwise be "too late" relative to some other process's state.
+3. `[V]` `SerializeEvalMultKey`/`SerializeEvalAutomorphismKey`/
+   `DeserializeEvalMultKey`/`DeserializeEvalAutomorphismKey`
+   (`api/CryptoContext.cpp:390-484`) are thin dispatchers onto vanilla
+   OpenFHE's own **process-global static key maps**
+   (`s_evalMultKeyMap`/`s_evalAutomorphismKeyMap`, explicitly instantiated at
+   `api/CryptoContext.cpp:39-41`). `EvalMultKeyGen`/`EvalRotateKeyGen` and
+   `DeserializeEvalMultKey`/`DeserializeEvalAutomorphismKey` populate the
+   *same* maps -- `LoadContext`'s later key lookups cannot distinguish
+   "generated live" from "deserialized." Both `examples/serial/src/serial.cpp`
+   and `examples/resnet/src/controller.cpp`'s `deserialize_context()` prove
+   this end-to-end: they call `DeserializeEvalMultKey`/
+   `DeserializeEvalAutomorphismKey` then go straight to `LoadContext`, with
+   **no** `EvalMultKeyGen`/`EvalRotateKeyGen` call anywhere in that path.
+4. `[V]` One caveat that matters: `LoadContext`'s rotation-key upload loop
+   iterates `this->rotation_indexes` (`api/CryptoContext.cpp:236`), which is
+   FIDESlib's own bookkeeping vector populated only by `EvalRotateKeyGen`
+   (`api/CryptoContext.cpp:329`) or by deserializing the **CryptoContext
+   itself** (the `.dev` sidecar's `RotationIndexes:` line,
+   `api/Serialize.cpp:170-182`) -- `DeserializeEvalAutomorphismKey` alone
+   does not touch it (it is `const`, header line 95). A cross-process reader
+   therefore needs both: deserialize the `CryptoContext` (restores
+   `rotation_indexes`) *and* `DeserializeEvalAutomorphismKey` (restores the
+   actual key material in OpenFHE's static map).
+5. `[V]` **Answering finding 5's open question directly: yes, a
+   deserializing second process can skip `EvalMultKeyGen`/
+   `EvalRotateKeyGen` entirely** and go straight from deserialization to
+   `LoadContext`.
+6. `[V]` The GPU-side `FIDESlib::CKKS::Context` (`this->gpu`, populated by
+   `LoadContext` at `api/CryptoContext.cpp:247`) has **no serialize path at
+   all** (grepped `src/CKKS/Context.cuh`/`.cu` -- no such symbols exist).
+   `LoadContext` unconditionally calls `GenCryptoContextGPU`
+   (`api/CryptoContext.cpp:223`) whenever it actually runs
+   (`!this->loaded && !this->devices.empty()`), rebuilding GPU-side NTT
+   tables/memory from the CPU-side crypto parameters and re-uploading
+   key-switching keys from the (possibly just-deserialized) key maps. Every
+   process that wants to evaluate on GPU must pay this, regardless of what
+   was deserialized -- it is not avoidable by any serialization scheme
+   FIDESlib currently exposes.
+
+**Prototype implemented:** two new sibling binaries under
+`fhe/gpu_real_scheme_b/src/`, both forked from the caching prototype
+(`real_dnagpt_fides_scheme_b_cached.cpp`, confirmed unchanged, `shasum -a
+256` still `de79d6e7145b3ac9035b09cf7bc86354c755faab139c46f942bcc03f6ab72cc6`)
+without editing it:
+
+- `real_dnagpt_fides_scheme_b_serialize_writer.cpp` ("process A"): builds a
+  fresh context/keys exactly like every other gate (`GenCryptoContext` ->
+  `Enable`s -> `KeyGen` -> `EvalMultKeyGen` -> `EvalRotateKeyGen` for the
+  `full` gate's rotation set, per the same "request the covering gate once"
+  rationale as the caching prototype) but **deliberately never calls
+  `LoadContext`** -- point 1 above shows everything the `.dev` sidecar needs
+  is already populated by the time `EvalRotateKeyGen` returns, so
+  `LoadContext` is not a prerequisite for serialization. It then serializes
+  `CryptoContext`+`PublicKey`+`PrivateKey`+`EvalMultKey`+
+  `EvalAutomorphismKey` to `--state-dir` and exits without evaluating
+  anything. Defines no `Client`/`EncryptedEvaluator` at all.
+- `real_dnagpt_fides_scheme_b_serialize_reader.cpp` ("process B"):
+  deserializes everything from `--state-dir` (contains **zero** textual
+  occurrences of `GenCryptoContext(`, `->KeyGen()`, `->EvalMultKeyGen(`, or
+  `->EvalRotateKeyGen(` -- verified by `test_serialization_contract.py`, not
+  merely asserted in the source), then calls the one unavoidable GPU step
+  (`LoadContext`, internally `GenCryptoContextGPU`, per point 6), timed
+  separately from deserialization, then evaluates the same released-weight
+  block-0 `full` gate against the unchanged `4e-2` oracle exactly like every
+  other gate. The evidence JSON records `writer_keygen_seconds`/
+  `writer_serialize_to_disk_seconds` (folded in from the writer's own
+  non-secret `writer_timing.txt`), `reader_deserialize_seconds`,
+  `reader_load_context_gpu_seconds`, and
+  `reader_encrypted_evaluation_seconds` separately, plus an explicit
+  `avoidable_via_cross_process_reload_seconds` (= writer's keygen cost, now
+  proven skippable) vs. `unavoidable_per_process_gpu_load_seconds` (=
+  `LoadContext`/`GenCryptoContextGPU`, paid by every process, proven
+  unavoidable) summary.
+
+**Secret-key hygiene (`~/.agents/policies/secrets.md`):** this repo's real
+protocol keeps the secret key inside `Client` and never persists it; this
+prototype breaks that rule deliberately, only to simulate a restarted client
+process for measurement -- an explicit testbed simplification, not a
+production client/server key-custody design (out of scope per `CLAUDE.md`).
+The writer serializes the secret key to `--state-dir/secret-key.txt` with
+`chmod 0600` immediately after writing it; neither binary ever prints that
+filename or path to stdout/stderr, and the writer's own evidence JSON
+explicitly omits it from its `serialized_artifacts` list (a real bug was
+caught and fixed here during development: the first draft *did* list
+`"secret-key.txt"` in that array, directly contradicting its own
+`secret_key_handling` field -- `test_serialization_contract.py`'s
+`test_evidence_json_never_records_secret_key_path` catches this class of
+mistake for both binaries). The orchestrator
+(`wait_and_run_scheme_b_serialize.sh`) deletes the entire state directory
+after the reader phase completes, regardless of pass/fail, logging only that
+cleanup happened, never the filename.
+
+Same safety invariants as every other gate: `O_WRONLY | O_CREAT | O_EXCL`
+immutable-output guards, pinned FIDESlib-commit check, pinned
+fixture-manifest hash check (reader only -- the writer never touches the
+fixture). New evidence tags must contain both `_scheme_b_` and
+`_serialized_` (a substring distinct from the caching prototype's
+`_cached_`, so the three prototypes' evidence namespaces can never
+collide -- checked textually by the contract test, not just asserted).
+
+```bash
+python3 fhe/gpu_real_scheme_b/test_serialization_contract.py -v
+python3 fhe/gpu_real_scheme_b/test_caching_contract.py -v
+python3 fhe/gpu_real_scheme_b/test_batching_contract.py -v
+shasum -a 256 fhe/gpu_real_scheme_b/src/real_dnagpt_fides_scheme_b.cpp
+shasum -a 256 fhe/gpu_real_scheme_b/src/real_dnagpt_fides_scheme_b_cached.cpp
+```
+
+`[V]` All 29 new static/text contract tests pass (writer builds fresh
+context/keys exactly once and never calls `LoadContext`; writer defines no
+`Client`/`EncryptedEvaluator`; writer restricts and never logs the
+secret-key path; reader has zero occurrences of the key-generation calls;
+reader deserializes before the one `LoadContext` call; reader's
+`EncryptedEvaluator` still contains neither `Decrypt(` nor `secretKey`;
+neither binary's evidence JSON ever records the secret-key filename; CMake
+and both new run scripts reference the new binaries and require the
+`_serialized_` tag marker). The existing 9-test caching contract and 3-test
+batching contract suites still pass unchanged, and both frozen source hashes
+are confirmed unchanged -- all three suites run today on this Mac, no
+FIDESlib/CUDA build required (same style as the existing contract tests:
+source-text and float64-oracle checks, not a compiled binary).
+
+### Scheme B context/key caching: cross-process GPU evidence (2026-07-27)
+
+Built on Brev (`FIDESLIB_ARCH=80-real BUILD_JOBS=4
+fhe/gpu_real_scheme_b/build_in_fideslib.sh`, all four targets, from a fresh
+`build/` dir since the directory was root-owned from an earlier container
+run). One real build-time bug found and fixed en route: the reader's
+`EncryptedEvaluator` inlined `cc_->EvalMult(ct, some_plain_fn(...))` calls
+directly -- FIDESlib's `EvalMult(Ciphertext, Plaintext)` overload takes the
+plaintext by non-`const` lvalue reference, so a temporary `Plaintext`
+returned straight from a helper cannot bind to it (9 compile errors,
+`nvcc`). The original/cached gates avoid this via a `multiply_plain(Ct,
+Plaintext plaintext)` wrapper that takes the plaintext by value into a named
+parameter (an lvalue); the reader lost that wrapper when its
+`EncryptedEvaluator` was trimmed down during authoring. Fixed by
+reintroducing the identical wrapper and routing all eight affected call
+sites through it -- confirmed against real `nvcc` on the pinned container,
+not just locally. Then launched via the capacity-aware two-phase
+orchestrator (`fhe/gpu_real_scheme_b/wait_and_run_scheme_b_serialize.sh`,
+deployed to a versioned remote dir `gpu_real_scheme_b_serialized_v1/`,
+driven by a one-shot host `cron` entry so the launch survives
+local session/SSH loss -- confirmed via `ps` that the process tree is
+parented by a cron-spawned `/bin/sh -c`, not any shell tied to the launching
+session). Host load dropped from `838.66` to `175.85` over about ten minutes
+of polling before the writer phase launched; the reader phase followed
+immediately after (load `153.17`) with a confirmed idle-GPU preflight
+(`mem=0MiB util=0%`) for both phases.
+
+Evidence: `fhe_fides_real_d768_t2_full_serialized_writer_scheme_b_a100_20260727.json`
+(writer) and `fhe_fides_real_d768_t2_full_serialized_reader_scheme_b_a100_20260727.json`
+(reader) -- `[V]` both PASS. `source_sha256` in each evidence file matches
+the local repo's `shasum -a 256` of the corresponding `.cpp` bit-for-bit
+(`ea720f1b...` writer, `4dbb003f...` reader), confirming the binaries that
+ran on Brev are the same code reviewed here.
+
+`[V]` **Finding 5 is now closed on real GPU hardware, not just by source
+reading.** The reader's own source contains zero occurrences of
+`GenCryptoContext(`, `->EvalMultKeyGen(`, or `->EvalRotateKeyGen(` (checked
+by `test_serialization_contract.py`), and it reached the identical passing
+block-0 `full` gate result (`global_rel_inf`/`worst_token_rel_inf`
+`3.4569e-10`, 7 round trips / 24 logical boundary instances -- the same
+protocol shape as every other full-block gate) as a genuinely separate OS
+process (its own `docker run`, sharing only a bind-mounted state directory
+with the writer) that never generated a single key itself.
+
+**Honest cost accounting -- this is a negative/boundary result, not tuned to
+look favorable:**
+
+| Quantity | Value |
+|---|---:|
+| writer: `GenCryptoContext`+`KeyGen`+`EvalMultKeyGen`+`EvalRotateKeyGen` | `1.274 s` |
+| writer: serialize to disk (context+all keys) | `0.970 s` |
+| reader: deserialize (context+public+secret key+eval keys) | `3.822 s` |
+| reader: `LoadContext`/`GenCryptoContextGPU` (unavoidable every process) | `4.053 s` |
+| reader: encrypted evaluation (`384.01s` server + `1.98s` client boundary) | `385.985 s` |
+| **reader's own total setup** (deserialize + `LoadContext`) | **`7.875 s`** |
+| for comparison: in-process cached run's one-time setup (same gate) | `5.862 s` |
+
+`[V]` The reader's own setup cost (`7.875s`) is **larger**, not smaller,
+than the in-process cached prototype's one-time setup (`5.862s`,
+`fhe_fides_real_d768_t2_full_cached_2x_scheme_b_a100_20260727`) -- and even
+larger than a hypothetical fresh setup using this run's own numbers
+(writer's `1.274s` keygen + this reader's `4.053s` `LoadContext` =
+`5.327s`). The reason is not the unavoidable GPU step: `LoadContext`
+(`4.053s`) is in the same ballpark as the combined in-process number
+(`5.862s`, which itself included `KeyGen`/`EvalMultKeyGen`/`EvalRotateKeyGen`).
+The reason is that **deserialization itself costs more (`3.822s`) than the
+`KeyGen`+`EvalMultKeyGen`+`EvalRotateKeyGen` it replaces (`1.274s`)** at this
+context size (`ring_dim=65536`, 66 rotation keys) -- cereal parsing plus
+repopulating OpenFHE's process-global static key maps is not free. **No
+cross-process speedup is claimed from this evidence.**
+
+`[A]` This does not mean cross-process serialization has no value --
+`EvalRotateKeyGen` is the specific call that stalled 8.5+ minutes under
+*extreme* host contention in the 2026-07-25 session (load average
+~1000-1127), while deserialization is a fixed, contention-insensitive cost
+independent of host CPU load. So the plausible value proposition is
+**avoiding repeated exposure to CPU-contention risk across many readers**,
+not raw wall-clock savings for a single reader -- and that specific claim
+has not been tested here (this run's host load had already dropped to
+~150-175 by launch time, nowhere near the ~1000+ regime that caused the
+original stall). `[U]` Only one writer and one reader were exercised; a
+many-reader-per-writer scenario, and a reader launched under genuinely
+extreme host contention, both remain unmeasured.
+
+```bash
+brev exec awesome-gpu-name -- "cat .../evidence/fhe_fides_real_d768_t2_full_serialized_writer_scheme_b_a100_20260727.json"
+brev exec awesome-gpu-name -- "cat .../evidence/fhe_fides_real_d768_t2_full_serialized_reader_scheme_b_a100_20260727.json"
+```

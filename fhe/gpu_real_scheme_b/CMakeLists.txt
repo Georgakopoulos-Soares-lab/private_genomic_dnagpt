@@ -39,3 +39,29 @@ set_target_properties(real_dnagpt_fides_scheme_b_cached PROPERTIES
     CUDA_RESOLVE_DEVICE_SYMBOLS ON
     CUDA_SEPARABLE_COMPILATION ON
     POSITION_INDEPENDENT_CODE ON)
+
+add_executable(real_dnagpt_fides_scheme_b_serialize_writer src/real_dnagpt_fides_scheme_b_serialize_writer.cpp)
+set_source_files_properties(src/real_dnagpt_fides_scheme_b_serialize_writer.cpp PROPERTIES LANGUAGE CUDA)
+target_link_libraries(real_dnagpt_fides_scheme_b_serialize_writer PRIVATE
+    fideslib::fideslib
+    OpenMP::OpenMP_CXX)
+target_compile_options(real_dnagpt_fides_scheme_b_serialize_writer PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>
+    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wall,-Wextra,-Wpedantic>)
+set_target_properties(real_dnagpt_fides_scheme_b_serialize_writer PROPERTIES
+    CUDA_RESOLVE_DEVICE_SYMBOLS ON
+    CUDA_SEPARABLE_COMPILATION ON
+    POSITION_INDEPENDENT_CODE ON)
+
+add_executable(real_dnagpt_fides_scheme_b_serialize_reader src/real_dnagpt_fides_scheme_b_serialize_reader.cpp)
+set_source_files_properties(src/real_dnagpt_fides_scheme_b_serialize_reader.cpp PROPERTIES LANGUAGE CUDA)
+target_link_libraries(real_dnagpt_fides_scheme_b_serialize_reader PRIVATE
+    fideslib::fideslib
+    OpenMP::OpenMP_CXX)
+target_compile_options(real_dnagpt_fides_scheme_b_serialize_reader PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>
+    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wall,-Wextra,-Wpedantic>)
+set_target_properties(real_dnagpt_fides_scheme_b_serialize_reader PROPERTIES
+    CUDA_RESOLVE_DEVICE_SYMBOLS ON
+    CUDA_SEPARABLE_COMPILATION ON
+    POSITION_INDEPENDENT_CODE ON)
