@@ -70,6 +70,7 @@ real, and it is what the paper cites.
 | `fhe_fides_real_d768_t2_block0_scheme_b_a100_20260725` | Scheme B (hybrid) real complete block-0 (LN1+attention+MLP+LN2+pack) | `[V]` pass, global `3.32e-10`, 24 client round trips; `372.27 s [gpu]` total = `365.78 s` server + `6.49 s` client boundary (vs Scheme A equivalent `2461.8 s`) |
 | `fhe_fides_real_d768_t2_attention_batched_scheme_b_a100_20260726` | Scheme B batched real block-0 D768 LN1+12-head attention correctness gate | `[V]` pass, global `2.18e-10`, 3 physical round trips / 14 logical boundary instances, zero intermediate decrypts; `[U]` timing excluded because shared-host load surged after launch |
 | `fhe_fides_real_d768_t2_block0_batched_scheme_b_a100_20260726` | Scheme B batched real complete block-0 correctness gate | `[V]` pass, global `3.51e-10`, 7 physical round trips / 24 logical boundary instances, zero intermediate decrypts; `[U]` timing excluded because shared-host load surged after launch |
+| `fhe_fides_real_d768_t2_full_cached_2x_scheme_b_a100_20260727` | Scheme B in-process context/key caching: same block-0 full gate evaluated 2x sharing one setup | `[V]` both iterations pass (global `3.73e-10`, `1.98e-10`); one-time setup measured `5.86s`; `[A]` saves `~1.4%` of the 12-block extrapolation; `[U]` per-iteration timing (`467.24s`/`342.70s`) is contention noise, not compared as a speedup |
 
 The CPU and CUDA toy-block results are the current complete-graph arithmetic anchors.
 Their encrypted inputs begin after embedding, and their one final decrypt exists only

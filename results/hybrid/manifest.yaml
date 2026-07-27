@@ -271,3 +271,59 @@ runs:
       after the confirmed-idle launch, making this run incomparable with the
       serial timing anchor (source: Brev host
       gpu_real_scheme_b_batched_v2/fhe/scheme_b_orchestrator.log).
+
+  - id: fhe_fides_real_d768_t2_full_cached_2x_scheme_b_a100_20260727
+    task: "Scheme B (hybrid) in-process context/key caching prototype: same block-0 full gate evaluated twice sharing one context/key setup"
+    status: "[V] PASS"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 0 [gpu] (preflight_confirmed mem=747MiB util=0%), launched via host cron (survives session/SSH loss) after 176-882 load1 contention while waiting for an idle GPU"
+    config:
+      dimension: 768
+      sequence_length: 2
+      heads: 12
+      batch_slots: 4096
+      ring_dim: 65536
+      multiplicative_depth: 16
+      repeats: 2
+      rotation_keys: 66
+      rotation_key_gate_requested: "full (covers attention and ln1)"
+    metrics:
+      context_keygen_load_seconds: 5.8622762169999998
+      iteration_0_global_rel_inf: 3.733841469135101e-10
+      iteration_0_worst_token_rel_inf: 4.5053100544122318e-10
+      iteration_0_encrypted_evaluation_seconds: 467.237146897
+      iteration_0_round_trips: 7
+      iteration_0_logical_boundary_instances: 24
+      iteration_1_global_rel_inf: 1.9849048787969555e-10
+      iteration_1_worst_token_rel_inf: 2.3950164947863365e-10
+      iteration_1_encrypted_evaluation_seconds: 342.70417568300002
+      iteration_1_round_trips: 7
+      iteration_1_logical_boundary_instances: 24
+      all_iterations_passed: true
+      intermediate_decrypt_attempts: 0
+      final_decrypt_calls_per_iteration: 1
+    provenance:
+      result_sha256: "49018001084e40d222d0dc242e62ed5b42dbf3a626ca9e68a97916034770f24f"
+      source_sha256: "de79d6e7145b3ac9035b09cf7bc86354c755faab139c46f942bcc03f6ab72cc6"
+      fixture_manifest_sha256: "8d20a2841ee29a7a386171f1bd173b7189144359ce8f91ea5eb21cc60c0a78fe"
+      fixture_contract_sha256: "b35651110c5e45efc53c7ab39066f1ad455cd53dfbb05959a8ffb8835bd382d8"
+    verdict: >
+      [V] PASS. First GPU evidence that context/key setup can be shared
+      in-process across more than one Scheme B evaluation: one
+      GenCryptoContext/KeyGen/EvalMultKeyGen/EvalRotateKeyGen/LoadContext
+      (5.86s, measured once) fed two independent evaluations of the identical
+      real-weight block-0 full gate (467.24s and 342.70s), each constructing
+      a fresh Client/EncryptedEvaluator so per-iteration round-trip and
+      logical-boundary counts start at zero (7/24 both times, not
+      14/48) -- the concrete "no state leakage" property. Both iterations
+      independently pass the unchanged 4e-2 oracle gate; zero intermediate
+      decrypts; evaluator holds no private key. [A] Setup reuse saves ~5.86s
+      per avoided re-setup: naive extrapolation to the existing 12-block,
+      T=2 estimate (11 avoided re-setups) saves ~64.5s of the previously
+      reported 4,474.1s grand total (~1.4%) -- not yet independently verified
+      at N=12. [U] The 27% gap between the two iteration timings (467.24s vs
+      342.70s) is host-contention noise (load1 oscillated 176-882 while
+      waiting for capacity), not a caching effect -- both iterations run
+      identical setup-shared work; no clean/uncontended re-run has been
+      attempted. [U] Cross-process (serialized context/keys reloaded by a
+      separate process) reuse remains unimplemented and unmeasured.

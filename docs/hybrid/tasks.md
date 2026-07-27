@@ -369,14 +369,67 @@ hash is confirmed unchanged -- both run today on this Mac, no FIDESlib/CUDA
 build required (same style as the existing contract test: source-text and
 float64-oracle checks, not a compiled binary).
 
-`[U]` No GPU evidence exists yet for this prototype. Pending: build on Brev
-(`FIDESLIB_ARCH=80-real BUILD_JOBS=4 fhe/gpu_real_scheme_b/build_in_fideslib.sh`),
-one interactive sanity run of `real_dnagpt_fides_scheme_b_cached`, then a
-capacity-aware launch via `launch_brev_scheme_b_cached.sh` with a tag
-containing `_scheme_b_` and `_cached_` (e.g.
-`fhe_fides_real_d768_t2_full_cached2x_scheme_b_a100_<date>.json`). Until that
-run exists, per `results/README.md`'s "a number without a run file does not
-exist" rule: no `results/hybrid/manifest.yaml` row yet, and setup reuse is
-`[V]` proven **in-process only, by source-level construction** -- not yet
-proven on real GPU hardware, and not proven to survive a process restart
-(finding 5, cross-process reload, remains `[U]`).
+### Scheme B context/key caching: GPU evidence (2026-07-27)
+
+Built on Brev (`FIDESLIB_ARCH=80-real BUILD_JOBS=4
+fhe/gpu_real_scheme_b/build_in_fideslib.sh`, both targets), then launched via
+the capacity-aware orchestrator (`fhe/gpu_real_scheme_b/wait_and_run_scheme_b_cached.sh`,
+deployed to a versioned remote dir `gpu_real_scheme_b_cached_v1/`, driven by a
+one-shot host `cron` entry so the launch survives local session/SSH loss --
+confirmed via `ps` that the process tree is parented by `cron`, not by any
+shell tied to the launching session). One real operational bug found and
+fixed en route: the chosen run tag `..._cached2x_...` did not contain the
+literal substring `_cached_` (underscore on both sides) required by
+`launch_brev_scheme_b_cached.sh`'s own naming guard, so two genuine capacity
+windows (an idle GPU appearing) were correctly refused before the tag was
+fixed to `..._cached_2x_...` and the job relaunched -- the guard did exactly
+its job (fail closed on a bad tag) rather than writing bad evidence.
+
+Evidence: `fhe_fides_real_d768_t2_full_cached_2x_scheme_b_a100_20260727.json`
+-- `[V]` PASS, both iterations independently pass the unchanged `4e-2` oracle
+gate (`global_rel_inf` `3.73e-10` and `1.98e-10`; `worst_token_rel_inf`
+`4.51e-10` and `2.40e-10`), zero intermediate decrypts, evaluator holds no
+private key, 7 round trips / 24 logical boundary instances each (identical
+protocol shape to the existing batched full-block gate). Source hash
+`de79d6e7145b3ac9035b09cf7bc86354c755faab139c46f942bcc03f6ab72cc6` confirmed
+matching the local file bit-for-bit.
+
+`[V]` **Setup reuse is now proven on real GPU hardware, not just by
+source-level construction.** `context_keygen_load_seconds` (one
+`GenCryptoContext`/`KeyGen`/`EvalMultKeyGen`/`EvalRotateKeyGen`/`LoadContext`)
+measured **`5.86s`**, paid exactly once, shared by both evaluations
+(`467.24s` and `342.70s` respectively). This closes finding 5's in-process
+half: the same context/key lineage evaluated the identical block-0 `full`
+gate twice with independently-passing correctness and zero state leakage
+between iterations (each iteration's own `round_trips`/`logical_boundary_instances`
+in the evidence JSON starts fresh at 7/24, not 14/48 -- confirming the
+per-iteration `Client`/`EncryptedEvaluator` construction works as designed).
+
+**Improvement captured, honestly bounded:**
+
+| Quantity | Value |
+|---|---:|
+| one-time setup (measured) | `5.86 s` |
+| iteration 0 total (encrypt+eval+decrypt) | `467.74 s` |
+| iteration 1 total (encrypt+eval+decrypt) | `343.12 s` |
+| measured grand total, `repeats=2` | `816.80 s` |
+| setup share of grand total | `0.72%` |
+| `[A]` setup saved vs. 2 independent single-shot processes | `5.86 s` (one avoided re-setup) |
+| `[A]` setup saved, naive ×12-block extrapolation (11 avoided re-setups) | `~64.5 s` out of the existing `4,474.1 s` 12-block grand total in this file above -- `~1.4%` |
+
+`[U]` The `27%` gap between iteration 0 (`467.24s`) and iteration 1
+(`342.70s`) is host-contention noise, not a caching effect: both iterations
+run the identical setup-shared work, and the launch itself only cleared the
+capacity gate at `load1=176.92` (still non-trivial load on this 255-core
+shared host) after multiple hours oscillating between `load1` `176` and
+`882` while waiting for an idle GPU (see
+`scheme_b_cached_orchestrator.log`). No clean/uncontended re-run of this
+gate has been attempted; the `5.86s` setup number is the more
+contention-resistant of the two claims here, since it is small and CPU-bound
+(the same kind of cost that previously stalled 8.5+ minutes under *extreme*
+contention) yet completed normally at this run's moderate contention level.
+
+`[U]` Cross-process (serialized context/keys reloaded by a separate process
+invocation) reuse remains unimplemented and unmeasured -- finding 5 stands as
+scoped, not closed. Setup reuse is `[V]` proven only for multiple evaluations
+sharing one live process.
