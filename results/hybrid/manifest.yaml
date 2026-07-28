@@ -430,3 +430,137 @@ runs:
       "practical" per CLAUDE.md. [U] Only two processes (one writer, one
       reader) were exercised; a many-reader scenario reusing one writer's
       output has not been measured.
+
+  - id: fhe_fides_real_d768_t2_full_profiled_scheme_b_a100_20260727
+    task: "Released-weight DNAGPT block-0 Scheme B (hybrid) GPU-side profiling of server_linear_algebra_seconds"
+    status: "[V] PASS"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 0 [gpu] (preflight_confirmed mem=541MiB util=0%)"
+    config:
+      dimension: 768
+      sequence_length: 2
+      heads: 12
+      batch_slots: 4096
+      ring_dim: 65536
+      multiplicative_depth: 16
+      rotation_keys: 66
+      matmul_call_count: 24
+      explicit_ciphertext_ciphertext_multiplications: 33
+      explicit_ciphertext_plaintext_multiplications: 24666
+    metrics:
+      global_rel_inf: 2.5096405413502395e-10
+      worst_token_rel_inf: 2.5096405413502395e-10
+      round_trips: 7
+      logical_boundary_instances: 24
+      context_keygen_load_seconds: 7.073676632
+      encrypted_evaluation_seconds: 533.129684045
+      client_boundary_seconds_total: 2.4273141729999996
+      server_linear_algebra_seconds: 530.702369872
+      matmul_stage_fraction_of_server_seconds: 0.9953756785699075
+    provenance:
+      result_sha256: "7869038f3d9ed86fb0c794c9dc570ed15c90104a8abece561ad18acb1e036f16"
+      source_sha256: "4ca9c66470c412140ed483479ae869963e8b097e2880b3ffd4d9287a81374d61"
+      fixture_manifest_sha256: "8d20a2841ee29a7a386171f1bd173b7189144359ce8f91ea5eb21cc60c0a78fe"
+      fixture_contract_sha256: "b35651110c5e45efc53c7ab39066f1ad455cd53dfbb05959a8ffb8835bd382d8"
+    verdict: >
+      [V] PASS. First GPU-measured breakdown of where the block-0 full gate's
+      server_linear_algebra_seconds actually goes, via Synchronize()-bracketed
+      timers on all 24 matmul() call sites plus one fully detailed
+      giant-step breakdown. The 6 matmul stages account for 99.5% of server
+      time; within one matmul call, ciphertext-plaintext multiply-and-
+      accumulate is ~100% of internal cost while giant-step rotation/
+      keyswitch is <0.1% -- rotation is not the bottleneck at any BSGS split,
+      a stronger result than the already-ruled-out "retune N1/N2" lever.
+      Per-call cost is not uniform: the 6 QKV-stage calls average ~41.8s/call
+      while the 8 matmul_mlp_projection calls average ~13.3s/call (3.15x),
+      despite byte-identical BSGS shape and similarly "fresh" ciphertext
+      levels (depth/level-cost explanation checked and ruled out). This
+      motivated the diagonal-plaintext-cache fix and warm-up-prelude
+      investigations below (see docs/hybrid/tasks.md).
+
+  - id: fhe_fides_real_d768_t2_full_profiled_scheme_b_a100_20260728_control
+    task: "Control run: byte-for-byte unmodified profiled binary, re-run to bracket the diagcache fix's 6 GPU crash attempts"
+    status: "[V] PASS"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 0 [gpu] (preflight_confirmed mem=0MiB util=0%)"
+    config:
+      dimension: 768
+      sequence_length: 2
+      heads: 12
+      batch_slots: 4096
+      ring_dim: 65536
+      multiplicative_depth: 16
+      rotation_keys: 66
+    metrics:
+      global_rel_inf: 2.8733968916415914e-10
+      worst_token_rel_inf: 3.2845787346382057e-10
+      round_trips: 7
+      logical_boundary_instances: 24
+      context_keygen_load_seconds: 16.314422158
+      encrypted_evaluation_seconds: 515.085936391
+      client_boundary_seconds_total: 2.359111181
+      server_linear_algebra_seconds: 512.72682521
+    provenance:
+      result_sha256: "46f007c840951437760fa4bc8e172f24aeb258cd5c97f9b802673d9553601a5c"
+      source_sha256: "4ca9c66470c412140ed483479ae869963e8b097e2880b3ffd4d9287a81374d61"
+      fixture_manifest_sha256: "8d20a2841ee29a7a386171f1bd173b7189144359ce8f91ea5eb21cc60c0a78fe"
+      fixture_contract_sha256: "b35651110c5e45efc53c7ab39066f1ad455cd53dfbb05959a8ffb8835bd382d8"
+    verdict: >
+      [V] PASS. Deliberately identical source (source_sha256 matches the
+      2026-07-27 profiled run above bit-for-bit) run as a control experiment
+      after the diagcache fix (see docs/hybrid/tasks.md) had failed several
+      consecutive GPU attempts, to test whether the unmodified baseline could
+      still complete cleanly under that day's host conditions. It did
+      (515.09s, well within the historical 342-533s range), while diagcache
+      failed 6/6 times bracketing this run and the 2026-07-27 profiled run --
+      decisive evidence the diagcache failures are not explainable as pure
+      host contention. This run's timing is not directly comparable to the
+      2026-07-27 profiled run's (different, unrecorded ambient host load) but
+      its PASS/FAIL outcome is the load-bearing fact here, not its wall time.
+
+  - id: fhe_fides_real_d768_t2_full_warmup_scheme_b_a100_20260728
+    task: "Warm-up-prelude hypothesis test: does a CUDA allocator/kernel warm-up pass flatten the QKV-vs-mlp_projection cost gap"
+    status: "[V] PASS (correctness); [U] timing inconclusive"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 4 [gpu] (preflight_confirmed mem=5138MiB util=0%, compute_processes=4), host load pinned 800-1218 for the ~43-minute run"
+    config:
+      dimension: 768
+      sequence_length: 2
+      heads: 12
+      batch_slots: 4096
+      ring_dim: 65536
+      multiplicative_depth: 16
+      rotation_keys: 66
+    metrics:
+      global_rel_inf: 2.928102639113588e-10
+      worst_token_rel_inf: 2.928102639113588e-10
+      round_trips: 7
+      logical_boundary_instances: 24
+      context_keygen_load_seconds: 6.1408267969999999
+      warmup_prelude_seconds: 0.22577871199999999
+      encrypted_evaluation_seconds: 2595.5970191900001
+      client_boundary_seconds_total: 3.6318033539999997
+      server_linear_algebra_seconds: 2591.965215836
+    provenance:
+      result_sha256: "1cfa53dd76af49c3f0b9135f8f14a7d942b265ad15aec58aa39f65c55f5ab854"
+      source_sha256: "d76c71fbe058ce4f2b4afd8f977d02e719ef7f130c2265c7fee88e7d4fd58716"
+      fixture_manifest_sha256: "8d20a2841ee29a7a386171f1bd173b7189144359ce8f91ea5eb21cc60c0a78fe"
+      fixture_contract_sha256: "b35651110c5e45efc53c7ab39066f1ad455cd53dfbb05959a8ffb8835bd382d8"
+    verdict: >
+      [V] PASS on correctness (global_rel_inf=2.93e-10, third independent
+      pass this session at the unchanged 4e-2 gate). warmup_prelude itself
+      cost only 0.226s, as expected -- a throwaway dummy ct-pt multiply/
+      ct-ct multiply/EvalAdd/giant EvalRotate/baby EvalFastRotation batch at
+      the real problem's shapes. [U] The timing comparison this binary was
+      built to make is inconclusive: encrypted_evaluation (2595.60s) is
+      roughly 5x the clean baseline's 533.13s because host load was pinned
+      at 800-1218 for this run's entire ~43-minute duration (the worst
+      sustained contention observed this session). Per-stage inflation vs
+      the clean baseline is NOT uniform -- QKV is only 2.49x slower here
+      (104.05s vs 41.79s/call) while matmul_mlp_projection is 8.83x slower
+      (117.28s vs 13.28s/call) -- growing worse through the run, consistent
+      with contention increasing over time, not with the warm-up prelude
+      flattening the front-to-back gap. This run cannot confirm or refute
+      the warm-up hypothesis; no clean/low-contention window was available
+      to re-attempt it this session. Do not read the flattened absolute
+      numbers here as evidence of anything about warm-up.

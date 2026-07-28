@@ -671,3 +671,253 @@ extreme host contention, both remain unmeasured.
 brev exec awesome-gpu-name -- "cat .../evidence/fhe_fides_real_d768_t2_full_serialized_writer_scheme_b_a100_20260727.json"
 brev exec awesome-gpu-name -- "cat .../evidence/fhe_fides_real_d768_t2_full_serialized_reader_scheme_b_a100_20260727.json"
 ```
+
+### Scheme B GPU-side profiling: where the 384s server time actually goes (2026-07-27)
+
+The 2026-07-27 caching/serialization sessions above closed setup/key reuse as a speed
+lever (`< 2%` of wall time even in the worst measured case). The remaining cost is the
+server-side GPU linear algebra inside one block-0 `full` gate. This session profiles
+that cost directly with real GPU-synchronized wall-clock timing rather than a static
+call-count model.
+
+New sibling binary `fhe/gpu_real_scheme_b/src/real_dnagpt_fides_scheme_b_profiled.cpp`
+(forked from the frozen single-shot gate, hash confirmed unchanged) brackets every one
+of the 24 `matmul()` call sites with `Synchronize()`-before/after timers by graph
+stage (`matmul_qkv_query`/`_key`/`_value`/`_attention_projection`/`_mlp_fc`/
+`_mlp_projection`), additionally instruments one representative call (token 0's Q
+projection) at full giant-step granularity, and times every other linear-algebra
+stage (LayerNorm, attention score/delta, GELU pack/restore) coarsely. It changes
+nothing about the encrypted computation: same packing, same `BSGS_N1=32`/`BSGS_N2=32`
+split, same `TOL=4e-2` oracle gate. `test_profiling_contract.py` (16 tests) statically
+verifies the 24 call sites, the one detailed call, the bucket labels, and that the
+frozen sources are untouched -- no FIDESlib/CUDA build required.
+
+```bash
+python3 fhe/gpu_real_scheme_b/test_profiling_contract.py -v
+FIDESLIB_ARCH=80-real BUILD_JOBS=4 fhe/gpu_real_scheme_b/build_in_fideslib.sh
+
+FIDES_CONTAINER_IMAGE=dnagpt-fideslib:786c-asymfix2 \
+FIDES_RUN_ENVIRONMENT='Brev A100-SXM4-80GB [gpu]' \
+fhe/gpu_real_scheme_b/run_scheme_b_profiled.sh 0 "$FIXTURE" \
+  /work/results/runs/fhe_fides_real_d768_t2_full_profiled_scheme_b_a100_20260727.json
+```
+
+Evidence: `fhe_fides_real_d768_t2_full_profiled_scheme_b_a100_20260727.json` --
+`[V]` PASS, `global_rel_inf=2.51e-10`, well inside the unchanged `4e-2` gate.
+`encrypted_evaluation=533.13s` (`server_linear_algebra_seconds=530.70s` +
+`client_boundary_seconds_total=2.43s`), source hash
+`4ca9c66470c412140ed483479ae869963e8b097e2880b3ffd4d9287a81374d61`.
+
+**`[V]` Finding 1: the 6 matmul stages are 99.5% of server time.** Summing the six
+`matmul_*` bucket totals (78.87+74.87+96.97+46.83+124.44+106.26 = 528.25s) against
+`server_linear_algebra_seconds` (530.70s) gives `99.54%`. Everything else --
+LayerNorm (4 calls), the 12-head attention score/delta loop, GELU pack/restore,
+residual adds, baby-rotation batches -- is collectively under 0.5%.
+
+**`[V]` Finding 2: within one matmul call, rotation is not the bottleneck.** The one
+detailed call's three sub-buckets: `detail_ciphertext_plaintext_multiply_accumulate`
+(32 giant-steps, `44.15s` total, `1.38s` mean), `detail_giant_rotation_keyswitch` (31
+calls, `0.036s` total -- `<0.1%` of the call), `detail_giant_result_accumulate` (31
+calls, `0.0024s` total). Ciphertext-plaintext multiply-and-accumulate is essentially
+100% of a matmul call's internal cost; giant-step `EvalRotate`/keyswitch and
+baby-step hoisted `EvalFastRotation` are both negligible. This is a stronger, more
+specific result than the already-ruled-out "retune `BSGS_N1`/`BSGS_N2`" lever
+(CLAUDE.md) -- it shows the entire rotation operation class, not just its N1/N2
+balance, is immaterial here. (Note: the JSON's own `unaccounted_seconds` field reads
+`-45.58s` because the three `detail_*` buckets nest inside the coarse
+`matmul_qkv_query` bucket's already-counted time -- summing all buckets naively
+double-counts that one call. Removing the double-count gives a corrected
+reconciliation of `532.09s` against `530.70s` measured, `99.7%` accounted for.)
+
+**`[U]` Finding 3: per-call cost is not uniform -- a 3.15x front-to-back gap with no
+settled explanation.** The 6 QKV-stage calls average `~41.8s/call`; the 8
+`matmul_mlp_projection` calls average `~13.3s/call`. Both stages operate on
+similarly "fresh" ciphertexts (2 levels consumed since their respective
+client-boundary resets -- checked directly, so a depth/level-cost explanation does
+not hold). This finding drove two follow-up investigations below, one abandoned as
+unsafe and one left inconclusive by host conditions.
+
+```bash
+python3 -c "import json; d=json.load(open('results/runs/fhe_fides_real_d768_t2_full_profiled_scheme_b_a100_20260727.json')); b=d['profiling_breakdown']['buckets']; print({k:v['mean_seconds'] for k,v in b.items() if k.startswith('matmul_')})"
+```
+
+### Scheme B diagonal-plaintext-cache fix: designed, implemented, abandoned as unsafe (2026-07-27/28)
+
+Motivated by Finding 3 above: each of the block's 24 `matmul()` calls corresponds to
+one of only **12 distinct D×D weight matrices**, each used by both of the T=2 tokens.
+Reading `matmul()`/`bsgs_inner_loop`, every call independently rebuilds and
+re-encodes its own 1024 BSGS diagonal `Plaintext` objects from scratch via
+`raw_plain()`/`MakeCKKSPackedPlaintext`, even on the token-1 call reusing the
+identical weight (and therefore identical diagonal values) as the token-0 call for
+that site. Pinned FIDESlib source (`api/CryptoContext.cpp:251-258`,
+`LoadPlaintext`) shows `LoadPlaintext(Plaintext& pt)` returns immediately if
+`pt->loaded` is already true -- so reusing the *same* `Plaintext` object (not merely
+an equal one) across a weight's two token-calls should, in principle, let the second
+call skip CPU-encode+GPU-upload entirely.
+
+**Implementation:** new sibling `fhe/gpu_real_scheme_b/src/real_dnagpt_fides_scheme_b_diagcache.cpp`
+(forked from the profiled binary, keeping identical instrumentation for direct
+comparison), source hash `ea2e9eca3f40233eed6105c5d13e1e39c9a3e440d193d2f9ec5579970cc14593`.
+Adds `std::map<const Matrix*, std::vector<Plaintext>> diagonal_cache_` to
+`EncryptedEvaluator`, keyed by weight-matrix address (stable for the whole
+`evaluate()` call); `cached_diagonal_plaintexts()` builds a weight's 1024 diagonals
+once and memoizes them, `bsgs_inner_loop` looks them up instead of rebuilding.
+Changes nothing about the encrypted computation (same packing/BSGS/TOL) and reuses
+Plaintext object *identity*, never their content. `test_diagcache_contract.py` (16
+tests) statically verifies the cache is keyed by address, the inner loop no longer
+builds plaintexts inline, and both frozen sources remain untouched.
+
+**`[V]` GPU evidence: 6 consecutive real-GPU crashes across 6 different physical
+GPUs (0, 4, 7, 4, 1, 4), all with the identical signature**, immediately after
+context setup succeeds (the `[context] ...` line prints, then nothing else, then
+`Cuda failure /opt/FIDESlib/src/CudaUtils.cu:400: 'out of memory'`). No evidence JSON
+was ever produced by any diagcache attempt (correctness of the fix on real GPU
+hardware remains unverified). Attempts (no `results/runs/` rows added -- none
+produced valid evidence):
+
+| Attempt | Physical GPU | Wall time to crash | Preflight reading |
+|---|---:|---:|---|
+| 1 (no suffix) | 0 | ~3 min | mem=541MiB util=0% (all 8 GPUs spiked to 53-84% util moments later) |
+| retry1 | 4 | ~3 min | mem=0MiB util=0% compute_processes=0 |
+| retry2 (+ live memory sampler) | 7 | ~3 min | mem=1608MiB util=0% |
+| retry3 | 4 | ~13 min | mem=3272MiB util=0% **compute_processes=4** |
+| retry4 | 1 | ~3 min | mem=0MiB util=0% |
+| retry5 | 4 | ~24 min | mem=2878MiB util=5% **compute_processes=4** |
+
+`[V]` **`addr2line` against the actual crashed binary (independently reproduced, not
+just asserted) resolves the crash to:** `Ciphertext::multPt` ->
+`Plaintext::adjustPlaintextToCiphertext` -> `Plaintext::copy` -> `RNSPoly::copy` ->
+`RNSPoly::grow` -> `LimbPartition::generateLimbToLevel`/`generate` -> `Limb::Limb` ->
+`VectorGPU::VectorGPU` -> `FIDESlib::GPUmalloc`. Identical (or near-identical, one
+offset byte apart across different process loads) across all 6 crashes.
+
+**`[V]` Two same-session control runs of the byte-for-byte unmodified profiled
+baseline both passed cleanly**, bracketing the 6 diagcache failures:
+`fhe_fides_real_d768_t2_full_profiled_scheme_b_a100_20260727.json` (before) and
+`fhe_fides_real_d768_t2_full_profiled_scheme_b_a100_20260728_control.json` (after,
+`global_rel_inf=2.87e-10`, `encrypted_evaluation=515.09s`, launched specifically as a
+control experiment once the first several diagcache attempts had failed). A 6-fail /
+2-pass split under overlapping host-load conditions the same day is not explainable
+as pure external contention.
+
+**`[U]` Root cause narrowed but not fully resolved.** A prior hypothesis (this
+repo's own, and independently proposed by an external code review shown mid-session)
+that the failure is "unbounded `diagonal_cache_` map accumulation, peak memory only
+grows" does **not** hold up quantitatively:
+- FIDESlib's `device_plaintexts`/`device_ciphertexts` registries
+  (`api/CryptoContext.cpp`) have **zero callers** of their paired
+  `EvictDevicePlaintext`/`EvictDeviceCiphertext` functions anywhere in the FIDESlib
+  codebase (confirmed by `git grep` across the whole pinned tree) -- both the
+  original baseline and the diagcache fix accumulate GPU-registered plaintexts
+  without eviction for the life of the process.
+- The diagcache fix registers **fewer** total distinct plaintexts than the original
+  (`12*1024=12288` vs the original's `24*1024=24576`, since it skips the second
+  token's redundant registration rather than adding to it) -- the opposite of what
+  an "unbounded accumulation" story predicts.
+- The object that actually grows at the crash site (`Plaintext b_(cc_);` inside
+  `Ciphertext::multPt`, `src/CKKS/Ciphertext.cpp:388`) is a **fresh, local, per-call
+  stack variable in both the original and the diagcache fix** -- it is never part of
+  the cache, and this exact `GPUmalloc` call site fires on every one of the 24666
+  ciphertext-plaintext multiplications in *either* design.
+
+What the evidence does point to: something about **reusing a GPU-resident
+`Plaintext` object across two separate `multPt` calls** (the fix's core mechanism)
+interacts badly with this pinned FIDESlib build's `adjustPlaintextToCiphertext`/
+`RNSPoly::grow` path in a way a never-before-multiplied object does not trigger. The
+exact low-level reason (why growth on a second use needs more memory than the first)
+was not resolved within this session's time budget -- it would require reading
+`RNSPoly::grow`/`LimbPartition::generate`'s CUDA-side limb/partition allocation logic
+in more depth than was productive to pursue via further blind GPU retries.
+
+**Conclusion: this specific caching approach is not safe against the pinned
+FIDESlib build (`786c7600fb2f16b724e0acf73df367b27b8afed6`) and is abandoned, not
+fixed.** A proposed workaround ("cap the cache to one hot weight, evict on the next
+distinct weight touched") would not resolve this -- it would still reuse each
+weight's plaintexts across its own two token-calls, which is exactly the reuse
+pattern that crashes; any design that captures *any* benefit from this optimization
+target reuses a plaintext for a second `multPt` call. This is reported as a valid,
+honest negative result per CLAUDE.md's explicit allowance for negative boundaries --
+no `results/runs/` row is added since no attempt produced passing (or any) evidence.
+
+```bash
+python3 fhe/gpu_real_scheme_b/test_diagcache_contract.py -v   # local, no GPU build needed
+# GPU attempts (all failed, no evidence produced -- see table above)
+```
+
+### Scheme B warm-up-prelude hypothesis: correctness reconfirmed, timing inconclusive (2026-07-28)
+
+A different, much lower-risk hypothesis for Finding 3's front-to-back gap: a CUDA
+allocator/kernel warm-up effect (first `cudaMalloc` calls of a new size class,
+first-launch kernel JIT/module loading being slower than steady-state reuse) rather
+than anything about object reuse. New sibling
+`fhe/gpu_real_scheme_b/src/real_dnagpt_fides_scheme_b_warmup.cpp` (forked from the
+profiled baseline; `matmul()`/`bsgs_inner_loop`/`EncryptedEvaluator`/`Client` are
+byte-identical to it, verified by diff and by `test_warmup_contract.py`, 14 tests)
+adds one untimed dummy pass -- one ct-pt multiply, one ct-ct multiply, one `EvalAdd`,
+one giant `EvalRotate`, one baby `EvalFastRotation` batch, all at the real problem's
+exact shapes on a throwaway all-zero ciphertext/plaintext -- immediately after
+context setup and before the real timed `evaluate()` call, timed separately as
+`warmup_prelude` and never folded into `encrypted_evaluation_seconds`.
+
+Evidence: `fhe_fides_real_d768_t2_full_warmup_scheme_b_a100_20260728.json` -- `[V]`
+PASS, `global_rel_inf=2.93e-10`, correctness reconfirmed a third time this session.
+Source hash `d76c71fbe058ce4f2b4afd8f977d02e719ef7f130c2265c7fee88e7d4fd58716`.
+`warmup_prelude=0.226s` (negligible, as expected).
+
+`[U]` **Timing result is inconclusive, not negative or positive.** This run's
+`context_keygen_load` alone took the process ~43 minutes of wall-clock to reach
+(under host load pinned at 800-1218 for that entire window, the worst sustained
+contention observed this session), and `encrypted_evaluation=2595.60s` -- roughly
+5x the clean baseline's `533.13s`. Comparing each stage's per-call mean against the
+clean baseline shows the inflation is *not* uniform: QKV is only `2.49x` slower here
+(`104.05s` vs `41.79s`/call) while `matmul_mlp_projection` is `8.83x` slower
+(`117.28s` vs `13.28s`/call) -- growing worse through the run, the signature of host
+contention *increasing* over the ~43-minute `evaluate()` window, not evidence the
+warm-up prelude flattened anything. This run cannot confirm or refute the warm-up
+hypothesis; the signal is swamped by time-varying external load. `[U]` No clean,
+low-contention window was available on this host during the session to re-attempt
+this specific comparison.
+
+```bash
+python3 fhe/gpu_real_scheme_b/test_warmup_contract.py -v
+FIDES_CONTAINER_IMAGE=dnagpt-fideslib:786c-asymfix2 \
+FIDES_RUN_ENVIRONMENT='Brev A100-SXM4-80GB [gpu]' \
+fhe/gpu_real_scheme_b/run_scheme_b_warmup.sh 0 "$FIXTURE" \
+  /work/results/runs/fhe_fides_real_d768_t2_full_warmup_scheme_b_a100_20260728.json
+```
+
+### Next optimization candidate identified: FIDESlib's native batched `LinearTransform` primitive (2026-07-28, not yet implemented)
+
+`[A]` Scoped but not attempted this session. Grepping the pinned FIDESlib commit
+(`786c7600fb2f16b724e0acf73df367b27b8afed6`) surfaced a purpose-built, already-tested
+BSGS diagonal linear-transform primitive that our hand-rolled `matmul()`/
+`bsgs_inner_loop` does not use:
+
+- `FIDESlib::CKKS::LinearTransform(Ciphertext&, int rowSize, int bStep, const
+  std::vector<Plaintext*>& pts, int stride, int offset)`
+  (`src/CKKS/LinearTransform.cuh`/`.cu`) performs exactly the BSGS diagonal
+  matrix-vector multiply our `matmul()` reimplements manually, but internally
+  dispatches to `RNSPoly::LTdotProductPtBatch` ->
+  `LimbPartition::LTdotProductPtBatch` -> the `dotProductLtBatchedPt___`/`Pt2___`/
+  `Pt3___` CUDA kernels (`src/CKKS/ElemenwiseBatchKernels.cu`/`.cuh`), which process
+  a **batch** of ciphertext-plaintext diagonal products in kernels launched over
+  the whole batch, not our current design's 1024 sequential `EvalMult`+`EvalAdd`
+  calls per matmul call.
+- This is not experimental/unused code inside FIDESlib -- it is exercised by
+  FIDESlib's own official transformer example,
+  `examples/bert-tiny/src/MatMul.cu`, for the identical purpose (matrix
+  multiplication inside a CKKS-encrypted transformer block), and by
+  `CoeffsToSlots.cu`/`Bootstrap.cu` internally.
+- Given Finding 2 above (ciphertext-plaintext multiply-and-accumulate is ~100% of a
+  matmul call's cost, with rotation/keyswitch negligible), replacing the manual
+  per-diagonal loop with this native batched primitive is the most promising
+  remaining lever for real wall-clock speedup: it targets the actual bottleneck
+  operation directly, is a stock, already-tested FIDESlib API (not a new
+  correctness risk comparable to the abandoned diagcache reuse), and requires no
+  change to packing, `BSGS_N1`/`BSGS_N2`, or `TOL`.
+- Not yet scoped in detail against our exact `SLOTS=4096`/four-copies packing
+  layout, nor measured. This is the concrete next step, not a claim of speedup.
+
+```bash
+git -C <pinned-FIDESlib-clone> grep -n "LinearTransform\|LTdotProductPtBatch" HEAD -- '*.cuh' '*.cu' '*.cpp'
+```

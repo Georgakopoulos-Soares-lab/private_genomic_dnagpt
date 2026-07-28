@@ -31,6 +31,7 @@ cmake --build "${BUILD_DIR}" --target real_dnagpt_fides_scheme_b_serialize_write
 cmake --build "${BUILD_DIR}" --target real_dnagpt_fides_scheme_b_serialize_reader --parallel "${JOBS}"
 cmake --build "${BUILD_DIR}" --target real_dnagpt_fides_scheme_b_profiled --parallel "${JOBS}"
 cmake --build "${BUILD_DIR}" --target real_dnagpt_fides_scheme_b_diagcache --parallel "${JOBS}"
+cmake --build "${BUILD_DIR}" --target real_dnagpt_fides_scheme_b_warmup --parallel "${JOBS}"
 
 echo "[build] ${BUILD_DIR}/real_dnagpt_fides_scheme_b"
 echo "[build] ${BUILD_DIR}/real_dnagpt_fides_scheme_b_cached"
@@ -38,3 +39,4 @@ echo "[build] ${BUILD_DIR}/real_dnagpt_fides_scheme_b_serialize_writer"
 echo "[build] ${BUILD_DIR}/real_dnagpt_fides_scheme_b_serialize_reader"
 echo "[build] ${BUILD_DIR}/real_dnagpt_fides_scheme_b_profiled"
 echo "[build] ${BUILD_DIR}/real_dnagpt_fides_scheme_b_diagcache"
+echo "[build] ${BUILD_DIR}/real_dnagpt_fides_scheme_b_warmup"

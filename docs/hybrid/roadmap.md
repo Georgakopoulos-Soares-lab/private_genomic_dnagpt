@@ -29,8 +29,29 @@ correctness failure" condition below is met. Full comparison and rationale in
    `ring_dim=65536`/depth 16, half of Scheme A's `ring_dim=131072`/depth 43.
 5. Scale sequence length and block count only after one Scheme B block gate passes,
    mirroring the "Scale and optimize" and "Compose only after one block scales" order
-   in [../roadmap.md](../roadmap.md). **Active next step.** The naive ×12-block T=2
-   linear extrapolation ([tasks.md](tasks.md), `~74.6 min` total) is `[A]`-only; real
-   sequence-length scaling is `[U]` and blocked on designing a general causal-attention
-   Scheme B circuit, since the current T=2 schedule uses a closed-form identity specific
+   in [../roadmap.md](../roadmap.md). The naive ×12-block T=2 linear extrapolation
+   ([tasks.md](tasks.md), `~74.6 min` total) is `[A]`-only; real sequence-length
+   scaling is `[U]` and blocked on designing a general causal-attention Scheme B
+   circuit, since the current T=2 schedule uses a closed-form identity specific
    to a two-token window.
+6. `[done, 2026-07-27]` GPU-side profiling of `server_linear_algebra_seconds` found
+   the 6 matmul stages are 99.5% of server time, with ciphertext-plaintext
+   multiply-and-accumulate ~100% of one matmul call's internal cost (rotation/
+   keyswitch <0.1%, not the bottleneck at any BSGS split). See
+   [tasks.md](tasks.md)'s 2026-07-27 profiling subsection.
+7. A diagonal-plaintext-cache fix motivated by that profiling
+   (`real_dnagpt_fides_scheme_b_diagcache.cpp`) was implemented and contract-tested
+   but abandoned after 6 consecutive real-GPU crashes, root-caused via `addr2line`
+   to `Ciphertext::multPt`'s plaintext-level-adjustment path rejecting a reused
+   GPU-resident `Plaintext` object. A follow-up warm-up-prelude hypothesis test
+   passed correctness but returned an inconclusive timing result (host contention
+   swamped the signal). See [tasks.md](tasks.md)'s 2026-07-27/28 subsections for
+   the full evidence trail.
+8. **Active next step.** FIDESlib's own `LinearTransform`/`LTdotProductPtBatch`
+   native batched BSGS primitive (verified present in the pinned commit, used by
+   FIDESlib's own `examples/bert-tiny/src/MatMul.cu`) has not yet been scoped
+   against this repo's exact packing layout or measured. It targets the actual
+   bottleneck (ciphertext-plaintext multiply) directly via real GPU batching
+   rather than object reuse, so it carries none of the correctness risk that sank
+   the diagcache fix. See [tasks.md](tasks.md)'s 2026-07-28 "Next optimization
+   candidate" subsection.
