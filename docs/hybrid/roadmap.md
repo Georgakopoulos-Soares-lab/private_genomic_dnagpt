@@ -30,10 +30,18 @@ correctness failure" condition below is met. Full comparison and rationale in
 5. Scale sequence length and block count only after one Scheme B block gate passes,
    mirroring the "Scale and optimize" and "Compose only after one block scales" order
    in [../roadmap.md](../roadmap.md). The naive ×12-block T=2 linear extrapolation
-   ([tasks.md](tasks.md), `~74.6 min` total) is `[A]`-only; real sequence-length
-   scaling is `[U]` and blocked on designing a general causal-attention Scheme B
-   circuit, since the current T=2 schedule uses a closed-form identity specific
-   to a two-token window.
+   ([tasks.md](tasks.md), `~74.6 min` total) is `[A]`-only.
+   `[done, 2026-07-28]` — a general causal-attention Scheme B circuit (real per-row
+   exact softmax at the client boundary, generalizing the T=2 closed-form identity
+   rather than replacing it) is designed, numpy-proven against a real T=3 oracle, and
+   passes both the `attention` and `full` real-GPU gates at T=3
+   (`global_rel_inf` `3.19e-10`/`3.65e-10` against the unchanged `4e-2` tolerance; see
+   [tasks.md](tasks.md)'s 2026-07-28 "General causal-attention Scheme B circuit"
+   section and `fhe_fides_real_d768_t3_{attention,full}_general_attention_scheme_b_a100_20260728.json`).
+   `[U]` Only T=3 is measured; scaling to task-representative lengths (`T=32/64/103`)
+   and multi-block composition remain open, and no speed claim is made from this
+   result (T=3 is not compared against the T=2 anchor; round-trip/score-count growth
+   is `O(T)`/`O(T^2)` by construction, not yet empirically confirmed beyond T=3).
 6. `[done, 2026-07-27]` GPU-side profiling of `server_linear_algebra_seconds` found
    the 6 matmul stages are 99.5% of server time, with ciphertext-plaintext
    multiply-and-accumulate ~100% of one matmul call's internal cost (rotation/
@@ -47,11 +55,18 @@ correctness failure" condition below is met. Full comparison and rationale in
    passed correctness but returned an inconclusive timing result (host contention
    swamped the signal). See [tasks.md](tasks.md)'s 2026-07-27/28 subsections for
    the full evidence trail.
-8. **Active next step.** FIDESlib's own `LinearTransform`/`LTdotProductPtBatch`
-   native batched BSGS primitive (verified present in the pinned commit, used by
-   FIDESlib's own `examples/bert-tiny/src/MatMul.cu`) has not yet been scoped
-   against this repo's exact packing layout or measured. It targets the actual
-   bottleneck (ciphertext-plaintext multiply) directly via real GPU batching
-   rather than object reuse, so it carries none of the correctness risk that sank
-   the diagcache fix. See [tasks.md](tasks.md)'s 2026-07-28 "Next optimization
-   candidate" subsection.
+8. **Closed, measured-negative.** FIDESlib's own `LinearTransform`/
+   `LTdotProductPtBatch` native batched BSGS primitive (verified present in the
+   pinned commit, used by FIDESlib's own `examples/bert-tiny/src/MatMul.cu`)
+   was scoped against this repo's exact packing layout (compatible, three
+   concrete adaptations required -- not a drop-in), implemented for one call
+   site (QKV query projection) in `real_dnagpt_fides_scheme_b_lintransform.cpp`,
+   validated locally (106 tests, including a numpy reconstruction against the
+   real oracle fixture), and run on a real A100. `[done, 2026-07-28]`
+   Correctness passes (`global_rel_inf=4.59e-10`). `[V]` Timing regresses: the
+   converted call measures `1.6-1.9x` *slower* than its unconverted sibling
+   calls in the same run (the only comparison not confounded by host load).
+   Converting the remaining 23 call sites was not attempted given this
+   negative signal. See [tasks.md](tasks.md)'s 2026-07-28 "`LinearTransform`
+   scoping", "Step 2: single-call-site implementation", and "isolated
+   single-call-site gate" subsections for the full evidence trail.

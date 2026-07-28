@@ -564,3 +564,186 @@ runs:
       the warm-up hypothesis; no clean/low-contention window was available
       to re-attempt it this session. Do not read the flattened absolute
       numbers here as evidence of anything about warm-up.
+
+  - id: fhe_fides_real_d768_t2_full_lintransform_scheme_b_a100_20260728
+    task: "Isolated single-call-site gate: FIDESlib::CKKS::LinearTransform native batched BSGS primitive for the QKV query projection only (23 other matmul() calls unchanged, manual path)"
+    status: "[V] PASS (correctness); [V] timing regresses"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 0 [gpu] (preflight_confirmed mem=0MiB util=0%), host load ~6 (load average 6.17/6.26/21.94) -- the cleanest host conditions observed in this project"
+    config:
+      dimension: 768
+      sequence_length: 2
+      heads: 12
+      batch_slots: 4096
+      ring_dim: 65536
+      multiplicative_depth: 16
+      rotation_keys: 66
+    metrics:
+      global_rel_inf: 4.5882853048823325e-10
+      worst_token_rel_inf: 5.53629501613163e-10
+      round_trips: 7
+      logical_boundary_instances: 24
+      context_keygen_load_seconds: 4.851976919
+      encrypted_evaluation_seconds: 247.509865742
+      client_boundary_seconds_total: 1.66842788
+      server_linear_algebra_seconds: 245.841437862
+      matmul_qkv_query_mean_seconds_lintransform: 17.2859242035
+      matmul_qkv_key_mean_seconds_manual: 10.6884866035
+      matmul_qkv_value_mean_seconds_manual: 9.8642745855
+      matmul_attention_projection_mean_seconds_manual: 9.1849163145
+      matmul_mlp_fc_mean_seconds_manual: 9.388136970125
+      matmul_mlp_projection_mean_seconds_manual: 9.406171027625
+    provenance:
+      result_sha256: "71455f92be9c187e33b295ac72940ab40db79b3238c58c87a760977e34e723ed"
+      source_sha256: "915cbd38a9ca5b6e94865f08956328533eeba3d8248d007e583a28397fa5accd"
+      fixture_manifest_sha256: "8d20a2841ee29a7a386171f1bd173b7189144359ce8f91ea5eb21cc60c0a78fe"
+      fixture_contract_sha256: "b35651110c5e45efc53c7ab39066f1ad455cd53dfbb05959a8ffb8835bd382d8"
+    verdict: >
+      [V] PASS on correctness (global_rel_inf=4.59e-10, consistent with every
+      prior Scheme B run's ~1e-10 range) -- the LinearTransform-based QKV
+      query translation (diagonal layout, level threading) is correct on
+      real GPU hardware, confirming the 2026-07-28 scoping analysis and its
+      numpy reference check. [V] Timing regresses: the converted call
+      (17.29s/call) is 1.6-1.9x SLOWER than every one of its unconverted
+      manual-path sibling calls in the SAME run (9.18-10.69s/call) -- the
+      only comparison not confounded by host load, since ambient conditions
+      are identical for both. This is the opposite of the hypothesized
+      direction. The overall wall-time drop vs the 2026-07-27 baseline
+      (247.51s vs 533.13s) is NOT attributable to this change -- only one
+      call changed and it got slower, not faster; the drop is fully
+      explained by this run's far lower host contention (every unconverted
+      bucket also dropped 1.4-3.5x vs its 2026-07-27 counterpart). Lost
+      baby-rotation reuse does not plausibly explain the gap (rotation was
+      independently measured at <0.1% of a manual call's cost on
+      2026-07-27). Converting the remaining 23 call sites was not attempted
+      given this negative signal; this lever is closed as measured-negative.
+      Full account: docs/hybrid/tasks.md's 2026-07-28 "isolated
+      single-call-site gate" subsection.
+
+  - id: fhe_fides_real_d768_t3_attention_general_attention_scheme_b_a100_20260728
+    task: "First general (T>2) causal-attention Scheme B circuit: real-weight D=768/T=3 LN1 + 12-head general causal attention gate"
+    status: "[V] PASS"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 0 [gpu]"
+    config:
+      dimension: 768
+      sequence_length: 3
+      heads: 12
+      batch_slots: 4096
+      ring_dim: 65536
+      multiplicative_depth: 16
+      rotation_keys: 63
+      explicit_ciphertext_ciphertext_multiplications: 69
+      explicit_ciphertext_plaintext_multiplications: 12480
+    metrics:
+      global_rel_inf: 3.1909063162173334e-10
+      worst_token_rel_inf: 3.9538049827995033e-10
+      max_abs_error: 5.3139075362196309e-09
+      round_trips: 6
+      logical_boundary_instances: 39
+      client_boundary_seconds_total: 1.436155631
+      server_linear_algebra_seconds: 129.174819056
+      encrypted_evaluation_seconds: 130.610974687
+      intermediate_decrypt_attempts: 0
+      declared_client_boundary_crossings: 6
+      declared_logical_boundary_instances: 39
+      final_decrypt_calls: 1
+    provenance:
+      result_sha256: "2dc5882b355ede04a0ae79e7741f29e29b85b0152c3f8786c090a944442c1875"
+      source_sha256: "c57e81d441b27400453c29e941d4f5e810df850a90cfc2d88ce68178ee4cd0f8"
+      fixture_manifest_sha256: "bfdabe62cdc7ff05dfb3e6ca149e50b081d5cfeb159408bb7478f2b168abd5c3"
+      fixture_contract_sha256: "918f6594f97257d133dd4eff4eb1c85a5a5c687314cf4f4ee91128cb29907195"
+    verdict: >
+      [V] PASS. First real-GPU evidence for a general causal-attention Scheme
+      B circuit, closing the T>2 gap flagged as [U] in every prior block-0
+      entry above. Forked from the frozen T=2 file
+      (real_dnagpt_fides_scheme_b.cpp, source_sha256
+      d88f1a0919a003a539e746aaf33e5d283c28810c2805a1af4b05dffac43e08df,
+      confirmed untouched) into
+      real_dnagpt_fides_scheme_b_general_attention.cpp: replaces the T=2
+      closed-form sigmoid identity (w1=sigmoid(s11-s10)) with a real per-row
+      exact softmax over the causal columns, evaluated at the Scheme B
+      client boundary exactly like every other nonlinearity, then
+      context_i=v0+sum_{j=1}^{i}weight_ij*(v_j-v0), generalizing the T=2
+      file's own v0+delta reduction rather than replacing it with a
+      different mechanism. Exported a new real fixture
+      (gsr_pos0_block0_t3_d63353abdc1a_52d046d1fcf0, same checkpoint/GSR
+      FASTA as the T=2 fixture, --tokens 3) via
+      fhe/realweights/export_fixture.py, which was already T-agnostic and
+      needed no changes. round_trips=6 splits as 3 LN1 invsqrts (one per
+      token, unchanged mechanism) + 3 attention softmax boundary calls
+      (row1_col1, row2_col1, row2_col2) -- exactly T*(T-1)/2=3, matching the
+      source's own derivation and this session's pre-GPU numpy proof
+      (test_general_attention_contract.py) bit for bit. Design was proven
+      in numpy against the real oracle (attention_scores,
+      attention_probabilities, attention_context_merged,
+      attention_projection) before any C++ was written; that same proof
+      also confirms the frozen T=2 identity is a strict special case of this
+      general formula (weight when row_length=2, select_index=1 equals
+      sigmoid(s11-s10) to 1e-12), so this is a generalization, not a
+      different algorithm that happens to agree at one data point.
+      global_rel_inf=3.19e-10 against the unchanged 4e-2 gate -- same
+      ~1e-10 precision band as every prior Scheme B gate, i.e. going from
+      T=2 to T=3 cost no accuracy. [A] Round trips growing as T*(T-1)/2 and
+      attention_score calls as O(T^2) are the same asymptotic cost any
+      plaintext causal-attention implementation pays; not yet measured at
+      T>3, and no wall-clock/speed claim is made from this gate (see the
+      companion full-block entry below and docs/hybrid/roadmap.md for the
+      scope this closes vs what remains open).
+
+  - id: fhe_fides_real_d768_t3_full_general_attention_scheme_b_a100_20260728
+    task: "First general (T>2) causal-attention Scheme B circuit: real-weight D=768/T=3 complete block-0 gate"
+    status: "[V] PASS"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 0 [gpu]"
+    config:
+      dimension: 768
+      sequence_length: 3
+      heads: 12
+      batch_slots: 4096
+      ring_dim: 65536
+      multiplicative_depth: 16
+      rotation_keys: 66
+      explicit_ciphertext_ciphertext_multiplications: 75
+      explicit_ciphertext_plaintext_multiplications: 37089
+    metrics:
+      global_rel_inf: 3.645898242295045e-10
+      worst_token_rel_inf: 4.399196415851209e-10
+      max_abs_error: 5.7438711564827827e-09
+      round_trips: 12
+      logical_boundary_instances: 54
+      client_boundary_seconds_total: 3.123612988
+      server_linear_algebra_seconds: 516.44982411
+      encrypted_evaluation_seconds: 519.573437098
+      context_keygen_load_seconds: 5.000964707
+      intermediate_decrypt_attempts: 0
+      declared_client_boundary_crossings: 12
+      declared_logical_boundary_instances: 54
+      final_decrypt_calls: 1
+    provenance:
+      result_sha256: "6d04e3a53dcf6b00fc9ae4f8b072effc19cbc38a0f890712436edf9ccbbf3f87"
+      source_sha256: "c57e81d441b27400453c29e941d4f5e810df850a90cfc2d88ce68178ee4cd0f8"
+      fixture_manifest_sha256: "bfdabe62cdc7ff05dfb3e6ca149e50b081d5cfeb159408bb7478f2b168abd5c3"
+      fixture_contract_sha256: "918f6594f97257d133dd4eff4eb1c85a5a5c687314cf4f4ee91128cb29907195"
+    verdict: >
+      [V] PASS. Same gate/source/fixture as
+      fhe_fides_real_d768_t3_attention_general_attention_scheme_b_a100_20260728
+      above, extended through LN2, 4-chunk GELU MLP, residual, and encrypted
+      output pack -- i.e. the general causal-attention circuit composes
+      correctly with the rest of the (unmodified) block, not just in
+      isolation. round_trips=12 = 3 LN1 + 3 general-attention-softmax + 3
+      GELU-chunk-batched + 3 LN2 = 54 logical boundary instances.
+      global_rel_inf=3.65e-10 against the unchanged 4e-2 gate. This is the
+      first passing complete-block Scheme B evidence at any T other than 2,
+      closing the roadmap step 5 gap ("blocked on designing a general
+      causal-attention Scheme B circuit"). [U] No speed claim: this run's
+      519.57s encrypted_evaluation is not compared against the T=2 block-0
+      anchor (372.27s, fhe_fides_real_d768_t2_block0_scheme_b_a100_20260725)
+      because T differs (3 vs 2, more matmul() calls: 36 vs 24) and this
+      session's host load was not controlled for; a same-T, same-host
+      controlled comparison would be needed before any per-token throughput
+      claim. [U] Only T=3 has been measured; scaling behavior at
+      task-representative lengths (T=32/64/103, per docs/roadmap.md) remains
+      unmeasured, and round-trip/score-count growth is O(T)/O(T^2)
+      respectively by construction, not yet empirically confirmed beyond
+      T=3.

@@ -56,8 +56,11 @@ See [tasks.md](tasks.md) for methods/commands and [data_provenance.md](data_prov
   depth. Naive 12-block `T=2` linear extrapolation (not yet scaled to real sequence
   lengths): `~74.6 min` total. Full evidence in [hybrid/roadmap.md](hybrid/roadmap.md)
   and [hybrid/tasks.md](hybrid/tasks.md).
-- `[U]` Real sequence-length scaling (`T>2`), multi-block composition, and a
-  task-valid encrypted sequence remain open under Scheme B.
+- `[V]` A general causal-attention Scheme B circuit (T>2, real per-row exact softmax
+  at the client boundary) is designed and passes real-GPU `attention`/`full` gates at
+  `T=3` (`rel_inf` `3.19e-10`/`3.65e-10`); no speed claim yet. `[U]` Scaling to
+  task-representative sequence lengths, multi-block composition, and a task-valid
+  encrypted sequence remain open under Scheme B.
 
 See [shared/architecture_options.md](shared/architecture_options.md) for why Scheme B
 was adopted. The full twelve-layer CPU route is not a planned stage: after a complete

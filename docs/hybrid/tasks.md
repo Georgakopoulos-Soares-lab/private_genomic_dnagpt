@@ -921,3 +921,338 @@ BSGS diagonal linear-transform primitive that our hand-rolled `matmul()`/
 ```bash
 git -C <pinned-FIDESlib-clone> grep -n "LinearTransform\|LTdotProductPtBatch" HEAD -- '*.cuh' '*.cu' '*.cpp'
 ```
+
+### `LinearTransform` scoping: compatible, not a drop-in, three concrete adaptations required (2026-07-28)
+
+Read `src/CKKS/LinearTransform.cu`/`.cuh`, `examples/bert-tiny/src/MatMul.cu`, the pinned
+FIDESlib-install rules, and this repo's own `api/CryptoContext.cpp`/`.hpp` wrapper (the
+"asymfix2" OpenFHE-API-compatible shim every Scheme B `.cpp` file actually calls) before
+writing any implementation code, per this session's instructions. Verdict: **compatible
+with our exact `SLOTS=4096`/`PACK_WIDTH=1024`/`BSGS_N1=32`/`BSGS_N2=32` packing, but three
+adaptations are required** -- this is not a mechanical swap of one function call for
+another.
+
+**`[V]` Finding 1: our code never touches native FIDESlib types today; `LinearTransform`
+does.** Every Scheme B `.cpp` file (`real_dnagpt_fides_scheme_b*.cpp`) only ever calls the
+OpenFHE-API-compatible wrapper (`using Ct = Ciphertext<DCRTPoly>`; `cc_->EvalMult`/
+`EvalRotate`/`EvalFastRotation`/`MakeCKKSPackedPlaintext`, all from the installed
+`<fideslib.hpp>` shim, not `FIDESlib::CKKS::*` directly). Tracing `EvalMult(ct1, Plaintext&
+pt)` in `api/CryptoContext.cpp` confirms our `multiply_plain()` bottoms out at
+`res_gpu->multPt(*pt_gpu)` -- the native single-diagonal call the 2026-07-27 profiling
+already measured. `FIDESlib::CKKS::LinearTransform` is a free function operating on native
+`FIDESlib::CKKS::Ciphertext&`/`Plaintext*`, and is only `#include`d in
+`api/CryptoContext.cpp` (for `ConvolutionTransform`/`SpecialConvolutionTransform`, which
+*are* wired to public wrapper methods `ConvolutionTransformInPlace`/
+`SpecialConvolutionTransformInPlace`) -- **no `LinearTransformInPlace` wrapper exists**.
+Calling it requires our new `.cpp` to reach into native FIDESlib types itself.
+
+**`[V]` Finding 2: this is possible without touching any frozen file or the wrapper.**
+`CryptoContextImpl<DCRTPoly>::LoadCiphertext`/`LoadPlaintext`/`GetDeviceCiphertext`/
+`GetDevicePlaintext` are `public` members (`api/CryptoContext.hpp:53-66,243-244`) --
+exactly the calls `ConvolutionTransformInPlace`'s own implementation uses internally
+(`api/CryptoContext.cpp:1850-1879`: `LoadCiphertext`/`LoadPlaintext`, `static_pointer_cast`
+to `FIDESlib::CKKS::Ciphertext`/`Plaintext`, then call the native free function). Our new
+sibling file can replicate that identical pattern locally. Header availability is also
+confirmed, not assumed: the pinned FIDESlib's top-level `CMakeLists.txt` (`install(...)`
+at line 344) installs `*.cuh`/`*.hpp`/`*.h`/`*.inc` from the *entire* `src/` tree alongside
+the public API headers ("Also install private headers so downstream targets can include
+implementation details when needed") -- `#include "CKKS/LinearTransform.cuh"` will resolve
+for an external consumer linked against `fideslib::fideslib`, no FIDESlib-side build change
+needed.
+
+**`[V]` Finding 3: diagonal indexing and packing match exactly, no packing-contract change
+needed.** `LinearTransform(ctxt, rowSize, bStep, pts, stride, offset)` computes
+`gStep = ceil(rowSize/bStep)` and, in its `FUSED` branch (hardcoded on --
+`constexpr bool FUSED = true`, the non-FUSED branch is dead code), builds
+`Aptr[bStep*j + i] = pts[bStep*j + i]` for giant index `j` and baby index `i`. Our own
+`bsgs_inner_loop`'s `diagonal = BSGS_N1*giant + small` is the identical indexing scheme.
+With `rowSize=1024=PACK_WIDTH`, `bStep=BSGS_N1=32`, `gStep=BSGS_N2=32`, `stride=1`,
+`offset=0`, a `pts` vector built as `pts[BSGS_N1*giant + small] = <existing diagonal
+plaintext for (giant, small)>` maps directly onto `LinearTransform`'s expected layout.
+`LinearTransform`'s internal baby-step rotation indices (`i*stride` for `i` in
+`[0,bStep)`) also match our own `baby_rotations()` (rotations `0..BSGS_N1-1`, index 0 =
+identity). **The existing `packed_values()` diagonal-value computation (including its
+`rolled_row` pre-rotation, which compensates for one post-hoc giant-step rotation instead
+of one per diagonal) can be reused unchanged** -- `LinearTransform` implements the same
+"sum bStep diagonals, then rotate once per giant step" structure our manual code already
+does by hand.
+
+**`[U]`->`[V]` Finding 4 (the real blocker, now resolved): plaintexts must be pre-encoded
+at the ciphertext's exact current level; ours are not.** `LinearTransform.cu:76` asserts
+`pts[0]->c0.getLevel() == ctxt.getLevel()` -- an *exact* match, checked before any
+internal adjustment, unlike `multPt`'s implicit `Plaintext::adjustPlaintextToCiphertext`
+step (`Ciphertext.cpp:393`) that our current per-diagonal `EvalMult(ct, pt)` calls silently
+rely on. Our `raw_plain()` always builds at OpenFHE level 0
+(`MakeCKKSPackedPlaintext(values, 1, 0, ...)`), but per the 2026-07-27 profiling (Finding
+3 there), ciphertexts entering `matmul()` are *not* always level 0 -- roughly 2 levels are
+consumed since the last client-boundary reset by the time of e.g. the MLP-projection call
+sites. This is real, not a formality: `examples/bert-tiny/src/MatMul.cu` independently
+confirms the pattern -- callers there explicitly `dropToLevel(...)` the ciphertext to match
+precomputed plaintexts before calling `LinearTransform`, with their own caller-side level
+asserts; the primitive itself does no implicit leveling. Traced the fix: `CryptoContext.cpp`
+confirms `MakeCKKSPackedPlaintext`'s `level` argument passes straight through to OpenFHE's
+own CPU-side encoding (`context->MakeCKKSPackedPlaintext(value, noiseScaleDeg, level, ...)`
+at `CryptoContext.cpp:496/520`), and `CiphertextImpl<DCRTPoly>::GetLevel()`
+(`Ciphertext.cpp:56-64`) shows the OpenFHE-visible level is `maxDepth - <native level>` --
+the same inverted convention used at `CryptoContext.cpp:615` to convert a native level back
+to an OpenFHE `level` argument. So **passing a ciphertext's own `Ct::GetLevel()` as
+`raw_plain()`'s `level` argument produces a plaintext whose native level matches that
+ciphertext's native level exactly** -- no separate `adjustPlaintextToCiphertext` call
+needed, just a non-zero `level` parameter threaded through `raw_plain()` at each call site
+(currently hardcoded to `0` everywhere). This is a real code change (Step 2 below), not a
+config flag.
+
+**`[A]` Finding 5 (safety-critical, motivates an added runtime check): the pinned build is
+`-DCMAKE_BUILD_TYPE=Release`, which defines `NDEBUG` and compiles out `assert()`.**
+`LinearTransform`'s own level-match assert will therefore **not** fire on the real GPU
+binary if Finding 4's level threading has a bug -- the call would silently proceed into
+`rescale`/rotation math built on a false level premise (wrong ciphertext values at best;
+at worst, an RNS-limb-count mismatch feeding the batched CUDA kernels, a similarly
+dangerous class of failure to the diagcache crash). Because of this, Step 2's
+implementation must add its own explicit `if (mismatch) throw` check before calling
+`LinearTransform` -- relying on the library's own (compiled-out) assert is not sufficient
+here.
+
+**`[A]` Finding 6 (distinguishes this from the abandoned diagcache fix): `LinearTransform`
+requires pre-adjusted plaintexts rather than adjusting them internally, so it does not
+obviously touch the crash path.** The diagcache crash was root-caused to
+`Ciphertext::multPt`'s implicit `Plaintext::adjustPlaintextToCiphertext` -> `RNSPoly::grow`
+path choking when a *reused* native `Plaintext` object was grown a second time. Because
+`LinearTransform`'s precondition demands the plaintext already be at the matching level
+(no internal grow-on-demand), and this design builds all 1024 diagonal plaintexts fresh
+per `matmul()` call -- each used exactly once inside one batched call, never reused across
+two separate `multPt`-like calls -- it does not exercise the same reuse pattern
+CLAUDE.md's ban targets. This is reasoning from the source, not a GPU-verified guarantee;
+the isolated single-call-site gate (Step 2) is what actually tests it.
+
+**`[A]` Finding 7 (non-blocking efficiency caveat): converting a shared-`baby` call site
+loses today's rotation-reuse, but Finding 2 (2026-07-27) says that shouldn't matter.**
+`LinearTransform(ctxt, ...)` takes the *un-rotated* input ciphertext and computes its own
+baby-step hoisted rotations internally (`ctxt.rotate_hoisted(...)`) -- it has no parameter
+to accept externally precomputed baby rotations. Our code currently computes
+`baby_rotations()` once and reuses it across sibling `matmul()` calls (QKV: 3 calls share
+one; MLP FC: 4 calls share one) -- converting one of those call sites to `LinearTransform`
+means its baby-step rotation work is redone per call instead of shared. Since the
+2026-07-27 profiling already found giant-step rotation/keyswitch is `<0.1%` of one matmul
+call's cost (rotation is not the bottleneck at any granularity), redoing baby-step
+rotation an extra 2-3x is expected to stay immaterial -- but this is an expectation, not
+yet measured, and the full-block re-measurement (once all 24 sites are converted) is what
+actually checks it.
+
+**Verdict for Step 2:** proceed. Required, concrete changes -- not a drop-in swap: (a)
+give `raw_plain()` an optional `level` parameter (default 0, preserving every other call
+site's existing behavior) so a matmul call site can request plaintexts pre-encoded at its
+input ciphertext's current level; (b) implement the QKV query projection (token 0) call
+site via `LoadCiphertext`/`LoadPlaintext`/`GetDeviceCiphertext`/`GetDevicePlaintext` +
+`FIDESlib::CKKS::LinearTransform(...)`, leaving the other 23 call sites on the existing
+manual path; (c) add an explicit throwing level-match check (Finding 5) since the
+library's own assert is compiled out; (d) verify with an isolated gate comparing that one
+call's output against the existing oracle before touching any other call site, exactly as
+this session's instructions specify.
+
+### Scheme B `LinearTransform` Step 2: single-call-site implementation, local validation passes (2026-07-28)
+
+New sibling `fhe/gpu_real_scheme_b/src/real_dnagpt_fides_scheme_b_lintransform.cpp`
+(forked from the profiled prototype, source hash
+`3c182a8c786f628d896cf96a8149a6f9f8ed945b3098038ea7b8359c1e0c2aed` before this file's own
+edits -- the frozen ancestors it was forked from remain untouched: single-shot
+`d88f1a09...`, cached `de79d6e7...`, profiled `4ca9c664...`, all still verified by
+`test_lintransform_contract.py`). Converts exactly one of the six textual `matmul()` call
+sites -- the QKV query projection, both `T=2` tokens -- to a new `matmul_lintransform()`
+member that: builds the identical 1024 diagonal plaintexts (`packed_values`/`rolled_row`
+formula copy-pasted unchanged from `bsgs_inner_loop`) pre-encoded at the input
+ciphertext's current level (`raw_plain()` gained an optional `level` parameter, default 0,
+every pre-existing call site unaffected); clones the input into an independent native
+ciphertext (`CiphertextImpl<DCRTPoly>`'s copy constructor deep-clones via
+`CopyDeviceCiphertext`, confirmed by reading `Ciphertext.cpp`, so `LinearTransform`'s
+in-place mutation never touches `baby.values[0]`/`normalized[token]`, still needed by the
+sibling key/value matmul calls and the manual BSGS path); adds an explicit
+`if (level mismatch) throw` check (scoping Finding 5 -- the library's own assert is
+compiled out under this pinned build's Release/NDEBUG); then calls
+`FIDESlib::CKKS::LinearTransform(*ctxt_gpu, BSGS_N1*BSGS_N2, BSGS_N1, pts_gpu, 1, 0)`. The
+other 23 call sites are untouched, on the original manual path. `CMakeLists.txt`/
+`build_in_fideslib.sh` gained the new target; `run_scheme_b_lintransform.sh`/
+`launch_brev_scheme_b_lintransform.sh`/`wait_and_run_scheme_b_lintransform.sh` were forked
+from the profiled prototype's scripts with the `_lintransform_` tag marker (disjoint from
+every other prototype's marker), to a new versioned remote dir
+(`gpu_real_scheme_b_lintransform_v1`, not reusing any prior version) per this project's
+standing Brev deployment convention.
+
+**`[V]` Local validation: `test_lintransform_contract.py` (19 tests) plus the full existing
+suite (`test_batching_contract.py`/`test_caching_contract.py`/`test_diagcache_contract.py`/
+`test_profiling_contract.py`/`test_serialization_contract.py`/`test_warmup_contract.py`,
+106 tests total) all pass.** Beyond the static source-text checks (frozen ancestors
+untouched, exactly one call site converted, level-match check present, native clone
+present, tag-marker discipline), this file's own numpy contract goes further than a static
+check: it transliterates `LinearTransform.cu`'s literal FUSED-branch reverse-order
+accumulation loop (not just its outer diagonal indexing) from source, independently
+re-derives (by induction, recorded in `test_lintransform_contract.py`'s docstring) that
+this reverse loop reduces to the closed form `sum_m rotate(S_m, m*bStep*stride)` -- the
+exact same formula our own `matmul()` computes via a differently-ordered forward loop --
+and checks both agree. It then feeds the *real* fixture's `weights.attn_qkv` and
+`oracle.ln1_output` through both formulations and checks the result against the *real*
+`oracle.query`, all at `atol=1e-9`. **All three agree exactly.** This is a
+mathematical-equivalence check against this session's own reading of
+`DotProductPtInternal`'s C++-level indexing, not a substitute for the real GPU gate (the
+low-level `LTdotProductPtBatch` CUDA kernel body was not read) -- but it is meaningfully
+stronger than confirming the diagonal indexing "looks the same," since it caught that
+`LinearTransform`'s reverse, incrementally-rotated accumulation order is a genuinely
+different control-flow shape from our own forward loop, and confirms by direct
+computation on real weights that the two are mathematically identical, not merely
+structurally similar.
+
+`[U]` Not yet run on real GPU hardware -- this is local-only validation (static contract +
+numpy arithmetic), no FIDESlib/CUDA build performed yet. The isolated single-call-site
+correctness gate (comparing the full block's `global_rel_inf` against the unchanged 4e-2
+oracle tolerance, exactly as the profiled/diagcache/warmup prototypes were gated) and the
+full-block timing re-measurement are the next steps, pending a decision on Brev capacity
+spend.
+
+```bash
+python3 fhe/gpu_real_scheme_b/test_lintransform_contract.py -v
+```
+
+**`[V]` Build-time finding: including FIDESlib's native `CKKS/Ciphertext.cuh`/
+`Plaintext.cuh` from an external consumer needs OpenFHE's own headers on the include
+path -- `fideslib::fideslib`'s exported CMake package does not provide them.** First real
+build attempt failed with two rounds of errors, both fixed without touching any frozen
+file or the FIDESlib install itself:
+
+1. `#include <CKKS/LinearTransform.cuh>` alone only forward-declares
+   `FIDESlib::CKKS::Ciphertext`/`Plaintext` (via `forwardDefs.cuh`) -- calling `->c0`/
+   `->getLevel()` on them needs the full class definitions. Fixed by also including
+   `<CKKS/Ciphertext.cuh>`/`<CKKS/Plaintext.cuh>` directly, matching
+   `api/CryptoContext.cpp`'s own include list.
+2. Those two headers transitively pull in `openfhe.h` (via
+   `CKKS/openfhe-interface/RawCiphertext.cuh`), which is **not** reachable from this
+   target: `fideslibTargets.cmake`'s exported `INTERFACE_INCLUDE_DIRECTORIES` covers only
+   FIDESlib's own installed headers, confirmed by grepping the installed
+   `fideslibTargets.cmake` directly. `examples/bert-tiny/CMakeLists.txt` independently
+   confirms this is expected, not a packaging bug -- it adds OpenFHE's include dirs
+   itself for the same reason. Fixed by adding a `find_package(OpenFHE CONFIG REQUIRED
+   PATHS /usr/local/lib/OpenFHE)` call and `target_include_directories(... PRIVATE
+   ${OpenFHE_INCLUDE} ${OpenFHE_INCLUDE}/core ${OpenFHE_INCLUDE}/pke
+   ${OpenFHE_INCLUDE}/binfhe)` scoped to only the new
+   `real_dnagpt_fides_scheme_b_lintransform` target in `CMakeLists.txt` -- every other
+   target in this tree only uses the OpenFHE-API-compatible `<fideslib.hpp>` wrapper and
+   is untouched by this change.
+
+After both fixes, `cmake --build build --target real_dnagpt_fides_scheme_b_lintransform`
+exits 0 and produces the binary. Build log:
+`/data/christos/private_genomic_ml/dnagpt_fides_asymfix2_20260724/gpu_real_scheme_b_lintransform_v1/gpu_real_scheme_b/build3.log`
+on the Brev host.
+
+### Scheme B `LinearTransform` isolated single-call-site gate: correctness passes, timing regresses (2026-07-28)
+
+Ran `real_dnagpt_fides_scheme_b_lintransform` (source hash `915cbd38a9ca5b6e94865f08956328533eeba3d8248d007e583a28397fa5accd`) on Brev physical GPU 0, host load `~6` (`load average: 6.17, 6.26, 21.94` -- by far the cleanest host conditions of any session in this project's history; every prior Scheme B session saw load in the 150-1500+ range). Evidence:
+`fhe_fides_real_d768_t2_full_lintransform_scheme_b_a100_20260728.json`.
+
+**`[V]` Correctness: PASS.** `global_rel_inf=4.59e-10`, `worst_token_rel_inf=5.54e-10`, both far inside the unchanged `4e-2` gate and consistent with every prior Scheme B run's `~1e-10` range. The single converted call site (QKV query projection, both `T=2` tokens, via `FIDESlib::CKKS::LinearTransform`) produces output indistinguishable from the manual path's historical accuracy once it propagates through the rest of the unmodified block. This confirms the scoping analysis's diagonal-layout and level-threading translation (Findings 3-4 above) is correct on real hardware, not just in the numpy reference check.
+
+**`[V]` Timing: the converted call is measurably SLOWER than its unconverted siblings in the same run, not faster.** This is the load-bearing, apples-to-apples comparison -- same run, same host load, same GPU, so ambient contention cancels out:
+
+| bucket | path | mean seconds/call | vs `matmul_qkv_query` |
+|---|---|---:|---:|
+| `matmul_qkv_query` | **LinearTransform** | **17.29** | -- |
+| `matmul_qkv_key` | manual (unconverted) | 10.69 | query is `1.62x` slower |
+| `matmul_qkv_value` | manual (unconverted) | 9.86 | query is `1.75x` slower |
+| `matmul_attention_projection` | manual (unconverted) | 9.18 | query is `1.88x` slower |
+| `matmul_mlp_fc` | manual (unconverted) | 9.39 | query is `1.84x` slower |
+| `matmul_mlp_projection` | manual (unconverted) | 9.41 | query is `1.84x` slower |
+
+`[A]` The lost baby-rotation-reuse (scoping Finding 7 -- `LinearTransform` recomputes its own 31 baby-step rotations instead of sharing the `baby_rotations()` object Q/K/V already share) does **not** plausibly explain a `~7-8s` gap: the 2026-07-27 profiling's Finding 2 measured giant/baby rotation at `<0.1%` of one manual call's cost (tens of milliseconds on a call costing tens of seconds), regardless of how many times it is repeated. Something about the batched primitive itself -- not the rotation overhead around it -- is the more likely explanation, but the exact mechanism is `[U]` unresolved (the low-level `LTdotProductPtBatch` CUDA kernel was not profiled internally the way the manual path's `detail_*` sub-buckets were in the 2026-07-27 session; that instrumentation doesn't exist for this new call path).
+
+`[A]` **Do not read the overall wall-time drop (`encrypted_evaluation=247.51s` vs the 2026-07-27 baseline's `533.13s`, a `2.16x` improvement) as evidence the swap helped.** Only 1 of 24 calls changed, and that one call got *slower*, not faster, within this run. The overall drop is fully explained by this run's dramatically lower host contention (`load~6` vs whatever the 2026-07-27 session experienced, unrecorded but evidently far worse given every *unconverted* sibling bucket also dropped 1.4-3.5x versus its 2026-07-27 counterpart, e.g. `matmul_mlp_projection` `9.41s` here vs `13.28s` then). Cross-run absolute-time comparisons are confounded by host load exactly as every prior session's caveats describe; the within-run comparison above is the only comparison not subject to that confound, and it points the opposite direction from the hypothesis motivating this work.
+
+**Verdict: the native batched `LinearTransform` primitive does not deliver the hoped-for speedup at this one call site, on this pinned build, under real GPU measurement.** This is a valid negative finding per CLAUDE.md, not a failure to force around. Converting the remaining 23 call sites is very likely to reproduce the same regression at each site (nothing about the QKV query call site is structurally special versus the others) and was not attempted -- spending further Brev capacity to mechanically confirm an already-observed direction was judged not worthwhile without first understanding *why* the batched primitive is slower here, which would require reading `RNSPoly::LTdotProductPtBatch`'s CUDA kernel body (not done this session; out of scope without further explicit direction). The lever identified 2026-07-28 ("Next optimization candidate... targets the actual bottleneck directly") is **closed as measured-negative for this pinned FIDESlib build**, joining the diagcache fix as an explored-and-abandoned lever, though for a different reason (measured slower, not GPU-crash-unsafe).
+
+```bash
+brev exec awesome-gpu-name -- "cat .../gpu_real_scheme_b_lintransform_v1/gpu_real_scheme_b/evidence/fhe_fides_real_d768_t2_full_lintransform_scheme_b_a100_20260728.json"
+```
+
+### General causal-attention Scheme B circuit (T>2): design, proof, and first real-GPU gate (2026-07-28)
+
+Every Scheme B speed lever above (batching, caching, serialization, profiling,
+diagcache, warm-up, `LinearTransform`) was measured against the **T=2 closed-form
+identity** (`softmax([s0,s1])[1]=sigmoid(s1-s0)`), which does not generalize: it is
+specific to a two-token causal window, not a real attention circuit. Before spending
+further effort on speed tuning a non-representative T=2 circuit, this session designed
+and measured the actual general causal-attention Scheme B circuit, closing the `[U]`
+flagged at line 172 above and in `docs/hybrid/roadmap.md` step 5.
+
+**Design.** The frozen file's `Client::cross_boundary_impl` (decrypt -> arbitrary
+plaintext transform -> re-encrypt) was already fully general — nothing about its
+mechanics is specific to a sigmoid or to two tokens. For causal row `i>=1` (query token
+`i` attends to key/value tokens `0..i`), the general circuit:
+
+1. builds one packed ciphertext per row holding, for all 12 heads, the `i+1` raw causal
+   scores `s_i0..s_ii` — each isolated to its own reserved slot
+   (`head*SCORE_SLOT_STRIDE+col`, `SCORE_SLOT_STRIDE=T`) via a one-hot plaintext mask,
+   disjoint from any head's real 64-wide value span (`static_assert`-enforced at
+   compile time: `HEADS*SCORE_SLOT_STRIDE <= PACK_WIDTH-D`);
+2. for each non-trivial causal column `j=1..i`, one new client boundary call
+   (`Client::cross_boundary_softmax_select`, the only new method added to `Client` —
+   `cross_boundary`/`cross_boundary_active`/`cross_boundary_impl` are byte-for-byte
+   unchanged) computes the exact, numerically-stable softmax over the row's `i+1`
+   scores per head and returns weight `j` broadcast across that head's real value span,
+   all 12 heads batched into the single round trip (the same "many logical values, one
+   ciphertext" batching already adopted for the T=2 file's attention sigmoid and GELU
+   chunks);
+3. `context_i = v0 + sum_{j=1}^{i} weight_ij*(v_j-v0)` — reusing, not replacing, the T=2
+   file's own algebraic reduction that folds the `j=0` weight into an implicit
+   "1 minus the rest" term.
+
+Row 0 is trivial (`context_0=value_0`, no boundary call). This makes round trips grow as
+`sum_{i=1}^{T-1} i = T*(T-1)/2` (1 at T=2, exactly matching the frozen file — proof this
+is a strict generalization, not a different algorithm coincidentally agreeing at one
+data point) and raw-score computation grow as the standard `O(T^2)` any causal-attention
+implementation pays, plaintext or encrypted.
+
+**Numpy proof before any C++.** `fhe/realweights/export_fixture.py` was already
+T-agnostic (`--tokens N` flag, `fhe/realweights/manual.py`'s `block_reference()` exports
+`attention_scores`/`causal_mask`/`attention_probabilities`/`attention_context_*` for any
+T) — only `fhe/gpu_real_scheme_b/src/real_dnagpt_fides_scheme_b.cpp`'s `T=2` constant
+and sigmoid identity were T-locked. Exported a new real fixture
+(`gsr_pos0_block0_t3_d63353abdc1a_52d046d1fcf0`, `--tokens 3`, same checkpoint/GSR FASTA
+as the T=2 fixture — weight file hashes are bit-identical, confirming no drift) and
+transliterated the proposed circuit in numpy against it: reconstructed
+`attention_context_heads`/`attention_context_merged`/`attention_projection` matched the
+real oracle to `atol=1e-9`, and the T=2 identity was confirmed as the `row_length=2,
+select_index=1` special case of the same softmax-select formula (`sigmoid` match to
+`1e-12` over 20 random score pairs). Captured as
+`fhe/gpu_real_scheme_b/test_general_attention_contract.py` (16 tests, all pass, no GPU
+required) alongside static structural checks: frozen T=2 source hash unchanged, shared
+constants match except `T`, exactly one new `Client` public method, `EncryptedEvaluator`
+still has zero `Decrypt`/`secretKey` references, run/launch/orchestrator scripts and
+CMake reference the new binary with a `_general_attention_` tag marker disjoint from
+every other prototype's.
+
+**Real-GPU gates: both PASS.** Forked
+`fhe/gpu_real_scheme_b/src/real_dnagpt_fides_scheme_b_general_attention.cpp` from the
+frozen T=2 file (confirmed untouched, `source_sha256
+d88f1a0919a003a539e746aaf33e5d283c28810c2805a1af4b05dffac43e08df`), built clean via
+`build_in_fideslib.sh`, ran on Brev physical GPU 0:
+
+| gate | `global_rel_inf` | round trips | `encrypted_evaluation_seconds` |
+|---|---:|---:|---:|
+| `attention` | `3.19e-10` | 6 (3 LN1 + 3 softmax, `T*(T-1)/2=3`) | 130.61 |
+| `full` | `3.65e-10` | 12 (+3 GELU + 3 LN2) | 519.57 |
+
+Evidence: `fhe_fides_real_d768_t3_attention_general_attention_scheme_b_a100_20260728.json`,
+`fhe_fides_real_d768_t3_full_general_attention_scheme_b_a100_20260728.json` (manifest
+rows in `results/hybrid/manifest.yaml`). Both pass the unchanged `4e-2` gate at the same
+`~1e-10` precision band as every prior Scheme B run — going from T=2 to T=3 cost no
+accuracy, and the `full` gate confirms the general-attention circuit composes correctly
+with the rest of the (unmodified) block, not just in isolation.
+
+**`[V]` This closes the T>2 design gap.** A general causal-attention Scheme B circuit
+now exists, is measured correct on real GPU hardware, and requires no algebraic
+re-derivation per sequence length (unlike the T=2 identity). **`[U]` No speed claim is
+made.** This run's `519.57s` is not compared against the T=2 block-0 anchor (`372.27s`)
+— T differs (3 vs 2 tokens, 36 vs 24 `matmul()` calls) and host load was not controlled
+for. `[U]` Only T=3 has been measured; scaling to task-representative lengths
+(`T=32/64/103` per `docs/roadmap.md`) is unmeasured, and the `O(T)`/`O(T^2)` round-trip/
+score-count growth is a design property, not yet empirically confirmed beyond T=3. The
+speed levers closed earlier in this document (multi-GPU sharding, kernel fusion, depth
+re-derivation) remain unexplored and are now better-motivated to revisit against this
+general circuit rather than the T=2-only one.
