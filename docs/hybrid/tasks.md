@@ -1256,3 +1256,91 @@ score-count growth is a design property, not yet empirically confirmed beyond T=
 speed levers closed earlier in this document (multi-GPU sharding, kernel fusion, depth
 re-derivation) remain unexplored and are now better-motivated to revisit against this
 general circuit rather than the T=2-only one.
+
+### T=8 growth-trend check and output-packing ceiling (2026-07-29)
+
+Empirically confirming the O(T)/O(T^2) growth the T=3 design predicted, at a second
+data point, before any speed optimization. Forked
+`real_dnagpt_fides_scheme_b_general_attention_t8.cpp` from the T=3 anchor (only T and
+the pinned fixture manifest changed at first), exported a T=8 fixture (`--tokens 8`,
+same checkpoint/GSR FASTA — weight file hashes bit-identical to T=2/T=3's), and
+verified the causal-softmax design in numpy first (as with T=3): matched the oracle,
+predicted `round_trips=28` (`T*(T-1)/2`) and `attention_score` calls `=420`
+(`heads*(T*(T+1)/2-1)`).
+
+**Two attempts crashed with zero diagnostics.** Real-GPU run 1 crashed after ~28
+minutes: `malloc(): unaligned tcache chunk detected` (glibc heap corruption). Run 2
+(after an SSH-blip caused a concurrent double-launch on the same GPU, unrelated
+crash) confirmed the same signature on a clean, confirmed-idle GPU. Both times the
+run log showed almost nothing — not even the `[context]`/`[stage]` prints that
+should have appeared before any real work — because `std::cout` is fully buffered
+when redirected to a file (as the launch scripts do) and a hard crash never flushes
+that buffer.
+
+**Localizing the crash.** Added `std::endl`-flushed versions of every existing
+`[stage]`/`[context]` print, plus a new per-`(row, col)` progress line inside the
+causal-attention loop (`[stage] attention row=R col=C done, level=L`) — the T=3 file
+only logs once before and once after the *entire* attention block, which cannot
+localize a mid-block crash. Rebuilt, retried: **the run log now showed all 28
+predicted `(row, col)` pairs complete successfully**, followed by `attention_context`
+and `attention_projection`'s stage logs — then the crash. This fully exonerates the
+causal-attention circuit itself (identical to the just-closed T=3 design, now proven
+correct at T=8 too) and pins the bug to whatever runs immediately after: `finish()`.
+
+**Root cause.** `finish()`/`output_block_plain()`/`measure()` (unchanged since the
+frozen T=2 file) silently assume `T<=COPIES=4` — the final output-packing step
+addresses each token by its own `PACK_WIDTH`-wide physical ciphertext slot, and there
+are only `COPIES=4` such slots in the `SLOTS=COPIES*PACK_WIDTH=4096` layout:
+
+```cpp
+Plaintext output_block_plain(std::size_t token) {
+    if (token >= T) { throw ...; }                    // only checked against T
+    std::vector<double> packed(SLOTS);                 // SLOTS = 4096
+    std::fill_n(packed.begin() + token * PACK_WIDTH, D, 1.0);  // token=4: offset 4096 -- OOB
+```
+
+At T=2/T=3 every token index is `< COPIES`, so this never manifested. At T=8, tokens
+4-7 write `std::fill_n` past the end of a heap-allocated `std::vector<double>`,
+corrupting adjacent heap metadata — the corruption is detected later, on a
+subsequent `malloc()`, which is why the crash message pointed nowhere near the real
+bug and why localization required the flushed per-row logging above. This is a
+**second, more restrictive scaling ceiling** than the causal-score packing one found
+during T=3 design (`HEADS*SCORE_SLOT_STRIDE<=PACK_WIDTH-D`, i.e. `T<=21`): the
+output-packing ceiling was `T<=COPIES=4`, tighter and previously undiscovered because
+no gate had ever run above T=3.
+
+**Fix.** Group tokens into `OUTPUT_GROUPS=ceil(T/COPIES)` output ciphertexts instead
+of one; within a group, address a token by its position *inside* that group
+(`local_slot`, bounded by `COPIES`) rather than its raw index. `EvaluationResult`'s
+`packed_output` becomes `std::vector<Ct>` (one per group); `main()` decrypts each
+group and reassembles a flat `T*D` output vector (simplifying `measure()`, which no
+longer needs to know about the raw `PACK_WIDTH`-slot layout at all — it now compares
+two plain `T*D` arrays). `output_block_plain()`'s bounds check moved from `token>=T`
+to `local_slot>=COPIES`, the actual invariant that matters.
+
+**Result: PASS.** `fhe_fides_real_d768_t8_attention_general_attention_t8_scheme_b_a100_20260729_fixed.json`
+— `global_rel_inf=3.69e-10` (same `~1e-10` band as every other Scheme B gate),
+`round_trips=36` (28 attention + 8 LN1, exactly as designed), `final_decrypt_calls=2`
+(`=ceil(8/4)`, confirming the fix's own arithmetic). `[V]` The output-packing fix is
+general — works for any `T`, not just `T<=8` — closing this ceiling rather than
+patching around it for one value.
+
+`[U]` No speed claim: `523.65s` (T=8, 32 `matmul()` calls) is not compared against the
+T=3 anchor's `130.61s` (T=3, 12 `matmul()` calls) — different T, and the shared Brev
+host was fully occupied by another tenant across all 8 GPUs for several hours before
+this run's GPU freed up (confirmed via `nvidia-smi` before and during — not inferred).
+`[U]` Only the `attention` gate was re-run at T=8; `full` (LN2+GELU+MLP) was not.
+`[U]` Scaling to task-representative lengths (`T=32/64/103`) remains unmeasured and
+would need the causal-score packing ceiling addressed too (`T<=21` currently, `T<=85`
+with the already-scoped 4-copy fix, per the T=3 entry above) — the output-packing fix
+in this entry only removes the *other* ceiling.
+
+Reproduction:
+```bash
+python -m fhe.realweights.export_fixture --tokens 8
+# build via fhe/gpu_real_scheme_b/build_in_fideslib.sh (target
+# real_dnagpt_fides_scheme_b_general_attention_t8), then
+fhe/gpu_real_scheme_b/run_scheme_b_general_attention_t8.sh 0 \
+  checkpoints/fhe_exports/gsr_pos0_block0_t8_d63353abdc1a_52d046d1fcf0 \
+  <output.json> attention
+```

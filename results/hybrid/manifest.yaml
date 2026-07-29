@@ -747,3 +747,69 @@ runs:
       unmeasured, and round-trip/score-count growth is O(T)/O(T^2)
       respectively by construction, not yet empirically confirmed beyond
       T=3.
+
+  - id: fhe_fides_real_d768_t8_attention_general_attention_t8_scheme_b_a100_20260729_fixed
+    task: "General causal-attention Scheme B circuit growth-trend check at T=8, plus fix for a T=8-only output-packing crash discovered en route"
+    status: "[V] PASS"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 4 [gpu] (preflight_confirmed mem=21MiB util=0%; shared host was fully occupied by another tenant's job across all 8 GPUs for several hours before this GPU freed up)"
+    config:
+      dimension: 768
+      sequence_length: 8
+      heads: 12
+      batch_slots: 4096
+      ring_dim: 65536
+      multiplicative_depth: 16
+      rotation_keys: 63
+      explicit_ciphertext_ciphertext_multiplications: 464
+      explicit_ciphertext_plaintext_multiplications: 34060
+    metrics:
+      global_rel_inf: 3.685551280758719e-10
+      worst_token_rel_inf: 3.7512836727973808e-10
+      max_abs_error: 6.1376539406410302e-09
+      round_trips: 36
+      logical_boundary_instances: 344
+      client_boundary_seconds_total: 8.498643766
+      server_linear_algebra_seconds: 515.15210769
+      encrypted_evaluation_seconds: 523.650751456
+      intermediate_decrypt_attempts: 0
+      declared_client_boundary_crossings: 36
+      declared_logical_boundary_instances: 344
+      final_decrypt_calls: 2
+    provenance:
+      result_sha256: "3ef470b0b93e133e12422817d0e6ac05c1ec58bec2ab77477630b059429a8b25"
+      source_sha256: "9d4dde16a0803d29c7e97d517fac77a275057ad3258d99c3e260f65feca85545"
+      fixture_manifest_sha256: "75ce745757a8141df42054612d54a0837b5f0c2e7a771cafd57fc5055e054162"
+      fixture_contract_sha256: "8d28366d650fc77d6dba672b8bb8b5039a08931804b4e859fb6886d071cf0069"
+    verdict: >
+      [V] PASS, after fixing a genuine bug this run itself discovered. Two prior attempts
+      at this exact gate (same fixture, same design, only T=8-specific instrumentation
+      differing) crashed with `malloc(): unaligned tcache chunk detected` (glibc heap
+      corruption) after roughly 28 minutes, with zero diagnostic output because
+      std::cout was fully buffered when redirected to a log file and the crash never
+      flushed it. Root cause, localized by adding flushed per-(row,col) progress
+      logging inside the attention loop: the frozen T=2/T=3 files' final output-packing
+      step (`finish()`/`output_block_plain()`/`measure()`) silently assumes
+      T<=COPIES=4 -- one physical PACK_WIDTH-wide ciphertext slot per token -- true at
+      T=2/T=3, false at T=8, where `output_block_plain(token)` wrote past the end of a
+      SLOTS=4096-sized heap vector for token>=4. The instrumented retry confirmed the
+      causal-attention circuit itself completed ALL 28 predicted round trips
+      (T*(T-1)/2) correctly before the crash -- the bug was entirely in output
+      packing, not the attention design closed in
+      fhe_fides_real_d768_t3_{attention,full}_general_attention_scheme_b_a100_20260728.
+      Fix: group tokens into ceil(T/COPIES)=2 output ciphertexts, addressed by a
+      token's position WITHIN its group rather than its raw index; `main()` now
+      decrypts each group and reassembles a flat T*D vector. After the fix, this run
+      passed cleanly: global_rel_inf=3.69e-10 (same ~1e-10 band as every other Scheme B
+      gate), round_trips=36 (28 attention + 8 LN1, exactly as designed),
+      final_decrypt_calls=2 (= ceil(8/4), confirming the fix's own arithmetic). [V] This
+      is a genuinely new, more restrictive scaling ceiling than the causal-score
+      packing one already known (HEADS*SCORE_SLOT_STRIDE<=PACK_WIDTH-D, T<=21): the
+      output-packing ceiling was T<=COPIES=4, now fixed generally (works for any T,
+      not just <=8). [U] No speed claim: this run's 523.65s (T=8, 32 matmul() calls) is
+      not compared against the T=3 anchor's 130.61s (T=3, 12 matmul() calls) --
+      different T, uncontrolled host load (shared host was fully occupied by another
+      tenant for ~5 hours before this GPU freed up). [U] The `full` gate (LN2+GELU+MLP)
+      was not re-run at T=8 in this session; only `attention` is confirmed at T=8.
+      Full account: docs/hybrid/tasks.md's 2026-07-29 "T=8 growth-trend check and
+      output-packing ceiling" entry.

@@ -42,6 +42,23 @@ correctness failure" condition below is met. Full comparison and rationale in
    and multi-block composition remain open, and no speed claim is made from this
    result (T=3 is not compared against the T=2 anchor; round-trip/score-count growth
    is `O(T)`/`O(T^2)` by construction, not yet empirically confirmed beyond T=3).
+   `[done, 2026-07-29]` — growth-trend confirmed at a second point, T=8
+   (`attention` gate, `global_rel_inf=3.69e-10`, `round_trips=36=28+8`, matching the
+   `T*(T-1)/2` prediction exactly), after finding and fixing a real, previously
+   undiscovered bug along the way: the frozen output-packing step
+   (`finish()`/`output_block_plain()`) silently assumed `T<=COPIES=4`, causing a heap
+   buffer overflow at T=8 (two crashes, root-caused via added flushed per-row
+   logging that also exonerated the attention circuit itself — all 28 round trips
+   completed before the crash both times). Fixed generally (groups tokens into
+   `ceil(T/COPIES)` output ciphertexts), not patched for one T. See
+   [tasks.md](tasks.md)'s 2026-07-29 "T=8 growth-trend check and output-packing
+   ceiling" section. `[U]` A second, still-open ceiling remains in the
+   causal-score packing (`HEADS*SCORE_SLOT_STRIDE<=PACK_WIDTH-D`, currently
+   `T<=21`, `T<=85` with an already-scoped but unimplemented 4-copy fix) — this
+   would need addressing before reaching task-representative lengths
+   (`T=32/64/103`). `full` gate (LN2/GELU/MLP) not re-verified at T=8, only
+   `attention`. No speed claim: host was fully occupied by another tenant for
+   hours before this run's GPU freed up.
 6. `[done, 2026-07-27]` GPU-side profiling of `server_linear_algebra_seconds` found
    the 6 matmul stages are 99.5% of server time, with ciphertext-plaintext
    multiply-and-accumulate ~100% of one matmul call's internal cost (rotation/

@@ -34,6 +34,7 @@ cmake --build "${BUILD_DIR}" --target real_dnagpt_fides_scheme_b_diagcache --par
 cmake --build "${BUILD_DIR}" --target real_dnagpt_fides_scheme_b_warmup --parallel "${JOBS}"
 cmake --build "${BUILD_DIR}" --target real_dnagpt_fides_scheme_b_lintransform --parallel "${JOBS}"
 cmake --build "${BUILD_DIR}" --target real_dnagpt_fides_scheme_b_general_attention --parallel "${JOBS}"
+cmake --build "${BUILD_DIR}" --target real_dnagpt_fides_scheme_b_general_attention_t8 --parallel "${JOBS}"
 
 echo "[build] ${BUILD_DIR}/real_dnagpt_fides_scheme_b"
 echo "[build] ${BUILD_DIR}/real_dnagpt_fides_scheme_b_cached"
@@ -44,3 +45,4 @@ echo "[build] ${BUILD_DIR}/real_dnagpt_fides_scheme_b_diagcache"
 echo "[build] ${BUILD_DIR}/real_dnagpt_fides_scheme_b_warmup"
 echo "[build] ${BUILD_DIR}/real_dnagpt_fides_scheme_b_lintransform"
 echo "[build] ${BUILD_DIR}/real_dnagpt_fides_scheme_b_general_attention"
+echo "[build] ${BUILD_DIR}/real_dnagpt_fides_scheme_b_general_attention_t8"

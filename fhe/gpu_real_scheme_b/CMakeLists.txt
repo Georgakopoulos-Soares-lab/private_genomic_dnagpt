@@ -151,3 +151,16 @@ set_target_properties(real_dnagpt_fides_scheme_b_general_attention PROPERTIES
     CUDA_RESOLVE_DEVICE_SYMBOLS ON
     CUDA_SEPARABLE_COMPILATION ON
     POSITION_INDEPENDENT_CODE ON)
+
+add_executable(real_dnagpt_fides_scheme_b_general_attention_t8 src/real_dnagpt_fides_scheme_b_general_attention_t8.cpp)
+set_source_files_properties(src/real_dnagpt_fides_scheme_b_general_attention_t8.cpp PROPERTIES LANGUAGE CUDA)
+target_link_libraries(real_dnagpt_fides_scheme_b_general_attention_t8 PRIVATE
+    fideslib::fideslib
+    OpenMP::OpenMP_CXX)
+target_compile_options(real_dnagpt_fides_scheme_b_general_attention_t8 PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>
+    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wall,-Wextra,-Wpedantic>)
+set_target_properties(real_dnagpt_fides_scheme_b_general_attention_t8 PROPERTIES
+    CUDA_RESOLVE_DEVICE_SYMBOLS ON
+    CUDA_SEPARABLE_COMPILATION ON
+    POSITION_INDEPENDENT_CODE ON)
