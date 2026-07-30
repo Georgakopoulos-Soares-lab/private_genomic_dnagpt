@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "task": "Process-specific GPU-memory telemetry for the released-weight DNAGPT blocks 0->1 Scheme B full-hidden-state client-refresh gate",
+  "measured_at_utc_start": "2026-07-29T14:45:27Z",
+  "measured_at_utc_end": "2026-07-29T15:02:12Z",
+  "status": "[V] measured; speed-contaminated",
+  "environment": "Brev A100-SXM4-80GB physical GPU 0 [gpu]",
+  "gpu": 0,
+  "process_pid": 4076718,
+  "sampling": {
+    "command": "nvidia-smi --query-gpu=index,memory.used,utilization.gpu --format=csv,noheader,nounits; nvidia-smi --query-compute-apps=pid,gpu_uuid,used_memory --format=csv,noheader,nounits",
+    "nominal_interval_seconds": 5,
+    "sample_count": 193,
+    "raw_log_sha256": "d568c86f815c55f086978fed74137d95d0cc496c7bd9edce93ebfe9f7ca2f614"
+  },
+  "process_memory_mib": {
+    "peak": 10872,
+    "observed_values": [
+      {"mib": 8824, "samples": 58, "first_seen_utc": "2026-07-29T14:45:27Z"},
+      {"mib": 9848, "samples": 14, "first_seen_utc": "2026-07-29T14:50:31Z"},
+      {"mib": 10872, "samples": 120, "first_seen_utc": "2026-07-29T14:51:45Z"},
+      {"mib": 10752, "samples": 1, "first_seen_utc": "2026-07-29T15:02:12Z"}
+    ],
+    "interpretation": "[V] The target process reached its 10872 MiB peak during block 0 and did not increase beyond that peak while block 1 ran. At T=2, sequential Scheme B composition with a client refresh therefore did not accumulate another block-sized GPU allocation."
+  },
+  "contamination": {
+    "present": true,
+    "observed_after_launch": "A second tenant process appeared on GPU 0 and used approximately 26214 MiB.",
+    "effect": "[U] Whole-GPU memory, utilization, and wall-clock timing cannot be attributed to this run. Only the target PID's nvidia-smi process-memory samples are used for the memory claim."
+  },
+  "linked_correctness_result": {
+    "path": "results/runs/fhe_fides_real_d768_t2_blocks0_1_scheme_b_two_block_refresh_a100_20260729_v2.json",
+    "sha256": "e8c0ceb281815a85476bb6197cb1493b301045247cecb01f31e5f434ac58b65b"
+  },
+  "limitations": [
+    "[U] nvidia-smi process memory is allocation-level telemetry, not a live-ciphertext object census.",
+    "[U] This is T=2 only and does not establish the T-dependent memory slope.",
+    "[U] It does not establish memory sufficiency for T=100 or T=103."
+  ]
+}

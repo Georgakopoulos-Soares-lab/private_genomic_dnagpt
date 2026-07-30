@@ -1344,3 +1344,419 @@ fhe/gpu_real_scheme_b/run_scheme_b_general_attention_t8.sh 0 \
   checkpoints/fhe_exports/gsr_pos0_block0_t8_d63353abdc1a_52d046d1fcf0 \
   <output.json> attention
 ```
+
+### T=32 spread-across-copies causal-score packing gate (2026-07-29)
+
+`[V]` The T=32 real-GPU evidence has landed and passes:
+`results/runs/fhe_fides_real_d768_t32_attention_general_attention_t32_scheme_b_a100_20260729.json`
+(result SHA-256
+`a6ae130008bd42a4f5d142cd5b7a964114fd3242dac5d76dfc2ad9724a98ddba`).
+The run is bound to source SHA-256
+`607e9c429bdea107149733e10f19765578175a5301b350556bd8604a1d384252`,
+fixture manifest SHA-256
+`6ae018b419a533dd9c77e6e0415bf7adf2b67c1f444013e68489a2fc84cca003`,
+and fixture contract SHA-256
+`44d5dbf1d23a3a2c1ebcee43e69ff3a43e0c1ab1c8a11b6947282d287b52cb41`;
+all three match the corresponding local files.
+
+`[V]` `global_rel_inf=2.14e-10`, `worst_token_rel_inf=2.65e-10`,
+`max_abs_error=3.56e-09`, and all outputs are finite against the unchanged
+`4e-2` gate. The run completed all 496 predicted causal-attention column
+crossings plus 32 LN1 crossings (`round_trips=528`), represented 5,984
+logical boundary instances, and used `final_decrypt_calls=8=ceil(32/4)`.
+This validates both the spread-across-copies score mapping at T=32 and the
+general output-grouping fix beyond its T=8 checkpoint.
+
+`[V]` The measured encrypted attention gate took `3823.09s`, split into
+`3703.50s` server linear algebra and `119.59s` client boundaries. This is
+evidence of execution cost, not a clean throughput comparison: the shared
+host was uncontrolled after a clean per-GPU preflight. `[U]` This is still
+block 0 and the `attention` gate only; it does not validate the T=32 MLP,
+multi-block composition, or any sequence length beyond the raised `T<=85`
+packing ceiling.
+
+Reproduction:
+```bash
+python -m fhe.realweights.export_fixture --tokens 32
+# build via fhe/gpu_real_scheme_b/build_in_fideslib.sh (target
+# real_dnagpt_fides_scheme_b_general_attention_t32), then
+fhe/gpu_real_scheme_b/run_scheme_b_general_attention_t32.sh 0 \
+  checkpoints/fhe_exports/gsr_pos0_block0_t32_d63353abdc1a_52d046d1fcf0 \
+  <output.json> attention
+```
+
+### Scoped (not implemented): chunked/streaming causal-score packing for arbitrary T (2026-07-29)
+
+After launching the T=32 real-GPU run (spread-across-copies causal-score packing fix,
+now passed and recorded above), scoped the actual
+fix needed to reach task-representative sequence lengths (`T~103` per `docs/roadmap.md`,
+also `32/64`). The spread-across-copies fix raises the packing ceiling from `T<=21`
+(`HEADS*SCORE_SLOT_STRIDE<=PACK_WIDTH-D`) to `T<=85`
+(`HEADS_PER_COPY*SCORE_SLOT_STRIDE<=PACK_WIDTH-D`) — a real improvement, but `T~103`
+still exceeds it. Any *fixed* per-copy reservation scheme has a hard ceiling regardless of
+how cleverly heads are spread across copies, because it requires an entire causal row's
+raw scores to sit in one ciphertext simultaneously so the client can compute
+max/sum in a single decrypt. Removing the ceiling requires not packing the whole row into
+one ciphertext at all.
+
+**Design: two-phase chunked softmax, chunk width independent of T.**
+
+- Fix a chunk width `C = (PACK_WIDTH-D)/HEADS_PER_COPY` (`=85` at current constants) —
+  a constant, not derived from `T`. Any row, however long, is split into
+  `ceil(row_length/C)` chunks of at most `C` columns, each packed exactly like today's
+  single-row packing (spread across copies, one-hot isolated) but only for that chunk's
+  local columns.
+- **Phase A (reduction, `ceil(row_length/C)` crossings per row):** for each chunk, the
+  client decrypts and appends the recovered per-head values into its own in-process
+  cache for that row. Once every chunk for the row has arrived, the client computes the
+  row's max and softmax denominator over the *full* reassembled row — this needs no
+  incremental/online-softmax rescaling trick (the numerical-stability concern that
+  hardware-streaming flash-attention kernels have to solve): the client is a single
+  process with the whole row in float64 memory by the time the last chunk lands, so
+  computing max/sum directly is exact and trivial. The ciphertext this phase returns to
+  the server carries no information the rest of the computation depends on (the
+  server-side graph never uses it) — it exists purely to preserve the existing
+  `cross_boundary_impl` request/response symmetry and honest crossing-count bookkeeping;
+  a leaner decrypt-only variant is possible but changes what "one round trip" means and
+  was not pursued here.
+- **Phase B (selection, exactly `row` crossings per row, same count as today):**
+  unchanged from the current per-column loop — for column `j`, the client already has
+  `s_ij` and the row's max/sum cached from phase A, so it needs no new decrypt at all,
+  just an encrypt-only crossing emitting `weight_ij = exp(s_ij-max)/sum` broadcast across
+  all copies exactly as today.
+
+**Numpy proof (this session, before any C++ change):**
+
+1. `[V]` Chunk partitioning is a bijection over every column `0..row_length-1` — checked
+   for `row_length in {1,2,9,32,85,86,103,200,1000}` and `chunk_width in
+   {1,5,85,86}`: every column covered exactly once, no chunk exceeds the fixed width.
+2. `[V]` The two-phase chunked design reproduces the current single-shot softmax
+   bit-for-bit (`atol=1e-13`) for every `(row_length, chunk_width)` tested at
+   `row_length<=85` (inside today's ceiling, so directly comparable).
+3. `[V]` The chunked design matches a plain reference softmax at `row_length in
+   {86,103,200,1000}` — lengths the *current* packing scheme cannot run at all
+   (`HEADS_PER_COPY*T<=256` fails past `T=85`), proving the ceiling genuinely
+   disappears, not just moves.
+4. `[V]` Honest round-trip growth, `chunk_width=85`: `new_round_trips(T) =
+   old_round_trips(T) + sum_{row=1}^{T-1} ceil((row+1)/85)`. At `T<=85` (still inside
+   the old ceiling, so both are computable) the overhead is exactly `T-1` extra
+   crossings (one reduction chunk per row, since the whole row fits in one chunk) —
+   measured: `T=8` old=28/new=35 (+7), `T=32` old=496/new=527 (+31), `T=85`
+   old=3570/new=3654 (+84). Past `T=85` there is no "old" to compare against; `T=103`
+   is `5373` total crossings, `T=200` is `20244` — polynomial, not exponential, growth.
+
+**Not done:** no chunked-softmax C++ source, contract test file, fixture, or GPU run. This is
+scoping only, in the same spirit as the 2026-07-27 `LinearTransform`/diagonal-cache
+scoping sessions — recorded so the next session can implement directly from this
+design rather than re-deriving it. `[U]` Phase A's "return a ciphertext the server
+ignores" choice versus a leaner
+decrypt-only crossing is an open implementation decision, not yet resolved.
+
+### T=32 causal-score packing fix: spread across copies, real-GPU attention gate (2026-07-29)
+
+Implements the fix scoped in the T=8 entry above. Forked
+`real_dnagpt_fides_scheme_b_general_attention_t32.cpp` from the frozen T=8 file
+(source hash confirmed unchanged by the new contract test, alongside the T=3 and T=2
+sources), carrying its output-packing fix forward unchanged
+(`OUTPUT_GROUPS=ceil(32/4)=8`) and replacing the causal-score packing: instead of
+`one_hot_plain` isolating each head's raw score into the SAME slot in all `COPIES=4`
+physical copies (pure redundancy — `packed_scores` never goes through
+`sum_broadcast`/cross-copy rotation, so three of the four copies carried no
+information the client boundary ever used), `HEADS_PER_COPY=HEADS/COPIES=3` heads are
+now spread one-per-slot into each copy via a new `one_hot_single_copy_plain(copy,
+slot)`. The read side (`cross_boundary_softmax_select`) now iterates per global head,
+derives `(copy, local_head)` from the assignment, and reads that head's row from its
+own copy; the write side (the softmax weight broadcast, multiplied against
+fully-replicated value ciphertexts) is unchanged. This raises the packing ceiling from
+`HEADS*SCORE_SLOT_STRIDE<=PACK_WIDTH-D` (`T<=21`) to
+`HEADS_PER_COPY*SCORE_SLOT_STRIDE<=PACK_WIDTH-D` (`T<=85`).
+
+**Numpy-proven before any GPU work** (28 static/numpy tests in
+`test_general_attention_t32_contract.py`, all passing locally, no FIDESlib/CUDA build
+required): the head->copy/local-slot assignment is a bijection covering all 12 heads
+exactly once with every local index `<HEADS_PER_COPY`; the sparse per-copy read
+reproduces the old all-copies-redundant read's exact softmax weights, both on
+synthetic random scores and on every non-trivial causal row of the real T=32 oracle
+fixture (`oracle.attention_scores`); the packing-ceiling arithmetic itself confirms
+`T<=85` (`21` for the old scheme, matching the T=8 entry's derivation).
+
+Exported the T=32 fixture (`--tokens 32`, same checkpoint/GSR FASTA — weight-file
+hashes bit-identical to T=2/T=3/T=8's, only `input__embeddings.bin` and the three
+oracle arrays differ). Built on Brev (`build_in_fideslib.sh`, new
+`real_dnagpt_fides_scheme_b_general_attention_t32` target alongside the existing
+ones), deployed via `brev copy` into the same `gpu_real_scheme_b_general_attention_v1`
+tree used by the T=3/T=8 gates (additive only, no existing file touched), then
+launched via the capacity-aware detached orchestrator
+(`wait_and_run_scheme_b_general_attention_t32.sh`, same `LOAD_THRESHOLD`/
+`POLL_SECONDS` polling and nohup+`.done`-sentinel launch pattern as the T=8 orchestrator
+— the host had all 8 GPUs occupied by another tenant for the first ~8 minutes of
+polling before GPU 0 freed up).
+
+**Result: PASS.**
+`fhe_fides_real_d768_t32_attention_general_attention_t32_scheme_b_a100_20260729.json`
+— `global_rel_inf=2.135e-10`, `worst_token_rel_inf=2.646e-10` (same `~1e-10` band as
+every other Scheme B gate, well inside the unchanged `4e-2` tolerance),
+`round_trips=528` (`=496` attention softmax crossings, `T*(T-1)/2`, `+32` LN1
+invsqrts — matching the design prediction exactly, and confirming the T=8 entry's
+growth formula holds at a third data point), `final_decrypt_calls=8` (`=ceil(32/4)`,
+confirming the carried-forward output-packing fix's arithmetic at a new `T`).
+`3823.09s` total (`3703.50s` server + `119.59s` client boundary, `~3.1%` client
+share).
+
+`[U]` No speed claim: this run is not compared against the T=8 anchor (`523.65s`) — T
+differs 4x (32 vs 8 tokens, 4x the QKV/MLP matmul work) and host load was not
+controlled for (the shared host had all 8 GPUs occupied by another tenant for the
+first several minutes of this session's polling window). `[U]` Only the `attention`
+gate is confirmed at T=32 in this entry; `full` (LN2+GELU+MLP) is a separate,
+subsequent run. `[U]` T=32 still sits comfortably under the raised `T<=85` ceiling —
+this run does not test the ceiling itself, only the growth trend at a value inside
+it. Task-representative `T~103` remains blocked on the chunked/streaming softmax
+design scoped in the entry immediately above.
+
+Reproduction:
+```bash
+python -m fhe.realweights.export_fixture --tokens 32
+python3 fhe/gpu_real_scheme_b/test_general_attention_t32_contract.py -v
+# build via fhe/gpu_real_scheme_b/build_in_fideslib.sh (target
+# real_dnagpt_fides_scheme_b_general_attention_t32), then
+fhe/gpu_real_scheme_b/run_scheme_b_general_attention_t32.sh 0 \
+  checkpoints/fhe_exports/gsr_pos0_block0_t32_d63353abdc1a_52d046d1fcf0 \
+  <output.json> attention
+```
+
+### T=32 full gate: complete block-0 (2026-07-29)
+
+Same session, same binary, `--gate full`, launched via the same detached
+orchestrator once GPU 4 freed up (~17 minutes after the `attention` gate above
+completed — the shared host had all 8 GPUs occupied by another tenant across that
+window). Extends the `attention`-only gate with the unchanged LN2/GELU/MLP/residual
+path already proven at T=2/T=3/T=8 — no new design, no new fix, just the first
+complete-block confirmation that the spread-across-copies packing fix and the
+carried-forward output-packing fix compose correctly through the whole graph.
+
+**Result: PASS.**
+`fhe_fides_real_d768_t32_full_general_attention_t32_scheme_b_a100_20260729.json` —
+`global_rel_inf=2.478e-10`, `worst_token_rel_inf=2.981e-10` (same `~1e-10` band as
+every other Scheme B gate), `round_trips=592` (`=528` from the attention gate `+32`
+LN2 invsqrts `+32` GELU 4-chunk-batched crossings, one per token),
+`final_decrypt_calls=8` (unchanged from the attention-only gate, confirming the
+output-packing fix composes across the full block). `8228.95s` total (`8090.27s`
+server + `138.68s` client boundary, `~1.7%` client share) — consistent with the
+server-GPU-dominated split seen at every prior gate.
+
+`[U]` No speed claim: not compared against any smaller-`T` anchor (T differs, host
+load uncontrolled — this run itself waited on GPU capacity). `[U]` This closes the
+T=32 growth-trend/packing-fix milestone (`docs/hybrid/roadmap.md` item 8); T=32
+still sits comfortably under the raised `T<=85` ceiling, and task-representative
+`T~103` remains blocked on the chunked/streaming softmax design scoped above. `[U]`
+Single block-0 gate only — no multi-block composition attempted, consistent with
+every other Scheme B evidence file to date.
+
+Reproduction: same as the `attention` gate above, with `--gate full` (last
+positional argument to `run_scheme_b_general_attention_t32.sh`).
+
+### First Scheme B multi-block composition gate: blocks 0 -> 1 at T=2 (2026-07-29)
+
+Forked `real_dnagpt_fides_scheme_b_two_block_refresh.cpp` from the frozen T=2
+single-block source, pinning the frozen source hash before any change. The new
+fixture contract binds released blocks 0 and 1 and proves that the saved block-0
+oracle output is byte-identical to block 1's plaintext input. The client refresh
+protocol decrypts block 0's packed hidden state, unpacks both token vectors, and
+re-encrypts them as fresh level-0 replicated ciphertexts under the same crypto
+context and key lineage. The evaluator never receives the private key.
+
+The local contract suite passes `12/12`; the full Scheme B test suite passes
+`174/174`. The real A100 gate also passes:
+
+- `[V]` Block 0 refresh-boundary `global_rel_inf=9.245e-11`; block 1 final
+  `global_rel_inf=8.485e-11`, both far inside the unchanged `4e-2` tolerance.
+- `[V]` Block 0 exits at packed level 6 and block 1 starts at level 0 after the
+  refresh. Both blocks independently reproduce the same level trace, including
+  `LN2 max=8`; no depth accumulates across the block boundary.
+- `[V]` Protocol counts are 14 nonlinearity crossings plus one full-hidden-state
+  refresh crossing (`15` declared crossings, `50` logical instances), with no
+  bootstraps and no undeclared intermediate decrypt.
+- `[V]` PID-specific `nvidia-smi` telemetry (193 samples, nominally every 5 seconds)
+  records a peak of `10872 MiB`. The process reached that peak during block 0 and
+  never exceeded it during block 1, so T=2 sequential composition does not
+  accumulate another block-sized allocation.
+- `[U]` No speed claim. GPU 0 passed the preflight at 543 MiB/0% utilization, but a
+  second tenant appeared after launch. The measured wall time is valid as an event
+  record, not as an uncontended performance comparison.
+- `[U]` This proves blocks 0 -> 1 at T=2 only. It does not yet prove all 12 blocks,
+  the final task-output head, or memory sufficiency at T~100.
+
+Immutable evidence:
+
+- `results/runs/fhe_fides_real_d768_t2_blocks0_1_scheme_b_two_block_refresh_a100_20260729_v2.json`
+  (`sha256=e8c0ceb281815a85476bb6197cb1493b301045247cecb01f31e5f434ac58b65b`)
+- `results/runs/fhe_fides_real_d768_t2_blocks0_1_scheme_b_two_block_refresh_vram_a100_20260729_v2.json`
+  (`sha256=fd21f2fc29d5357bcbf17f5f5d65fd91531a297dd1d6c8d14db7f7a07f3e844f`;
+  raw telemetry log `sha256=d568c86f815c55f086978fed74137d95d0cc496c7bd9edce93ebfe9f7ca2f614`)
+
+Exact correctness reproduction:
+
+```bash
+.venv/bin/python -m unittest fhe.gpu_real_scheme_b.test_two_block_refresh_contract -v
+# Build target real_dnagpt_fides_scheme_b_two_block_refresh via
+# fhe/gpu_real_scheme_b/build_in_fideslib.sh in the pinned FIDESlib container, then:
+fhe/gpu_real_scheme_b/run_scheme_b_two_block_refresh.sh 0 \
+  checkpoints/fhe_exports/gsr_pos0_multiblock_t2_d63353abdc1a_52d046d1fcf0 \
+  results/runs/<new_tag_containing_scheme_b_and_two_block_refresh>.json
+```
+
+Exact telemetry sampler (run concurrently with the correctness command, directing
+stdout to a new immutable log):
+
+```bash
+while true; do
+  date -u '+%Y-%m-%dT%H:%M:%SZ'
+  nvidia-smi --query-gpu=index,memory.used,utilization.gpu \
+    --format=csv,noheader,nounits
+  nvidia-smi --query-compute-apps=pid,gpu_uuid,used_memory \
+    --format=csv,noheader,nounits
+  sleep 5
+done
+```
+
+### T=103 chunked-softmax attention gate (2026-07-29/30)
+
+Implemented the two-phase chunked causal softmax scoped above in
+`real_dnagpt_fides_scheme_b_general_attention_t103.cpp`. The fixed
+`CHUNK_WIDTH=85` is independent of `T`: phase A sends each row's one or two score
+chunks through the declared client boundary and reassembles the complete causal row
+in client float64 memory; the client then computes one stable full-row softmax.
+Phase B performs no further decrypt for those scores and emits the cached
+per-column weights used by the encrypted value accumulation. The T=103 source
+carries forward the already-proven output grouping
+`OUTPUT_GROUPS=ceil(T/COPIES)=26`.
+
+`[V]` The local source/fixture contract passes all 27 tests, including exact
+partition coverage, the 85/86 chunk boundary, the 103-token partial final chunk,
+stable-softmax agreement on real and synthetic rows, the predicted protocol count,
+frozen-source hash checks, and build/run wiring. The pinned hashes are:
+
+- source:
+  `70580ff0b4f12565921e0af8ce04e7b4c0d4253b51c0a8380ef0727ce85b2a0f`
+- fixture manifest:
+  `d2c90ba15c62c648495b51070eee585a3570dc174eb31e14782aaf016b31f8f6`
+- fixture contract:
+  `061d53bd25bbcaf75d4c12067ec77f032c3ba0e35300a0a6168c2ce15f3672db`
+
+`[V]` The detached real-A100 attention gate completed successfully even though the
+outer Brev/orchestrator session later lost its connection. The run's `.done`
+sentinel is `0`, its log ends in
+`REAL_DNAGPT_FIDES_SCHEME_B_GATE_PASS`, and the immutable result is:
+
+`results/runs/fhe_fides_real_d768_t103_attention_general_attention_t103_scheme_b_a100_20260729.json`
+
+Result SHA-256:
+`8f22ccf7c34125710197b84ef0b571f2095f8fbb800f7eb42afbfdbf38b8daee`
+(remote run-log SHA-256:
+`aabb5f8df636d2c7f1a8eb32b18d0628c69c9b30dd0c7c61ca02a8a60d82dcc9`).
+
+- `[V]` `global_rel_inf=3.6608055924837055e-10`,
+  `worst_token_rel_inf=4.390401958450227e-10`, and
+  `max_abs_error=6.096444238323784e-09`; all values are finite and the global
+  error is `1.09e8` times inside the unchanged `4e-2` tolerance.
+- `[V]` `round_trips=5476`: 103 LN1 crossings plus 5,373 chunked attention
+  crossings. `logical_boundary_instances=127399` and
+  `final_decrypt_calls=26=ceil(103/4)` also match the declared schedule.
+- `[V]` The measured attention-gate event took `14082.36s` (`3.91h`):
+  `13162.35s` server linear algebra plus `920.01s` client boundaries. This is an
+  execution record on the shared host, not a clean throughput comparison.
+- `[U]` This is block 0 through attention projection only. It does not validate
+  LN2/GELU/MLP at T=103, a complete T=103 block, T=103 GPU-memory headroom,
+  all 12 blocks, or the task-output head. No T=103 `full` gate was launched by
+  this run.
+
+Exact reproduction:
+
+```bash
+python -m fhe.realweights.export_fixture --tokens 103
+python3 fhe/gpu_real_scheme_b/test_general_attention_t103_contract.py -v
+# Build target real_dnagpt_fides_scheme_b_general_attention_t103 via
+# fhe/gpu_real_scheme_b/build_in_fideslib.sh in the pinned FIDESlib container, then:
+fhe/gpu_real_scheme_b/run_scheme_b_general_attention_t103.sh 0 \
+  checkpoints/fhe_exports/gsr_pos0_block0_t103_d63353abdc1a_52d046d1fcf0 \
+  results/runs/<new_tag_containing_scheme_b_and_general_attention_t103>.json \
+  attention
+```
+
+### T=103 Token-SIMD matched linear micro-gate (2026-07-30)
+
+The additive `real_dnagpt_fides_scheme_b_simd_linear_t103.cpp` micro-gate tests
+the first structural Token-SIMD step without modifying any frozen Scheme B
+implementation. Both modes use the same source, real T=103 fixture, CKKS
+context configuration (`ring_dim=65536`, `batch_slots=32768`, depth 16), exact client LN1
+boundary, encrypted query projection, and evidence schema:
+
+- `packed`: 13 ciphertext groups, up to 8 logical tokens per ciphertext;
+- `serial_control`: 103 ciphertexts, one logical token per ciphertext.
+
+The source SHA-256 is
+`926be6b276006dd6435713efa168d189af02e02589d143684991380bae7e9233`;
+the static source contract SHA-256 is
+`730ab0df519a857d618a264e9d401a67074402f56b7dac5d215d7e828d19bb5c`
+and passes `12/12` locally and on Brev. The complete local Scheme B suite passed
+`254/254` before deployment. The first compile-only attempt allocated no GPU
+and exposed four FIDESlib API lvalue/const mismatches; the minimal correction
+produced the pinned source above and the v2 build passed.
+
+Both real-A100 correctness gates pass:
+
+- `[V]` packed:
+  `global_rel_inf=3.4048182778014454e-9`,
+  `worst_token_rel_inf=6.712087988183497e-9`,
+  13 matrix products and 13 client crossings,
+  `encrypted_evaluation=306.542390898s`
+  (`server_linear_algebra=302.858285571s`);
+- `[V]` serial control:
+  `global_rel_inf=8.836401749619686e-9`,
+  `worst_token_rel_inf=1.86670267294098e-8`,
+  103 matrix products and 103 client crossings,
+  `encrypted_evaluation=2260.075644194s`
+  (`server_linear_algebra=2227.005309607s`);
+- `[V]` the exact dense-call reduction is `103/13=7.923076923x`. The observed
+  encrypted-evaluation ratio is `2260.075644194/306.542390898=7.372799689x`;
+  server-only ratio is `7.353291674x`; complete measured-stage ratio (fixture
+  load + setup + encryption + evaluation + final decrypt) is `7.243345438x`.
+- `[V]` PID-specific telemetry records packed/serial peaks of
+  `9848/15992 MiB`; the packed micro-gate peak is `6144 MiB` lower.
+- `[U]` This is not a clean dedicated-A100 timing comparison. Packed and serial
+  ran at different times on physical GPUs 5 and 4, respectively, and both
+  acquired co-tenants. The ratios above are observed event ratios only; the
+  uncontended speedup remains unmeasured.
+- `[U]` This proves exact LN1 plus one encrypted dense transform. It does not
+  yet prove packed causal attention, a complete T=103 block, full-block T=103
+  VRAM, all 12 blocks, or the task-output head.
+
+Immutable evidence:
+
+- `results/runs/fhe_fides_real_d768_t103_packed_simd_linear_t103_scheme_b_a100_20260730_v2.json`
+  (`sha256=bb99734d51f94671ff419ff9bad3edcf2eb685eb33dbd0a0a0798c92e2dc8917`);
+- `results/runs/fhe_fides_real_d768_t103_serial_control_simd_linear_t103_scheme_b_a100_20260730_v2.json`
+  (`sha256=5217aa33025f96eb1ad6190ed141c5fceaa4f09f39f4d05a35bfd33e23b94eb9`);
+- `results/runs/fhe_fides_real_d768_t103_packed_simd_linear_t103_scheme_b_vram_a100_20260730_v2.json`
+  (`sha256=4f8499b702e1b5971fc0dfc2c217813652ebb964296a1ee76de2b61824342e30`;
+  raw telemetry `sha256=8bf215dd206669732428260c53f55b4d512ef22c15ce24a7f4229faf21cffa67`);
+- `results/runs/fhe_fides_real_d768_t103_serial_control_simd_linear_t103_scheme_b_vram_a100_20260730_v2.json`
+  (`sha256=ba71798d0fa5a5e82ed1871ea2330b32dbcc5d32f0dac0def9720ba575d30467`;
+  raw telemetry `sha256=3219bb2dcefc2c461fa81a913b60f117741a1b7ac215c0166048b33d6e7a0e53`).
+
+Exact correctness reproduction (use new output paths; the scripts refuse to
+overwrite evidence):
+
+```bash
+python3 fhe/gpu_real_scheme_b/test_simd_linear_source_contract.py -v
+# Build target real_dnagpt_fides_scheme_b_simd_linear_t103 via
+# fhe/gpu_real_scheme_b/build_in_fideslib.sh in the pinned FIDESlib container.
+fhe/gpu_real_scheme_b/run_scheme_b_simd_linear_t103.sh 0 \
+  checkpoints/fhe_exports/gsr_pos0_block0_t103_d63353abdc1a_52d046d1fcf0 \
+  results/runs/<new_tag_containing_scheme_b_simd_linear_t103_packed_a100>.json \
+  packed
+fhe/gpu_real_scheme_b/run_scheme_b_simd_linear_t103.sh 0 \
+  checkpoints/fhe_exports/gsr_pos0_block0_t103_d63353abdc1a_52d046d1fcf0 \
+  results/runs/<new_tag_containing_scheme_b_simd_linear_t103_serial_control_a100>.json \
+  serial_control
+```

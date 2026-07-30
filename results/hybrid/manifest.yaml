@@ -813,3 +813,418 @@ runs:
       was not re-run at T=8 in this session; only `attention` is confirmed at T=8.
       Full account: docs/hybrid/tasks.md's 2026-07-29 "T=8 growth-trend check and
       output-packing ceiling" entry.
+
+  - id: fhe_fides_real_d768_t32_attention_general_attention_t32_scheme_b_a100_20260729
+    task: "General causal-attention Scheme B circuit at T=32, using a new spread-across-copies causal-score packing fix that raises the packing ceiling from T<=21 to T<=85"
+    status: "[V] PASS"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 0 [gpu] (preflight_confirmed mem=903MiB util=0%; shared host was occupied by another tenant across most of the 8 GPUs for hours before this GPU freed up)"
+    config:
+      dimension: 768
+      sequence_length: 32
+      heads: 12
+      batch_slots: 4096
+      ring_dim: 65536
+      multiplicative_depth: 16
+      rotation_keys: 63
+      explicit_ciphertext_ciphertext_multiplications: 6884
+      explicit_ciphertext_plaintext_multiplications: 150172
+    metrics:
+      global_rel_inf: 2.1353270839948145e-10
+      worst_token_rel_inf: 2.6458523152800697e-10
+      max_abs_error: 3.556021255235464e-09
+      round_trips: 528
+      logical_boundary_instances: 5984
+      client_boundary_seconds_total: 119.59289629700004
+      server_linear_algebra_seconds: 3703.496080112
+      encrypted_evaluation_seconds: 3823.088976409
+      intermediate_decrypt_attempts: 0
+      declared_client_boundary_crossings: 528
+      declared_logical_boundary_instances: 5984
+      final_decrypt_calls: 8
+    provenance:
+      result_sha256: "a6ae130008bd42a4f5d142cd5b7a964114fd3242dac5d76dfc2ad9724a98ddba"
+      source_sha256: "607e9c429bdea107149733e10f19765578175a5301b350556bd8604a1d384252"
+      fixture_manifest_sha256: "6ae018b419a533dd9c77e6e0415bf7adf2b67c1f444013e68489a2fc84cca003"
+      fixture_contract_sha256: "44d5dbf1d23a3a2c1ebcee43e69ff3a43e0c1ab1c8a11b6947282d287b52cb41"
+    verdict: >
+      [V] PASS. Forked from the frozen T=8 file (T=8/T=3/T=2 sources confirmed
+      unchanged by the T=32 contract test's own source hash checks), carrying its
+      output-packing fix forward unchanged (OUTPUT_GROUPS=ceil(32/4)=8, confirmed by
+      final_decrypt_calls=8) and adding a new fix for the still-open causal-score
+      packing ceiling flagged in the T=8 entry above (HEADS*SCORE_SLOT_STRIDE<=
+      PACK_WIDTH-D, T<=21). Instead of replicating each head's raw causal score
+      redundantly into all COPIES=4 physical copies (the T=3/T=8 files'
+      `one_hot_plain`, which wastes 3 of 4 copies since packed_scores never goes
+      through cross-copy rotation), this file spreads HEADS_PER_COPY=HEADS/COPIES=3
+      heads into each copy at a local slot, isolated via a new
+      `one_hot_single_copy_plain(copy, slot)`; the read side
+      (`cross_boundary_softmax_select`) derives each head's assigned copy and reads
+      from it directly, while the write side (the softmax weight broadcast into all 4
+      copies, multiplied against replicated value ciphertexts) is unchanged. This
+      raises the packing ceiling from T<=21 to T<=85 (`HEADS_PER_COPY*
+      SCORE_SLOT_STRIDE<=PACK_WIDTH-D`). Numpy-proven before any GPU work: the
+      head->copy/local-slot assignment is a bijection covering all 12 heads exactly
+      once, and the sparse read reproduces the old redundant read's exact softmax
+      weights (both on synthetic data and on every non-trivial causal row of the real
+      T=32 oracle fixture) -- 28 static/numpy contract tests, all passing locally
+      before this run. Result: global_rel_inf=2.14e-10 (same ~1e-10 band as every
+      other Scheme B gate), round_trips=528 (=496 attention softmax crossings +
+      32 LN1 invsqrts, matching T*(T-1)/2+T exactly as designed). [U] No speed claim:
+      3823.09s total (3703.50s server + 119.59s client boundary) is not compared
+      against the T=8 anchor (523.65s) -- T differs by 4x and host load was not
+      controlled for; the shared host had all 8 GPUs occupied by another tenant for
+      hours before this GPU freed up. [U] T=32 still sits under the raised T<=85
+      ceiling; task-representative T~103 does not -- a further, more general fix
+      (chunked/streaming softmax with a chunk width independent of T) is scoped and
+      numpy-proven but not yet implemented, see docs/hybrid/roadmap.md item 8 and
+      tasks.md's 2026-07-29 "chunked/streaming causal-score packing" entry. [U] Only
+      the `attention` gate is confirmed at T=32 in this entry; `full` (LN2+GELU+MLP)
+      is a separate, subsequent run.
+
+  - id: fhe_fides_real_d768_t32_full_general_attention_t32_scheme_b_a100_20260729
+    task: "Complete DNAGPT block-0 Scheme B gate at T=32 (LN1, QKV, 12-head causal attention with spread-across-copies score packing, projection, LN2, 4-chunk GELU MLP, residuals, encrypted output pack)"
+    status: "[V] PASS"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 4 [gpu] (preflight_confirmed mem=1779MiB util=0%; shared host had all 8 GPUs occupied by another tenant for ~17 minutes of this session's polling window before GPU 4 freed up)"
+    config:
+      dimension: 768
+      sequence_length: 32
+      heads: 12
+      batch_slots: 4096
+      ring_dim: 65536
+      multiplicative_depth: 16
+      rotation_keys: 66
+      explicit_ciphertext_ciphertext_multiplications: 6948
+      explicit_ciphertext_plaintext_multiplications: 412668
+    metrics:
+      global_rel_inf: 2.477810225773867e-10
+      worst_token_rel_inf: 2.981445162060162e-10
+      max_abs_error: 3.903625866996663e-09
+      round_trips: 592
+      logical_boundary_instances: 6144
+      client_boundary_seconds_total: 138.67908841499994
+      server_linear_algebra_seconds: 8090.274474889
+      encrypted_evaluation_seconds: 8228.953563304
+      intermediate_decrypt_attempts: 0
+      declared_client_boundary_crossings: 592
+      declared_logical_boundary_instances: 6144
+      final_decrypt_calls: 8
+    provenance:
+      result_sha256: "6ab3854dbb7af08fb4edeeb9611496313311323a16318152fc10207d58c4c016"
+      source_sha256: "607e9c429bdea107149733e10f19765578175a5301b350556bd8604a1d384252"
+      fixture_manifest_sha256: "6ae018b419a533dd9c77e6e0415bf7adf2b67c1f444013e68489a2fc84cca003"
+      fixture_contract_sha256: "44d5dbf1d23a3a2c1ebcee43e69ff3a43e0c1ab1c8a11b6947282d287b52cb41"
+    verdict: >
+      [V] PASS. First complete real-weight T=32 Scheme B block gate, extending the
+      attention-only T=32 gate above with the unchanged LN2/GELU/MLP/residual path
+      already proven at T=2/T=3/T=8. round_trips=592 (=528 from the attention gate
+      [496 softmax crossings + 32 LN1 invsqrts] + 32 LN2 invsqrts + 32 GELU
+      4-chunk-batched crossings, one per token), final_decrypt_calls=8
+      (=ceil(32/4), the carried-forward output-packing fix's arithmetic, unchanged
+      from the attention-only gate). global_rel_inf=2.48e-10, same ~1e-10 band as
+      every other Scheme B gate to date, well inside the unchanged 4e-2 tolerance.
+      8228.95s total (8090.27s server + 138.68s client boundary, ~1.7% client
+      share) -- consistent with the server-GPU-dominated cost split seen at every
+      prior gate; not compared against any smaller-T anchor as a speed claim (T
+      differs, host load uncontrolled: this run itself waited ~17 minutes for GPU
+      4 to free up from another tenant's load). [U] This closes the T=32
+      growth-trend/packing-fix milestone (docs/hybrid/roadmap.md item 8) but
+      T=32 still sits comfortably under the raised T<=85 ceiling; task-representative
+      T~103 remains blocked on the scoped-but-unimplemented chunked/streaming
+      softmax design (tasks.md's 2026-07-29 "chunked/streaming causal-score
+      packing" entry). [U] No multi-block composition attempted; this is a single
+      block-0 gate only, as with every other Scheme B evidence file to date.
+
+  - id: fhe_fides_real_d768_t2_blocks0_1_scheme_b_two_block_refresh_a100_20260729_v2
+    task: "Released-weight DNAGPT Scheme B composition gate: complete blocks 0 and 1 with a full-hidden-state client refresh between blocks"
+    status: "[V] PASS"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 0 [gpu] (preflight_confirmed mem=543MiB util=0%; another tenant appeared after launch, so no speed claim)"
+    config:
+      dimension: 768
+      sequence_length: 2
+      blocks: [0, 1]
+      batch_slots: 4096
+      ring_dim: 65536
+      multiplicative_depth: 16
+      rotation_keys: 66
+      matrix_products: 48
+      bootstraps: 0
+    metrics:
+      block0_global_rel_inf: 9.244882886929112e-11
+      block1_global_rel_inf: 8.484667347918585e-11
+      block1_worst_token_rel_inf: 8.484667347918585e-11
+      block1_max_abs_error: 1.8999699591404351e-09
+      block0_packed_output_level: 6
+      block1_input_level_after_refresh: 0
+      nonlinearity_round_trips: 14
+      full_hidden_state_refresh_round_trips: 1
+      declared_client_boundary_crossings: 15
+      logical_boundary_instances: 50
+      server_linear_algebra_seconds: 1032.8736015910001
+      client_boundary_seconds_total: 4.5190357619999997
+      encrypted_evaluation_seconds: 1037.3926373530001
+      intermediate_decrypt_attempts: 0
+      final_decrypt_calls: 1
+    provenance:
+      result_sha256: "e8c0ceb281815a85476bb6197cb1493b301045247cecb01f31e5f434ac58b65b"
+      source_sha256: "5cb82f81dc46efe2f4bfd7a1c9e9c1bf90cea3d629432b027b42e5df89093767"
+      frozen_single_block_source_sha256: "d88f1a0919a003a539e746aaf33e5d283c28810c2805a1af4b05dffac43e08df"
+      fixture_manifest_sha256: "3c8d7bbcbfe62d9dc7f3fa89571396b93c3f92cb89563fa5cb4cd7b831bd5e4c"
+      fixture_contract_sha256: "a6f59fbf44d45f092339dabcdee58867dc99e1ae6145fc2b86adbae146be543c"
+    verdict: >
+      [V] PASS. This is the first Scheme B result to compose more than one released
+      DNAGPT transformer block. Block 0's encrypted packed output was decrypted and
+      unpacked only by the declared client, then the two T=2 hidden states were
+      re-encrypted as fresh level-0 ciphertexts under the same crypto context and key
+      lineage before evaluating block 1. Block 0 passes at rel_inf=9.24e-11 and block
+      1 passes at rel_inf=8.48e-11 against the unchanged 4e-2 gate. Both blocks have
+      identical measured level maxima (LN2 max=8), block 0 exits at packed level 6,
+      and the refresh resets block 1 input to level 0; there are no bootstraps and
+      the evaluator has no private key. [U] No speed claim: another tenant appeared
+      on GPU 0 after the clean preflight, contaminating wall-clock performance. [U]
+      This proves the refresh/composition mechanism for blocks 0->1 at T=2, not the
+      full 12-block backbone, task-output head, or T~100 memory sufficiency.
+
+  - id: fhe_fides_real_d768_t2_blocks0_1_scheme_b_two_block_refresh_vram_a100_20260729_v2
+    task: "Process-specific GPU-memory telemetry for the passing T=2 Scheme B blocks 0->1 composition gate"
+    status: "[V] measured; speed-contaminated"
+    backend: "nvidia-smi process-memory telemetry during FIDESlib CKKS/CUDA run"
+    environment: "Brev A100-SXM4-80GB physical GPU 0 [gpu]"
+    config:
+      sequence_length: 2
+      blocks: [0, 1]
+      nominal_sampling_interval_seconds: 5
+      sample_count: 193
+    metrics:
+      target_process_peak_memory_mib: 10872
+      target_process_initial_memory_mib: 8824
+      target_process_final_memory_mib: 10752
+      peak_first_seen_utc: "2026-07-29T14:51:45Z"
+    provenance:
+      result_sha256: "fd21f2fc29d5357bcbf17f5f5d65fd91531a297dd1d6c8d14db7f7a07f3e844f"
+      raw_log_sha256: "d568c86f815c55f086978fed74137d95d0cc496c7bd9edce93ebfe9f7ca2f614"
+      linked_correctness_result_sha256: "e8c0ceb281815a85476bb6197cb1493b301045247cecb01f31e5f434ac58b65b"
+    verdict: >
+      [V] The target process reached 10872 MiB during block 0 and did not exceed
+      that allocation while block 1 ran. At T=2, sequential Scheme B composition
+      with a client refresh therefore does not accumulate another block-sized GPU
+      allocation. [U] A second tenant used the same GPU after launch, so whole-GPU
+      memory/utilization and timing are not attributable; only PID-specific memory
+      is claimed. [U] This single T=2 point does not determine the memory slope with
+      T and cannot establish that T=100 or T=103 fits on one 80GB A100.
+
+  - id: fhe_fides_real_d768_t103_attention_general_attention_t103_scheme_b_a100_20260729
+    task: "Task-representative T=103 Scheme B block-0 attention gate using two-phase chunked causal softmax"
+    status: "[V] PASS"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 5 [gpu] (preflight_confirmed mem=5458MiB util=0%; shared host, so timing is an execution record rather than a clean throughput comparison)"
+    config:
+      dimension: 768
+      sequence_length: 103
+      heads: 12
+      head_dimension: 64
+      batch_slots: 4096
+      ring_dim: 65536
+      multiplicative_depth: 16
+      rotation_keys: 63
+      matrix_products: 412
+      chunk_width: 85
+      heads_per_copy: 3
+      bootstraps: 0
+      explicit_ciphertext_ciphertext_multiplications: 69719
+      explicit_ciphertext_plaintext_multiplications: 615080
+      packed_output_level: 6
+    metrics:
+      global_rel_inf: 3.6608055924837055e-10
+      worst_token_rel_inf: 4.390401958450227e-10
+      max_abs_error: 6.096444238323784e-09
+      tolerance: 0.04
+      round_trips: 5476
+      logical_boundary_instances: 127399
+      client_boundary_seconds_total: 920.0065504369991
+      server_linear_algebra_seconds: 13162.351921388001
+      encrypted_evaluation_seconds: 14082.358471825
+      intermediate_decrypt_attempts: 0
+      declared_client_boundary_crossings: 5476
+      declared_logical_boundary_instances: 127399
+      final_decrypt_calls: 26
+    provenance:
+      result_sha256: "8f22ccf7c34125710197b84ef0b571f2095f8fbb800f7eb42afbfdbf38b8daee"
+      source_sha256: "70580ff0b4f12565921e0af8ce04e7b4c0d4253b51c0a8380ef0727ce85b2a0f"
+      fixture_manifest_sha256: "d2c90ba15c62c648495b51070eee585a3570dc174eb31e14782aaf016b31f8f6"
+      fixture_contract_sha256: "061d53bd25bbcaf75d4c12067ec77f032c3ba0e35300a0a6168c2ce15f3672db"
+      remote_run_log_sha256: "aabb5f8df636d2c7f1a8eb32b18d0628c69c9b30dd0c7c61ca02a8a60d82dcc9"
+    verdict: >
+      [V] PASS. This is the first real-GPU Scheme B gate at the task-representative
+      GSR prompt length T=103 and the first real-GPU validation beyond the prior
+      T<=85 causal-score packing ceiling. The two-phase design uses fixed
+      CHUNK_WIDTH=85: phase A reassembles each causal row at the client before
+      computing a stable full-row softmax, and phase B emits the cached per-column
+      weights. The output is finite and passes at global_rel_inf=3.66e-10,
+      1.09e8 times inside the unchanged 4e-2 tolerance. The observed 5476
+      crossings equal 103 LN1 crossings plus 5373 chunked-attention crossings;
+      final_decrypt_calls=26 equals ceil(103/4), confirming the general output
+      grouping at T=103. The measured attention-gate event took 14082.36s:
+      13162.35s server linear algebra plus 920.01s client boundaries. [U] This is
+      block 0 and the attention gate only. It does not validate LN2/GELU/MLP at
+      T=103, a complete T=103 block, all 12 blocks, the task-output head, or T=103
+      GPU-memory headroom. [U] No clean throughput claim is made from this
+      shared-host run.
+
+  - id: fhe_fides_real_d768_t103_packed_simd_linear_t103_scheme_b_a100_20260730_v2
+    task: "T=103 packed Token-SIMD Scheme B micro-gate: exact client LN1 plus encrypted query projection"
+    status: "[V] PASS; timing speed-contaminated"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 5 [gpu] (preflight_confirmed mem=3553MiB util=0%; a co-tenant later occupied the GPU)"
+    config:
+      dimension: 768
+      sequence_length: 103
+      token_batch: 8
+      logical_tokens_per_ciphertext: 8
+      token_groups: 13
+      batch_slots: 32768
+      ring_dim: 65536
+      multiplicative_depth: 16
+      rotation_keys: 63
+      matrix_products: 13
+      frozen_equivalent_matrix_products: 103
+      dense_call_reduction: 7.923076923076923
+      packed_output_level: 3
+    metrics:
+      global_rel_inf: 3.4048182778014454e-09
+      worst_token_rel_inf: 6.712087988183497e-09
+      max_abs_error: 1.9792276623187277e-08
+      tolerance: 0.04
+      round_trips: 13
+      logical_boundary_instances: 103
+      client_boundary_seconds_total: 3.684105327
+      server_linear_algebra_seconds: 302.858285571
+      encrypted_evaluation_seconds: 306.542390898
+      total_measured_stage_seconds: 317.228204415
+      intermediate_decrypt_attempts: 0
+      final_decrypt_calls: 13
+    provenance:
+      result_sha256: "bb99734d51f94671ff419ff9bad3edcf2eb685eb33dbd0a0a0798c92e2dc8917"
+      source_sha256: "926be6b276006dd6435713efa168d189af02e02589d143684991380bae7e9233"
+      parent_source_sha256: "607e9c429bdea107149733e10f19765578175a5301b350556bd8604a1d384252"
+      fixture_manifest_sha256: "d2c90ba15c62c648495b51070eee585a3570dc174eb31e14782aaf016b31f8f6"
+      fixture_contract_sha256: "061d53bd25bbcaf75d4c12067ec77f032c3ba0e35300a0a6168c2ce15f3672db"
+      remote_run_log_sha256: "1eb3000a0586bcf7fd787babdf23eae1f2ab32c09cac2691ea6e5daf3611ed89"
+    verdict: >
+      [V] PASS. The first real-GPU Token-SIMD gate packs B=8 logical token
+      lanes per ciphertext and reduces the frozen-equivalent query projections
+      from 103 to 13 (7.923x). Accuracy remains far inside the unchanged 4e-2
+      gate, with global_rel_inf=3.40e-9, all outputs finite, no undeclared
+      intermediate decrypt, and no evaluator private key. Against the
+      same-source serial-control evidence below, the observed encrypted-evaluation
+      ratio is 2260.0756/306.5424=7.3728x and the observed complete measured-stage
+      ratio is 7.2433x. [U] These are shared-host observations, not uncontended
+      throughput claims: the two modes ran at different times on different physical
+      GPUs and both acquired co-tenants. [U] This isolated LN1-plus-query gate
+      demonstrates the structural dense-call leverage but does not yet prove
+      packed attention, a complete packed block, all 12 blocks, or the task head.
+
+  - id: fhe_fides_real_d768_t103_serial_control_simd_linear_t103_scheme_b_a100_20260730_v2
+    task: "T=103 serial-control Scheme B micro-gate paired with the packed Token-SIMD LN1-plus-query gate"
+    status: "[V] PASS; timing speed-contaminated"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 4 [gpu] (preflight_confirmed mem=4130MiB util=6%; a co-tenant later occupied the GPU)"
+    config:
+      dimension: 768
+      sequence_length: 103
+      token_batch: 8
+      logical_tokens_per_ciphertext: 1
+      token_groups: 103
+      batch_slots: 32768
+      ring_dim: 65536
+      multiplicative_depth: 16
+      rotation_keys: 63
+      matrix_products: 103
+      frozen_equivalent_matrix_products: 103
+      dense_call_reduction: 1
+      packed_output_level: 3
+    metrics:
+      global_rel_inf: 8.836401749619686e-09
+      worst_token_rel_inf: 1.86670267294098e-08
+      max_abs_error: 5.1366179781853205e-08
+      tolerance: 0.04
+      round_trips: 103
+      logical_boundary_instances: 103
+      client_boundary_seconds_total: 33.070334587
+      server_linear_algebra_seconds: 2227.005309607
+      encrypted_evaluation_seconds: 2260.075644194
+      total_measured_stage_seconds: 2297.793467106
+      intermediate_decrypt_attempts: 0
+      final_decrypt_calls: 103
+    provenance:
+      result_sha256: "5217aa33025f96eb1ad6190ed141c5fceaa4f09f39f4d05a35bfd33e23b94eb9"
+      source_sha256: "926be6b276006dd6435713efa168d189af02e02589d143684991380bae7e9233"
+      parent_source_sha256: "607e9c429bdea107149733e10f19765578175a5301b350556bd8604a1d384252"
+      fixture_manifest_sha256: "d2c90ba15c62c648495b51070eee585a3570dc174eb31e14782aaf016b31f8f6"
+      fixture_contract_sha256: "061d53bd25bbcaf75d4c12067ec77f032c3ba0e35300a0a6168c2ce15f3672db"
+      remote_run_log_sha256: "836e5ba9f86f0df2c9b0aeddd736e4144c5783859af5236e9eb99214d09089a5"
+    verdict: >
+      [V] PASS. This control executes the same T=103 fixture, source, CKKS
+      context configuration, exact LN1 boundary, and query projection one logical
+      token per ciphertext. It provides the 103-product denominator for the packed run's
+      structural and observed ratios and independently passes the unchanged
+      accuracy/privacy gates. [U] Its timing is also shared-host and
+      co-tenant-contaminated; it is not a clean dedicated-A100 baseline.
+
+  - id: fhe_fides_real_d768_t103_packed_simd_linear_t103_scheme_b_vram_a100_20260730_v2
+    task: "Process-specific GPU-memory telemetry for the passing T=103 packed Token-SIMD linear micro-gate"
+    status: "[V] measured; speed-contaminated"
+    backend: "nvidia-smi process-memory telemetry during FIDESlib CKKS/CUDA run"
+    environment: "Brev A100-SXM4-80GB physical GPU 5 [gpu]"
+    config:
+      sequence_length: 103
+      token_batch: 8
+      logical_tokens_per_ciphertext: 8
+      nominal_sampling_interval_seconds: 5
+      target_process_sample_count: 60
+    metrics:
+      target_process_initial_memory_mib: 4716
+      target_process_peak_memory_mib: 9848
+      target_process_final_memory_mib: 9848
+      peak_first_seen_utc: "2026-07-29T21:47:50Z"
+      whole_gpu_peak_memory_mib: 22135
+      cotenant_peak_process_memory_mib: 12272
+    provenance:
+      result_sha256: "4f8499b702e1b5971fc0dfc2c217813652ebb964296a1ee76de2b61824342e30"
+      raw_log_sha256: "8bf215dd206669732428260c53f55b4d512ef22c15ce24a7f4229faf21cffa67"
+      linked_correctness_result_sha256: "bb99734d51f94671ff419ff9bad3edcf2eb685eb33dbd0a0a0798c92e2dc8917"
+    verdict: >
+      [V] The packed target PID peaks at 9848 MiB. [U] A co-tenant occupied the
+      same GPU, so whole-GPU memory and utilization are not attributable; only
+      the target PID allocation trace is claimed. [U] This isolated micro-gate
+      does not establish complete-block T=103 memory sufficiency.
+
+  - id: fhe_fides_real_d768_t103_serial_control_simd_linear_t103_scheme_b_vram_a100_20260730_v2
+    task: "Process-specific GPU-memory telemetry for the passing T=103 serial-control linear micro-gate"
+    status: "[V] measured; speed-contaminated"
+    backend: "nvidia-smi process-memory telemetry during FIDESlib CKKS/CUDA run"
+    environment: "Brev A100-SXM4-80GB physical GPU 4 [gpu]"
+    config:
+      sequence_length: 103
+      token_batch: 8
+      logical_tokens_per_ciphertext: 1
+      nominal_sampling_interval_seconds: 5
+      target_process_sample_count: 434
+    metrics:
+      target_process_initial_memory_mib: 4716
+      target_process_peak_memory_mib: 15992
+      target_process_final_memory_mib: 15992
+      peak_first_seen_utc: "2026-07-29T22:42:34Z"
+      whole_gpu_peak_memory_mib: 27287
+      cotenant_peak_process_memory_mib: 12302
+    provenance:
+      result_sha256: "ba71798d0fa5a5e82ed1871ea2330b32dbcc5d32f0dac0def9720ba575d30467"
+      raw_log_sha256: "3219bb2dcefc2c461fa81a913b60f117741a1b7ac215c0166048b33d6e7a0e53"
+      linked_correctness_result_sha256: "5217aa33025f96eb1ad6190ed141c5fceaa4f09f39f4d05a35bfd33e23b94eb9"
+    verdict: >
+      [V] The serial-control target PID peaks at 15992 MiB, 6144 MiB above the
+      packed run's target-PID peak. [U] A co-tenant occupied the same GPU, so
+      whole-GPU memory and utilization are not attributable. [U] This isolated
+      micro-gate does not establish complete-block T=103 memory sufficiency.

@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "task": "Process-specific GPU-memory telemetry for the T=103 serial-control Scheme B LN1-plus-query micro-gate",
+  "measured_at_utc_start": "2026-07-29T22:09:04Z",
+  "measured_at_utc_end": "2026-07-29T22:47:14Z",
+  "status": "[V] measured; speed-contaminated",
+  "environment": "Brev A100-SXM4-80GB physical GPU 4 [gpu]",
+  "gpu": 4,
+  "process_pid": 2679049,
+  "sampling": {
+    "command": "nvidia-smi --query-gpu=index,memory.used,utilization.gpu --format=csv,noheader,nounits; nvidia-smi --query-compute-apps=pid,gpu_uuid,used_memory --format=csv,noheader,nounits",
+    "nominal_interval_seconds": 5,
+    "target_process_sample_count": 434,
+    "raw_log_sha256": "3219bb2dcefc2c461fa81a913b60f117741a1b7ac215c0166048b33d6e7a0e53",
+    "run_log_sha256": "836e5ba9f86f0df2c9b0aeddd736e4144c5783859af5236e9eb99214d09089a5"
+  },
+  "process_memory_mib": {
+    "initial": 4716,
+    "minimum": 4716,
+    "final": 15992,
+    "peak": 15992,
+    "peak_first_seen_utc": "2026-07-29T22:42:34Z",
+    "interpretation": "[V] The serial-control T=103 linear micro-gate's target process peaked at 15992 MiB, 6144 MiB above the packed run's measured peak."
+  },
+  "whole_gpu_observations": {
+    "peak_total_memory_mib": 27287,
+    "peak_utilization_percent": 100,
+    "peak_cotenant_process_memory_mib": 12302
+  },
+  "contamination": {
+    "present": true,
+    "effect": "[U] Whole-GPU memory, utilization, and exact wall-clock throughput cannot be attributed only to this run. The target PID's process-memory samples remain usable as allocation-level telemetry."
+  },
+  "linked_correctness_result": {
+    "path": "results/runs/fhe_fides_real_d768_t103_serial_control_simd_linear_t103_scheme_b_a100_20260730_v2.json",
+    "sha256": "5217aa33025f96eb1ad6190ed141c5fceaa4f09f39f4d05a35bfd33e23b94eb9"
+  },
+  "limitations": [
+    "[U] nvidia-smi process memory is allocation-level telemetry, not a live-ciphertext object census.",
+    "[U] This is an isolated LN1-plus-query micro-gate, not complete attention, a complete block, or the 12-block graph.",
+    "[U] It does not by itself establish full-block T=103 memory sufficiency."
+  ]
+}

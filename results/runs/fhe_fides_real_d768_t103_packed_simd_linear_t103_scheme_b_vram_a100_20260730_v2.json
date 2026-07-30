@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "task": "Process-specific GPU-memory telemetry for the T=103 packed Token-SIMD Scheme B LN1-plus-query micro-gate",
+  "measured_at_utc_start": "2026-07-29T21:43:01Z",
+  "measured_at_utc_end": "2026-07-29T21:48:11Z",
+  "status": "[V] measured; speed-contaminated",
+  "environment": "Brev A100-SXM4-80GB physical GPU 5 [gpu]",
+  "gpu": 5,
+  "process_pid": 2625913,
+  "sampling": {
+    "command": "nvidia-smi --query-gpu=index,memory.used,utilization.gpu --format=csv,noheader,nounits; nvidia-smi --query-compute-apps=pid,gpu_uuid,used_memory --format=csv,noheader,nounits",
+    "nominal_interval_seconds": 5,
+    "target_process_sample_count": 60,
+    "raw_log_sha256": "8bf215dd206669732428260c53f55b4d512ef22c15ce24a7f4229faf21cffa67",
+    "run_log_sha256": "1eb3000a0586bcf7fd787babdf23eae1f2ab32c09cac2691ea6e5daf3611ed89"
+  },
+  "process_memory_mib": {
+    "initial": 4716,
+    "minimum": 4716,
+    "final": 9848,
+    "peak": 9848,
+    "peak_first_seen_utc": "2026-07-29T21:47:50Z",
+    "interpretation": "[V] The packed T=103 linear micro-gate's target process peaked at 9848 MiB."
+  },
+  "whole_gpu_observations": {
+    "peak_total_memory_mib": 22135,
+    "peak_utilization_percent": 100,
+    "peak_cotenant_process_memory_mib": 12272
+  },
+  "contamination": {
+    "present": true,
+    "effect": "[U] Whole-GPU memory, utilization, and exact wall-clock throughput cannot be attributed only to this run. The target PID's process-memory samples remain usable as allocation-level telemetry."
+  },
+  "linked_correctness_result": {
+    "path": "results/runs/fhe_fides_real_d768_t103_packed_simd_linear_t103_scheme_b_a100_20260730_v2.json",
+    "sha256": "bb99734d51f94671ff419ff9bad3edcf2eb685eb33dbd0a0a0798c92e2dc8917"
+  },
+  "limitations": [
+    "[U] nvidia-smi process memory is allocation-level telemetry, not a live-ciphertext object census.",
+    "[U] This is an isolated LN1-plus-query micro-gate, not complete attention, a complete block, or the 12-block graph.",
+    "[U] It does not by itself establish full-block T=103 memory sufficiency."
+  ]
+}

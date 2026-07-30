@@ -1,0 +1,121 @@
+{
+  "schema_version": 1,
+  "task": "Released-weight DNAGPT blocks 0->1, Scheme B full-hidden-state client refresh correctness gate",
+  "implementation_version": "t2-scheme-b-two-block-full-hidden-refresh-v1",
+  "scheme": "B (hybrid client-assisted CKKS)",
+  "measured_at_utc": "2026-07-29T15:02:11Z",
+  "gate": "two_block_full",
+  "backend": "FIDESlib CKKS/CUDA",
+  "backend_commit": "786c7600fb2f16b724e0acf73df367b27b8afed6",
+  "container_image": "dnagpt-fideslib:786c-asymfix2",
+  "environment": "Brev A100-SXM4-80GB physical GPU 0 [gpu] (preflight_confirmed mem=543MiB util=0%)",
+  "gpu": 0,
+  "security": "HEStd_128_classic",
+  "source_sha256": "5cb82f81dc46efe2f4bfd7a1c9e9c1bf90cea3d629432b027b42e5df89093767",
+  "frozen_single_block_source_sha256": "d88f1a0919a003a539e746aaf33e5d283c28810c2805a1af4b05dffac43e08df",
+  "fixture_manifest_sha256": "3c8d7bbcbfe62d9dc7f3fa89571396b93c3f92cb89563fa5cb4cd7b831bd5e4c",
+  "fixture_contract_sha256": "a6f59fbf44d45f092339dabcdee58867dc99e1ae6145fc2b86adbae146be543c",
+  "config": {
+    "model": "dna_gpt0.1b_m classification checkpoint blocks 0 and 1",
+    "blocks": [0, 1],
+    "D": 768,
+    "T": 2,
+    "heads": 12,
+    "batch_slots": 4096,
+    "ring_dim": 65536,
+    "multiplicative_depth": 16,
+    "scale_bits": 50,
+    "bootstraps": 0,
+    "rotation_keys": 66,
+    "matrix_products": 48,
+    "operation_counts": {
+      "ciphertext_plaintext_matrix_products": 48,
+      "explicit_ciphertext_ciphertext_multiplications": 66,
+      "explicit_ciphertext_plaintext_multiplications": 49332
+    }
+  },
+  "composition": {
+    "same_crypto_context_and_key_lineage": true,
+    "block_boundary": "client decrypts packed block-0 hidden state, unpacks T token states, re-encrypts each as a fresh level-0 replicated ciphertext",
+    "block_boundary_count": 1,
+    "block_boundary_decrypt_calls": 1,
+    "block_boundary_encrypt_calls": 2,
+    "block_boundary_logical_instances": 2,
+    "block0_packed_output_level": 6,
+    "block1_input_level": 0
+  },
+  "blocks": {
+    "block0": {
+      "packed_output_level": 6,
+      "round_trips": 7,
+      "logical_boundary_instances": 24,
+      "metrics_at_refresh_boundary": {
+        "global_rel_inf": 9.2448828869291121e-11,
+        "worst_token_rel_inf": 1.1155016667591211e-10,
+        "max_abs_error": 1.4564700556718435e-09,
+        "all_finite": true,
+        "passed": true
+      },
+      "level_trace": {
+        "attention_context": {"min": 3, "max": 4},
+        "attention_projection": {"min": 4, "max": 5},
+        "block_output": {"min": 4, "max": 5},
+        "ln1": {"min": 2, "max": 2},
+        "ln2": {"min": 7, "max": 8},
+        "qkv": {"min": 3, "max": 3},
+        "residual1": {"min": 4, "max": 5}
+      }
+    },
+    "block1": {
+      "packed_output_level": 6,
+      "round_trips": 7,
+      "logical_boundary_instances": 24,
+      "metrics": {
+        "global_rel_inf": 8.4846673479185853e-11,
+        "worst_token_rel_inf": 8.4846673479185853e-11,
+        "max_abs_error": 1.8999699591404351e-09,
+        "all_finite": true,
+        "passed": true
+      },
+      "level_trace": {
+        "attention_context": {"min": 3, "max": 4},
+        "attention_projection": {"min": 4, "max": 5},
+        "block_output": {"min": 4, "max": 5},
+        "ln1": {"min": 2, "max": 2},
+        "ln2": {"min": 7, "max": 8},
+        "qkv": {"min": 3, "max": 3},
+        "residual1": {"min": 4, "max": 5}
+      }
+    }
+  },
+  "global_rel_inf": 8.4846673479185853e-11,
+  "worst_token_rel_inf": 8.4846673479185853e-11,
+  "max_abs_error": 1.8999699591404351e-09,
+  "all_finite": true,
+  "tol": 0.040000000000000001,
+  "passed": true,
+  "protocol": {
+    "round_trips": 15,
+    "nonlinearity_round_trips": 14,
+    "full_hidden_state_refresh_round_trips": 1,
+    "logical_boundary_instances": 50,
+    "boundary_seconds_total": 4.5190357619999997
+  },
+  "timings_seconds": {
+    "load_verified_fixture": 0.12580535700000001,
+    "context_keygen_load": 6.6501277710000002,
+    "encrypt_embedded_inputs": 0.31718349099999998,
+    "block0_encrypted_evaluation": 613.81202668900005,
+    "full_hidden_state_refresh": 0.45734604699999998,
+    "block1_encrypted_evaluation": 423.12326461700002,
+    "encrypted_evaluation": 1037.3926373530001,
+    "client_boundary_seconds_total": 4.5190357619999997,
+    "server_linear_algebra_seconds": 1032.8736015910001,
+    "final_decrypt": 0.13180554899999999
+  },
+  "input_boundary": "token plus position embeddings encrypted by client",
+  "intermediate_decrypt_attempts": 0,
+  "declared_client_boundary_crossings": 15,
+  "final_decrypt_calls": 1,
+  "evaluator_has_private_key": false
+}

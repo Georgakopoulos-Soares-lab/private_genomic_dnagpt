@@ -27,6 +27,13 @@ correctness failure" condition below is met. Full comparison and rationale in
    needed; a smaller context may clear the exact memory wall that blocked Scheme A.
    `[done, 2026-07-26]` — the passing block-0 gate above already lands at
    `ring_dim=65536`/depth 16, half of Scheme A's `ring_dim=131072`/depth 43.
+   `[U]` Depth 16 is still explicitly labeled a conservative placeholder in the
+   source, not a proven minimum. The T=2 two-block gate below measures `LN2 max=8`
+   and packed output level 6 in both blocks, leaving material unexamined headroom.
+   Re-deriving the smallest passing depth and resulting ring-dimension bucket remains
+   open. It must now be evaluated jointly with Token-SIMD: a ring change from 65536
+   to 32768 would also reduce the available complex slots from 32768 to 16384 and
+   lower the proved token batch from B=8 to B=4, so speedups cannot be multiplied.
 5. Scale sequence length and block count only after one Scheme B block gate passes,
    mirroring the "Scale and optimize" and "Compose only after one block scales" order
    in [../roadmap.md](../roadmap.md). The naive ×12-block T=2 linear extrapolation
@@ -59,6 +66,17 @@ correctness failure" condition below is met. Full comparison and rationale in
    (`T=32/64/103`). `full` gate (LN2/GELU/MLP) not re-verified at T=8, only
    `attention`. No speed claim: host was fully occupied by another tenant for
    hours before this run's GPU freed up.
+   `[done, 2026-07-29]` — the first Scheme B multi-block gate now passes for released
+   blocks 0 -> 1 at T=2. The client decrypts/unpacks block 0's packed hidden state and
+   re-encrypts both token states at level 0 under the same context/key lineage before
+   block 1; block 0/1 pass at `global_rel_inf=9.24e-11`/`8.48e-11`. PID-specific
+   telemetry peaks at `10872 MiB` during block 0 and does not rise in block 1, so the
+   Scheme A per-block memory accumulation failure does not transfer to this T=2
+   sequential-refresh composition mechanism. See [tasks.md](tasks.md)'s 2026-07-29
+   "First Scheme B multi-block composition gate" entry. `[U]` All 12 blocks and the
+   task-output head remain untested; this two-block result does not yet constitute the
+   project's embedded-vector-to-task-output graph. `[U]` Memory scaling with T also
+   remains unmeasured, so this does not establish that one 80GB A100 can run T~100.
 6. `[done, 2026-07-27]` GPU-side profiling of `server_linear_algebra_seconds` found
    the 6 matmul stages are 99.5% of server time, with ciphertext-plaintext
    multiply-and-accumulate ~100% of one matmul call's internal cost (rotation/
@@ -72,7 +90,19 @@ correctness failure" condition below is met. Full comparison and rationale in
    passed correctness but returned an inconclusive timing result (host contention
    swamped the signal). See [tasks.md](tasks.md)'s 2026-07-27/28 subsections for
    the full evidence trail.
-8. **Closed, measured-negative.** FIDESlib's own `LinearTransform`/
+8. **T=103 attention packing blocker closed; complete block still open.** `[done,
+   2026-07-29]` The two-phase chunked causal softmax is now implemented with a fixed
+   `CHUNK_WIDTH=85`, passes all 27 local static/numpy contracts, builds under the
+   pinned FIDESlib commit, and passes the real A100 `attention` gate at the full
+   task-representative `T=103`: `global_rel_inf=3.66e-10`, `round_trips=5476`,
+   and `final_decrypt_calls=26=ceil(103/4)`. This is the first real-GPU validation
+   beyond the earlier `T<=85` score-packing ceiling. Immutable evidence:
+   `results/runs/fhe_fides_real_d768_t103_attention_general_attention_t103_scheme_b_a100_20260729.json`
+   (`sha256=8f22ccf7c34125710197b84ef0b571f2095f8fbb800f7eb42afbfdbf38b8daee`).
+   `[U]` Only block 0 through the attention projection is proven at T=103.
+   LN2/GELU/MLP, a complete T=103 block, GPU-memory telemetry at T=103, all 12
+   blocks, and the task-output head remain untested.
+9. **Closed, measured-negative.** FIDESlib's own `LinearTransform`/
    `LTdotProductPtBatch` native batched BSGS primitive (verified present in the
    pinned commit, used by FIDESlib's own `examples/bert-tiny/src/MatMul.cu`)
    was scoped against this repo's exact packing layout (compatible, three
@@ -87,3 +117,19 @@ correctness failure" condition below is met. Full comparison and rationale in
    negative signal. See [tasks.md](tasks.md)'s 2026-07-28 "`LinearTransform`
    scoping", "Step 2: single-call-site implementation", and "isolated
    single-call-site gate" subsections for the full evidence trail.
+10. **Token-SIMD linear leverage proven; complete packed block next.** `[done,
+    2026-07-30]` An additive T=103 micro-gate packs B=8 logical token lanes into
+    each ciphertext and compares exact client LN1 plus the real encrypted query
+    projection against a same-source serial control. Both real-A100 modes pass
+    the unchanged accuracy/privacy gates. Matrix products fall from 103 to 13
+    (`7.923x`), while observed encrypted-evaluation time falls from `2260.08s`
+    to `306.54s` (`7.3728x`). PID-specific peaks are `15992 MiB` serial and
+    `9848 MiB` packed. Immutable correctness and telemetry evidence is in the
+    four `results/runs/*simd_linear_t103*20260730_v2.json` files; exact hashes
+    and reproduction commands are in [tasks.md](tasks.md).
+    `[U]` The timing pair is shared-host/co-tenant-contaminated and ran on
+    different physical A100s in different windows, so it is an observed event
+    ratio, not a clean dedicated-A100 claim. `[U]` Only LN1 plus one dense call
+    is proven. The next gate is a new additive complete packed T=103 block with
+    process-specific VRAM telemetry; end-to-end runtime must not be extrapolated
+    until packed attention and all remaining block stages pass.

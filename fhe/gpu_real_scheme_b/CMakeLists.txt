@@ -164,3 +164,106 @@ set_target_properties(real_dnagpt_fides_scheme_b_general_attention_t8 PROPERTIES
     CUDA_RESOLVE_DEVICE_SYMBOLS ON
     CUDA_SEPARABLE_COMPILATION ON
     POSITION_INDEPENDENT_CODE ON)
+
+add_executable(real_dnagpt_fides_scheme_b_general_attention_t32 src/real_dnagpt_fides_scheme_b_general_attention_t32.cpp)
+set_source_files_properties(src/real_dnagpt_fides_scheme_b_general_attention_t32.cpp PROPERTIES LANGUAGE CUDA)
+target_link_libraries(real_dnagpt_fides_scheme_b_general_attention_t32 PRIVATE
+    fideslib::fideslib
+    OpenMP::OpenMP_CXX)
+target_compile_options(real_dnagpt_fides_scheme_b_general_attention_t32 PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>
+    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wall,-Wextra,-Wpedantic>)
+set_target_properties(real_dnagpt_fides_scheme_b_general_attention_t32 PROPERTIES
+    CUDA_RESOLVE_DEVICE_SYMBOLS ON
+    CUDA_SEPARABLE_COMPILATION ON
+    POSITION_INDEPENDENT_CODE ON)
+
+add_executable(real_dnagpt_fides_scheme_b_general_attention_t103 src/real_dnagpt_fides_scheme_b_general_attention_t103.cpp)
+set_source_files_properties(src/real_dnagpt_fides_scheme_b_general_attention_t103.cpp PROPERTIES LANGUAGE CUDA)
+target_link_libraries(real_dnagpt_fides_scheme_b_general_attention_t103 PRIVATE
+    fideslib::fideslib
+    OpenMP::OpenMP_CXX)
+target_compile_options(real_dnagpt_fides_scheme_b_general_attention_t103 PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>
+    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wall,-Wextra,-Wpedantic>)
+set_target_properties(real_dnagpt_fides_scheme_b_general_attention_t103 PROPERTIES
+    CUDA_RESOLVE_DEVICE_SYMBOLS ON
+    CUDA_SEPARABLE_COMPILATION ON
+    POSITION_INDEPENDENT_CODE ON)
+
+add_executable(real_dnagpt_fides_scheme_b_simd_linear_t103
+    src/real_dnagpt_fides_scheme_b_simd_linear_t103.cpp)
+set_source_files_properties(
+    src/real_dnagpt_fides_scheme_b_simd_linear_t103.cpp
+    PROPERTIES LANGUAGE CUDA)
+target_link_libraries(real_dnagpt_fides_scheme_b_simd_linear_t103 PRIVATE
+    fideslib::fideslib
+    OpenMP::OpenMP_CXX)
+target_compile_options(real_dnagpt_fides_scheme_b_simd_linear_t103 PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>
+    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wall,-Wextra,-Wpedantic>)
+set_target_properties(real_dnagpt_fides_scheme_b_simd_linear_t103 PROPERTIES
+    CUDA_RESOLVE_DEVICE_SYMBOLS ON
+    CUDA_SEPARABLE_COMPILATION ON
+    POSITION_INDEPENDENT_CODE ON)
+
+add_executable(real_dnagpt_fides_scheme_b_simd_full_t103
+    src/real_dnagpt_fides_scheme_b_simd_full_t103.cpp)
+set_source_files_properties(
+    src/real_dnagpt_fides_scheme_b_simd_full_t103.cpp
+    PROPERTIES LANGUAGE CUDA)
+target_link_libraries(real_dnagpt_fides_scheme_b_simd_full_t103 PRIVATE
+    fideslib::fideslib
+    OpenMP::OpenMP_CXX)
+target_compile_options(real_dnagpt_fides_scheme_b_simd_full_t103 PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>
+    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wall,-Wextra,-Wpedantic>)
+set_target_properties(real_dnagpt_fides_scheme_b_simd_full_t103 PROPERTIES
+    CUDA_RESOLVE_DEVICE_SYMBOLS ON
+    CUDA_SEPARABLE_COMPILATION ON
+    POSITION_INDEPENDENT_CODE ON)
+
+add_executable(real_dnagpt_fides_scheme_b_two_block_refresh src/real_dnagpt_fides_scheme_b_two_block_refresh.cpp)
+set_source_files_properties(src/real_dnagpt_fides_scheme_b_two_block_refresh.cpp PROPERTIES LANGUAGE CUDA)
+target_link_libraries(real_dnagpt_fides_scheme_b_two_block_refresh PRIVATE
+    fideslib::fideslib
+    OpenMP::OpenMP_CXX)
+target_compile_options(real_dnagpt_fides_scheme_b_two_block_refresh PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>
+    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wall,-Wextra,-Wpedantic>)
+set_target_properties(real_dnagpt_fides_scheme_b_two_block_refresh PROPERTIES
+    CUDA_RESOLVE_DEVICE_SYMBOLS ON
+    CUDA_SEPARABLE_COMPILATION ON
+    POSITION_INDEPENDENT_CODE ON)
+
+add_executable(real_dnagpt_fides_scheme_b_two_block_refresh_depth12
+    src/real_dnagpt_fides_scheme_b_two_block_refresh_depth12.cpp)
+set_source_files_properties(
+    src/real_dnagpt_fides_scheme_b_two_block_refresh_depth12.cpp
+    PROPERTIES LANGUAGE CUDA)
+target_link_libraries(real_dnagpt_fides_scheme_b_two_block_refresh_depth12 PRIVATE
+    fideslib::fideslib
+    OpenMP::OpenMP_CXX)
+target_compile_options(real_dnagpt_fides_scheme_b_two_block_refresh_depth12 PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>
+    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wall,-Wextra,-Wpedantic>)
+set_target_properties(real_dnagpt_fides_scheme_b_two_block_refresh_depth12 PROPERTIES
+    CUDA_RESOLVE_DEVICE_SYMBOLS ON
+    CUDA_SEPARABLE_COMPILATION ON
+    POSITION_INDEPENDENT_CODE ON)
+
+add_executable(real_dnagpt_fides_scheme_b_all_blocks_head_t2
+    src/real_dnagpt_fides_scheme_b_all_blocks_head_t2.cpp)
+set_source_files_properties(
+    src/real_dnagpt_fides_scheme_b_all_blocks_head_t2.cpp
+    PROPERTIES LANGUAGE CUDA)
+target_link_libraries(real_dnagpt_fides_scheme_b_all_blocks_head_t2 PRIVATE
+    fideslib::fideslib
+    OpenMP::OpenMP_CXX)
+target_compile_options(real_dnagpt_fides_scheme_b_all_blocks_head_t2 PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>
+    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wall,-Wextra,-Wpedantic>)
+set_target_properties(real_dnagpt_fides_scheme_b_all_blocks_head_t2 PROPERTIES
+    CUDA_RESOLVE_DEVICE_SYMBOLS ON
+    CUDA_SEPARABLE_COMPILATION ON
+    POSITION_INDEPENDENT_CODE ON)
