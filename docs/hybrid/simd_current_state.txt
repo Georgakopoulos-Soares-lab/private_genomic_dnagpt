@@ -20,8 +20,9 @@ not treated as measured evidence.
 1. Executive state
 ------------------
 
-[V] Scheme B is numerically accurate at every tested size. Error is around
-    1e-10, far below the unchanged 4e-2 accuracy gate.
+[V] Scheme B is numerically accurate at every tested size. The complete packed
+    T=103 block reaches 4.78e-9 error, still about 8.37 million times inside the
+    unchanged 4e-2 accuracy gate.
 
 [V] The T=32 packing fixes pass both attention and full-block real-GPU gates.
 
@@ -68,10 +69,15 @@ not treated as measured evidence.
     306.54s (7.3728x). PID-specific peaks are 15992 MiB serial versus
     9848 MiB packed.
 
-[U] The observed timing pair is shared-host and co-tenant-contaminated. The
-    modes ran at different times on different physical A100s, so the clean,
-    uncontended speedup remains unmeasured. A complete packed block is also
-    not yet implemented or run.
+[V] The complete B=8 Token-SIMD T=103 block now passes every block stage:
+    global_rel_inf=4.78e-9, 156 dense products versus 1236 serial-equivalent,
+    857 client crossings, and packed_output_level=6. Its target PID peaks at
+    12920 MiB, proving one complete task-length block fits an 80GB A100.
+
+[U] The observed timing pair and complete-block run are shared-host and
+    co-tenant-contaminated. The complete block measured 6281.75s encrypted
+    evaluation, but the same GPU later held a 65868 MiB cotenant; clean,
+    uncontended throughput remains unmeasured.
 
 
 2. Verified accuracy evidence
@@ -114,9 +120,21 @@ T=32 full block 0:
   evidence:
     results/runs/fhe_fides_real_d768_t32_full_general_attention_t32_scheme_b_a100_20260729.json
 
+T=103 complete packed full block 0:
+  global_rel_inf       = 4.777473702899847e-9
+  worst_token_rel_inf  = 5.07508500941268e-9
+  max_abs_error        = 7.659995376191331e-8
+  tolerance            = 4.00e-2
+  passed               = true
+  result SHA-256:
+    333461fbd83aad670d57f11d418cdb525d33d09e9d90d0f0390aaba2e8b6d6f5
+  evidence:
+    results/runs/fhe_fides_real_d768_t103_block0_simd_full_t103_scheme_b_a100_20260730.json
+
 Conclusion:
-  [V] Accuracy is not the observed scaling constraint. T=32 full-block error is
-      approximately 1.6e8 times smaller than the 4e-2 gate.
+  [V] Accuracy is not the observed single-block scaling constraint. T=103
+      complete-block error is approximately 8.37e6 times smaller than the
+      4e-2 gate.
 
 
 3. Verified execution-cost evidence
@@ -560,23 +578,244 @@ Serial-control evidence:
     local attention schedule and process-specific VRAM telemetry.
 
 
+8c. Complete real Token-SIMD block obtained on 2026-07-30
+----------------------------------------------------------
+
+Correctness evidence:
+  results/runs/fhe_fides_real_d768_t103_block0_simd_full_t103_scheme_b_a100_20260730.json
+  SHA-256:
+    333461fbd83aad670d57f11d418cdb525d33d09e9d90d0f0390aaba2e8b6d6f5
+
+VRAM evidence:
+  results/runs/fhe_fides_real_d768_t103_block0_simd_full_t103_scheme_b_vram_a100_20260730.json
+  SHA-256:
+    9157f2e1188e68859ac9f2cb8ebe75a83f76952be7fdb84e4b3f87350c1fa752
+
+[V] The full LN1/QKV/causal-softmax/attention-projection/LN2/GELU/MLP/
+    residual graph passes:
+  global_rel_inf                    = 4.777473702899847e-9
+  worst_token_rel_inf               = 5.07508500941268e-9
+  matrix products                   = 156
+  serial-equivalent products        = 1236
+  exact dense-call reduction        = 7.923076923x
+  client crossings                  = 857
+  encrypted evaluation              = 6281.748445232s
+  server linear algebra             = 6140.143438612s
+  client boundary time              = 141.605006620s
+  packed output level               = 6
+
+[V] PID-specific peak allocation is 12920 MiB across 1196 samples. This
+    resolves single-block T=103 capacity positively for one 80GB A100.
+
+[U] Timing is heavily contaminated. The run launched after a clean preflight,
+    but later whole-GPU allocation reached 76757 MiB and one cotenant process
+    reached 65868 MiB. The 104.7-minute encrypted-evaluation observation is not
+    a dedicated-A100 benchmark.
+
+[A] Naively multiplying this contaminated block observation by 12 gives
+    20.94 hours. This is a planning bound, not measured end-to-end evidence.
+    T=103 multi-block refresh composition, all 12 blocks, and the task head
+    remain untested.
+
+
 9. MULT_DEPTH interaction
 -------------------------
 
 [V] Current MULT_DEPTH=16 is a source-commented conservative placeholder.
     Measured packed output reaches only level 6.
 
-[V] An additive depth-12 source and contract exist, and the source compiled in
-    the pinned remote environment.
+[V] A separate additive depth-12 source and contract exist for the T=2
+    serial-layout composition work, and that source compiled in the pinned
+    remote environment. It is not a T=103 Token-SIMD depth result.
 
-[U] No depth-12 GPU evidence exists.
+[U] No reduced-depth T=103 Token-SIMD GPU evidence exists.
 
-[U] If depth reduction changes ring_dim from 65536 to 32768, each operation may
-    become materially cheaper, but maximum complex slots also fall from 32768
-    to 16384. With a 4096-slot logical token lane, Token-SIMD capacity would
-    fall from B=8 to B=4. The lower operation cost and lower SIMD width may
-    cancel in throughput. Depth and Token-SIMD must therefore be evaluated
-    together rather than multiplying two optimistic speedups.
+[V] (2026-07-30) Three additive depth-8-family forks, each pinned to its exact
+    parent source hash:
+      1. plain depth-8, LARGE_DIGITS=4, source sha256 58c25752...50882 --
+         FAILED at OpenFHE context construction: nine towers could not be
+         validly distributed over four HYBRID large digits. No evidence JSON.
+      2. depth8_digits3, LARGE_DIGITS=3, source sha256 c53e4712...08c089,
+         parent = fork 1 -- also FAILED at context construction: passed digit
+         distribution but OpenFHE auto-selected a ring below the 32768-slot
+         requirement ("batch size cannot be larger than ring dimension / 2").
+         No evidence JSON.
+      3. depth8_digits3_ring65536, source sha256 65cc818c...be161365, parent
+         = fork 2, adds explicit SetRingDim(65536) -- local contract, full
+         local discovery, remote contract, and CUDA compile all pass.
+         Capacity-gated watcher (tag ..._depth8_digits3_ring65536_scheme_b_
+         a100_20260730) cleared the host-load gate at 2026-07-30T12:34:39Z
+         (load1=170.49 vs threshold 250) and launched on GPU 0. It FAILED at
+         2026-07-30T13:04:09Z, exit status 2, this time during actual
+         encrypted evaluation, not context construction: last logged stage
+         is the final causal score tile q=12 k=12 (13th/last partial token
+         group), then "vector::_M_range_check: __n (which is
+         18446744073709551615) >= this->size() (which is 9)" -- an
+         unsigned-underflow index into a 9-element vector (9 matches the
+         depth-8 tower count). [V] The fork's own additive source has
+         exactly one std::vector::at() call site (baby_rotations, loop
+         small runs 1..BSGS_N1-1, so small-1 never underflows) -- the
+         crash is NOT in this fork's own new code. [U] It originates
+         inside the linked FIDESlib/OpenFHE library's internal
+         level/digit/tower bookkeeping, in a path this depth=8/3-digit/
+         ring=65536 combination exercises that the depth-16 baseline
+         never does; not yet isolated to a specific library function, and
+         not fixable by editing only the additive .cpp fork. No evidence
+         JSON. Raw logs preserved and hashed (run.log sha256
+         eee7b4c9...96880f, orchestrator.log sha256 26c5a531...86ccac,
+         both verified byte-identical to the remote copies). A corrected
+         fork must use a new source filename and run tag; this one must
+         not be reused.
+    [U] Both context-construction failures (forks 1-2) are rejections
+    before any encrypted evaluation; fork 3's failure is a runtime crash
+    during evaluation. None are accuracy or runtime results.
+
+[V] (2026-07-30) Root cause narrowed by reading the vendored FIDESlib
+    source (local audit clone, commit 786c7600fb2f16b724e0acf73df367b27b8afed6):
+    Ciphertext::rescale() (Ciphertext.cpp:435) does
+    cc.param.ModReduceFactor.at(c0.getLevel()), ModReduceFactor sized L+1
+    (9 for MULT_DEPTH=8, matching the crash's size()==9). RNSPoly::rescale()
+    (RNSPoly.cpp:333-339,363) decrements level unconditionally with no
+    lower-bound guard (unlike setLevel(), which asserts level>=-1). One
+    redundant rescale drives level to -1; the next rescale() call then reads
+    getLevel()==-1, indexing ModReduceFactor.at(size_t(-1)) -- the observed
+    underflow. Consistent with the final tile's partial-group mask multiply
+    (masking 7 of 8 lanes in the 13th group) needing one more level than the
+    12 full-group tiles; MULT_DEPTH=16 had headroom to absorb it, MULT_DEPTH=8
+    does not. [U] Hypothesis from reading the code, not an instrumented
+    trace of the failing run.
+
+[V] (2026-07-30) Fork 4: real_dnagpt_fides_scheme_b_simd_full_t103_depth9_digits3_ring65536.cpp
+    (source sha256 738da0c0...98ae235, parent = fork 3, sha256
+    65cc818c...be161365). Changes only MULT_DEPTH (8->9) and identity/log
+    strings -- one extra level of headroom, no FIDESlib patch. Local CPU
+    OpenFHE-Python probe (scratch-only) confirms depth=9/3-digit/ring=65536
+    constructs without the OpenFHE-level rejection that killed forks 1-2.
+    Local contract 7/7, remote contract 7/7 (same source hash), remote CUDA
+    compile clean (27s). Capacity watcher (tag
+    ..._depth9_digits3_ring65536_scheme_b_a100_20260730, PID 1024611) queued
+    2026-07-30T18:20:26Z. [U] No accuracy/runtime/memory claim until an
+    immutable results/runs JSON lands.
+
+    [V] (2026-07-30) Gate cleared, launched 2026-07-30T18:33:27Z on GPU 0
+    (4 pre-existing compute processes on that GPU at preflight -- [U]
+    co-tenant-contaminated). Made real progress past fork 3's crash point:
+    all 91 causal score tiles completed, including the previously-fatal
+    final q=12 k=12 tile. Failed differently at 2026-07-30T19:19:28Z, exit 2:
+    OpenFHE "Decode(): approximation error is too high" (ckkspackedencoding.cpp:453),
+    not the vector-underflow crash again. Source-pinned to
+    Client::reduce_score_tile (line 526), the client-boundary decrypt called
+    right after each score tile -- so specifically the last/deepest tile's
+    decrypt fails; the other 90 decrypted fine. [U] Read as depth 9 (10
+    towers) still one level short of enough remaining precision at that one
+    worst-case ciphertext, not a distinct bug. No evidence JSON. Raw logs
+    hashed (run.log sha256 d0c54ed0...39f11, orchestrator.log sha256
+    52353527...763da2, both verified byte-identical to remote).
+
+[V] (2026-07-30) Fork 5: real_dnagpt_fides_scheme_b_simd_full_t103_depth10_digits3_ring65536.cpp
+    (source sha256 703a72d8...9333d5ca2, parent = fork 4, sha256
+    738da0c0...98ae235). Changes only MULT_DEPTH (9->10) and identity/log
+    strings -- one more level targeting the last tile's decode-precision
+    shortfall, no FIDESlib patch. Local CPU probe confirms context
+    construction. Local contract 7/7, remote contract 7/7, remote CUDA
+    compile clean (27s). Queued and launched immediately
+    (2026-07-30T19:59:15Z, tag ..._depth10_digits3_ring65536_scheme_b_
+    a100_20260730, PID 1453974) -- clean preflight (compute_processes=0),
+    unlike the contaminated fork-4 launch. [U] No accuracy/runtime/memory
+    claim until an immutable results/runs JSON lands.
+
+    [V] (2026-07-30) Further progress, then failed a third, distinct way:
+    got past all 91 score tiles AND the fork-4 decode-precision failure,
+    through attention projection/residual/LN2 boundary ([boundary] ln2
+    logical=8). Failed at 2026-07-30T20:20:30Z, exit 2, with the fork's own
+    self-diagnosing check: "insufficient depth before Token-SIMD MLP group 0"
+    -- require_remaining_depth(normalized2->GetLevel(), 4, ...) throws when
+    fewer than 4 levels remain under MULT_DEPTH=10. [U] Exact consumed level
+    at that point not logged (only QKV level=3 is printed anywhere in this
+    source); hand-deriving it is unreliable since the client-boundary
+    refresh pattern only resets one operand of each subsequent multiply and
+    there is no explicit level-alignment call, so behavior depends on how
+    FIDESlib's EvalMult handles mismatched operand levels internally.
+    Next step: a diagnostic-only fork that prints normalized2->GetLevel()
+    before the check, instead of continuing to blindly increment
+    MULT_DEPTH. No evidence JSON. Raw logs hashed (run.log sha256
+    0ab3e863...9364dcf9, orchestrator.log sha256 2fe76537...91169fecf, both
+    verified byte-identical to remote).
+
+[V] (2026-07-30) Diagnostic-only fork: ..._depth10_diag_digits3_ring65536.cpp
+    (source sha256 258e0da1...0c72e82, parent = fork 5, sha256
+    703a72d8...9333d5ca2). Changes only identity/log strings plus one added
+    line printing normalized2->GetLevel() before the existing
+    require_remaining_depth guard; MULT_DEPTH stays 10 unchanged, no
+    crypto/schedule change, no FIDESlib patch. Local+remote contract 7/7,
+    remote CUDA compile clean (32s). Queued (PID 1772313) at
+    2026-07-30T20:48:23Z. [U] Expected to fail identically to fork 5 (same
+    guard, same MULT_DEPTH) -- purpose is only to reveal the exact level so
+    the next fork picks the correct MULT_DEPTH in one step.
+
+    [V] (2026-07-31) Launched 2026-07-30T20:59:24Z, failed exactly as
+    expected at 2026-07-30T21:22:39Z with the same guard. Printed
+    "[diag] ln2 group=0 level=9" right before the throw. [V] Minimum
+    passing MULT_DEPTH for this graph = 9 + 4 = 13 (answers main question 1,
+    pending confirmation by an actual passing run). Raw logs hashed
+    (run.log sha256 41d84f7a...6d845, orchestrator.log sha256
+    f74135c1...4649fdc6986, both verified byte-identical to remote). Local
+    CPU probe confirms depth=13/3-digit/ring=65536 constructs -- proceeding
+    directly to a depth-13 fork.
+
+[V] (2026-07-31) Fork 7: real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536.cpp
+    (source sha256 6e8cd08e...d215fbe5e, parent = fork 5, sha256
+    703a72d8...9333d5ca2). Changes only MULT_DEPTH (10->13) and
+    identity/log strings, no FIDESlib patch. Local contract 7/7, remote
+    contract 7/7, remote CUDA compile clean (27s). Queued and launched
+    (tag ..._depth13_digits3_ring65536_scheme_b_a100_20260731, PID
+    3511176) at 2026-07-31T07:55:49Z. [U] No accuracy/runtime/memory claim
+    until an immutable results/runs JSON lands.
+
+    [V] (2026-07-31) PASSED -- first passing depth-8-family result. Launched
+    2026-07-31T08:09:51Z on physical GPU 4 (4 pre-existing compute
+    processes at preflight -- contaminated). No [stage] output appeared for
+    over an hour; docker top confirmed the process was actively burning CPU
+    the whole time (rising ~77 to ~110 core-equivalents) -- ordinary
+    fully-buffered stdio, not a hang: the ~205-line run.log wrote all at
+    once near completion, and context_keygen_load=4.15s in the evidence
+    JSON proves keygen was fast; the silence was genuine slow contaminated
+    compute (server_linear_algebra_seconds=4448.87s). Completed
+    (.done=0) 2026-07-31T09:27:41Z, GATE_PASS.
+    global_rel_inf=4.35054978665743e-9, tighter than the depth-16
+    baseline's 4.777e-9, both far inside the unchanged 4e-2 gate.
+    packed_output_level=6, identical to the depth-16 baseline -- confirms
+    final output level is graph-invariant regardless of depth budget,
+    exactly matching the "evidence of headroom, not proof" caveat: the
+    deepest mid-graph point (LN2, level 9) needed far more budget than the
+    final level suggested. Encrypted evaluation: 4662.22s total (4448.87s
+    server + 213.35s client) vs depth-16's 6281.75s (6140.14s + 141.61s) --
+    about 25.8% faster overall. [U] Directional only: both single-sample,
+    co-tenant-contaminated runs; not the 2-3 repeats docs/roadmap.md
+    requires for a reported stable speedup. Peak PID VRAM: 9834 MiB (below
+    depth-16's 12920 MiB, consistent with 14 vs 17 towers).
+
+    Immutable evidence: correctness
+    results/runs/..._depth13_digits3_ring65536_scheme_b_a100_20260731.json
+    (sha256 fe1016b5...84b11cb); VRAM
+    results/runs/..._depth13_digits3_ring65536_scheme_b_vram_a100_20260731.json
+    (sha256 c8655002...251b5e73); both pulled and verified byte-identical
+    to remote before writing. Manifest rows appended.
+
+    THIS ANSWERS MAIN QUESTION 1: minimum passing MULT_DEPTH for the
+    complete B=8 T=103 block at unchanged security = 13 (3 HYBRID digits,
+    ring 65536, scale 50). Questions 2-7 (uncontended-A100 speed/memory,
+    further error-budget tradeoffs, B=4 comparison, multi-GPU sharding,
+    multi-block composition, <=3h verdict) remain open.
+
+[V] The passing B=8 layout configures 32768 complex slots, which requires
+    ring_dim>=65536 independently of depth. Reducing depth cannot move this
+    exact packing to ring_dim=32768.
+
+[U] Reducing depth may still lower the live RNS-limb count and per-operation
+    cost. A smaller ring requires a separate B<=4 layout and doubles the dense
+    group count, so depth, packing width, accuracy, and runtime must be measured
+    together rather than multiplying optimistic speedups.
 
 
 10. Additive implementation plan
@@ -623,11 +862,11 @@ Phase 4: additive C++ prototype and static contract
   [DONE] Add and compile a FIDES-independent full-block C++ schedule contract.
   [DONE] Add a same-source serial control to isolate packed speedup.
   [DONE] Leave CMake/build/run/deployment untouched during the active T=103 run.
-  [DONE] Run the complete local Scheme B regression suite: 254/254 pass.
+  [DONE] Run the complete local Scheme B regression suite: 265/265 pass.
   [DONE] Add fail-closed build/run/launch/orchestrator wiring after T=103
          attention completed.
-  [TODO] Extend from the dense-linear micro-gate to a full packed block only
-         after the micro-gate compiles and demonstrates leverage.
+  [DONE] Extend from the dense-linear micro-gate to a full packed block after
+         the micro-gate compiled and demonstrated leverage.
 
 Phase 5: remote matched micro-gate
   [DONE] Contract-test and compile before any GPU allocation.
@@ -638,11 +877,11 @@ Phase 5: remote matched micro-gate
          packed-block implementation.
 
 Phase 6: complete packed T=103 block
-  [TODO] Extend the locally proved schedule into a new additive C++ source.
-  [TODO] Contract-test exact causal coverage, partial groups, boundary counts,
+  [DONE] Extend the locally proved schedule into a new additive C++ source.
+  [DONE] Contract-test exact causal coverage, partial groups, boundary counts,
          operation counts, fixture/source hashes, and output comparison.
-  [TODO] Compile before GPU allocation.
-  [TODO] Run only through the idle-GPU capacity gate and capture PID-specific
+  [DONE] Compile before GPU allocation.
+  [DONE] Run only through the idle-GPU capacity gate and capture PID-specific
          VRAM with immutable evidence.
 
 
@@ -676,14 +915,39 @@ Required future GPU evidence:
 -------------------------------------
 
 Active external work:
-  The T=103 chunked-softmax attention gate completed and is banked. Its follow-on
-  full gate was not launched.
+  The complete depth-16 T=103 block gate completed and is banked. All three
+  depth-8-family forks have now failed -- see section 9: two (4-digit,
+  3-digit) at OpenFHE context construction before reaching a GPU; the third
+  (digits3_ring65536) with a runtime vector-index underflow during actual
+  encrypted evaluation, at the final causal score tile. No evidence JSON
+  exists for depth 8 in any form. Root cause read from the vendored FIDESlib
+  source: an unguarded level-underflow in RNSPoly::rescale/Ciphertext::rescale,
+  triggered because the final tile's partial-group mask multiply needs one
+  more level than MULT_DEPTH=8 budgets. A depth-9 fork (fork 4, one-line
+  MULT_DEPTH change, no FIDESlib patch) passed local+remote contract and
+  remote CUDA compile, ran, and got past all 91 score tiles (fixing the
+  crash), but then failed at the last tile's client-boundary decrypt with
+  an OpenFHE "approximation error too high" -- read as still one level
+  short of enough remaining precision, not a distinct bug. A depth-10 fork
+  (fork 5) got further still (past all 91 tiles, attention projection,
+  residual, LN2 boundary) then hit its own require_remaining_depth guard
+  ("insufficient depth before Token-SIMD MLP group 0"). A diagnostic-only
+  sibling (depth10_diag, MULT_DEPTH unchanged) printed the exact level: 9.
+  Minimum passing MULT_DEPTH = 9 + 4 = 13. A depth-13 fork (fork 7) PASSED
+  2026-07-31T09:27:41Z: global_rel_inf=4.35e-9, packed_output_level=6
+  (same as depth-16), encrypted evaluation 4662.22s (vs depth-16's
+  6281.75s, directional only -- both contaminated single samples), peak
+  PID VRAM 9834 MiB. This is the first passing depth-8-family result and
+  answers main question 1 (minimum passing MULT_DEPTH = 13).
 
 This workstream:
-  The Token-SIMD packed/serial-control pair completed and is banked. No SIMD
-  process is currently queued or running on Brev. The next owned step is a new
-  complete packed-block source and contract, developed locally before any
-  further remote run.
+  The Token-SIMD packed/serial-control pair, complete packed T=103 block,
+  and the minimum-passing-depth answer (MULT_DEPTH=13) are all banked. The
+  next owned step is any further depth/scale Pareto sweep (e.g. whether a
+  smaller scale or fewer digits still passes at depth 13, or whether B=4
+  changes the picture), T=103 multi-block refresh composition, or
+  multi-GPU measurement -- per docs/roadmap.md's one-variable-at-a-time
+  rule and "no multi-GPU work until single-GPU throughput is measured."
 
 Files this workstream may add:
   a new Token-SIMD local contract/prototype and, after local proof, additive

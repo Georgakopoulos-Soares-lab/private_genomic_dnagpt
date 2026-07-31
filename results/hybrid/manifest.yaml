@@ -1228,3 +1228,183 @@ runs:
       packed run's target-PID peak. [U] A co-tenant occupied the same GPU, so
       whole-GPU memory and utilization are not attributable. [U] This isolated
       micro-gate does not establish complete-block T=103 memory sufficiency.
+
+  - id: fhe_fides_real_d768_t103_block0_simd_full_t103_scheme_b_a100_20260730
+    task: "Complete released-weight block-0 at T=103 with B=8 Token-SIMD Scheme B"
+    status: "[V] PASS; timing speed-contaminated"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 0 [gpu] (clean preflight; multiple co-tenants later occupied the GPU)"
+    config:
+      dimension: 768
+      sequence_length: 103
+      token_batch: 8
+      token_groups: 13
+      batch_slots: 32768
+      ring_dim: 65536
+      multiplicative_depth: 16
+      scale_bits: 50
+      rotation_keys: 80
+      matrix_products: 156
+      frozen_equivalent_matrix_products: 1236
+      dense_call_reduction: 7.923076923076923
+      packed_output_level: 6
+      ciphertext_ciphertext_multiplications: 1506
+      ciphertext_plaintext_multiplications: 177734
+      explicit_rotations: 8173
+      accumulate_sum_calls: 8776
+    metrics:
+      global_rel_inf: 4.777473702899847e-09
+      worst_token_rel_inf: 5.07508500941268e-09
+      max_abs_error: 7.659995376191331e-08
+      tolerance: 0.04
+      round_trips: 857
+      logical_boundary_instances: 129162
+      client_boundary_seconds_total: 141.60500662
+      server_linear_algebra_seconds: 6140.143438612
+      encrypted_evaluation_seconds: 6281.748445232
+      total_measured_stage_seconds: 6292.832251123
+      intermediate_decrypt_attempts: 0
+      final_decrypt_calls: 13
+    provenance:
+      result_sha256: "333461fbd83aad670d57f11d418cdb525d33d09e9d90d0f0390aaba2e8b6d6f5"
+      source_sha256: "97727a5bb2145b32749b746c3fc1b576811dfcc3222088278962b029fc1aea4b"
+      parent_source_sha256: "926be6b276006dd6435713efa168d189af02e02589d143684991380bae7e9233"
+      frozen_source_sha256: "70580ff0b4f12565921e0af8ce04e7b4c0d4253b51c0a8380ef0727ce85b2a0f"
+      schedule_sha256: "c6b221f365ba6326f615c5554458d7bd092990d23c4ba0d5106ca7577cb7c3aa"
+      fixture_manifest_sha256: "d2c90ba15c62c648495b51070eee585a3570dc174eb31e14782aaf016b31f8f6"
+      fixture_contract_sha256: "061d53bd25bbcaf75d4c12067ec77f032c3ba0e35300a0a6168c2ce15f3672db"
+      remote_run_log_sha256: "84480144fdb63f23e98223480485bb62276bfe87ba1303df06aad9fea1f9d59b"
+    verdict: >
+      [V] PASS. This is the first complete released-weight T=103 Scheme B
+      block. B=8 Token-SIMD reduces the exact dense-product count from 1236 to
+      156 while preserving the full LN1/QKV/causal-softmax/attention
+      projection/LN2/GELU/MLP/residual graph. Accuracy is 4.78e-9 relative
+      infinity error against the block-0 oracle, about 8.37 million times
+      inside the unchanged 4e-2 gate. [U] Multiple co-tenants arrived after a
+      clean preflight, so 6281.75s encrypted evaluation is an observed
+      shared-GPU wall time, not a clean throughput benchmark. [U] This remains
+      one block, not the chained 12-block graph or task head.
+
+  - id: fhe_fides_real_d768_t103_block0_simd_full_t103_scheme_b_vram_a100_20260730
+    task: "Process-specific GPU-memory telemetry for the passing T=103 packed Token-SIMD complete block"
+    status: "[V] measured; speed-contaminated"
+    backend: "nvidia-smi process-memory telemetry during FIDESlib CKKS/CUDA run"
+    environment: "Brev A100-SXM4-80GB physical GPU 0 [gpu]"
+    config:
+      sequence_length: 103
+      token_batch: 8
+      token_groups: 13
+      nominal_sampling_interval_seconds: 5
+      target_process_sample_count: 1196
+    metrics:
+      target_process_initial_memory_mib: 4716
+      target_process_peak_memory_mib: 12920
+      target_process_final_memory_mib: 12920
+      peak_first_seen_utc: "2026-07-30T09:29:59Z"
+      whole_gpu_peak_memory_mib: 76757
+      cotenant_peak_process_memory_mib: 65868
+    provenance:
+      result_sha256: "9157f2e1188e68859ac9f2cb8ebe75a83f76952be7fdb84e4b3f87350c1fa752"
+      raw_log_sha256: "dbb0ee603c445adcd79dad8117cbc0fdaa144c2e84c9edaa53c265c25fa4fc6c"
+      linked_correctness_result_sha256: "333461fbd83aad670d57f11d418cdb525d33d09e9d90d0f0390aaba2e8b6d6f5"
+    verdict: >
+      [V] The complete T=103 block's target PID peaks at 12920 MiB, resolving
+      single-block A100 capacity positively for this implementation. [U]
+      Whole-GPU memory and utilization are contaminated by later co-tenants
+      and are not attributed to this run. [U] One block fitting does not prove
+      that a future 12-block composition preserves the same bounded live set.
+
+  - id: fhe_fides_real_d768_t103_block0_simd_full_t103_depth13_digits3_ring65536_scheme_b_a100_20260731
+    task: "Complete released-weight block-0 at T=103, B=8 Token-SIMD Scheme B, first passing depth-8-family fork (MULT_DEPTH=13, 3 HYBRID digits, ring 65536)"
+    status: "[V] PASS; timing speed-contaminated"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 4 [gpu] (4 pre-existing compute processes at preflight; heavy host-wide contention throughout)"
+    config:
+      dimension: 768
+      sequence_length: 103
+      token_batch: 8
+      token_groups: 13
+      batch_slots: 32768
+      ring_dim: 65536
+      multiplicative_depth: 13
+      scale_bits: 50
+      rotation_keys: 80
+      matrix_products: 156
+      frozen_equivalent_matrix_products: 1236
+      dense_call_reduction: 7.923076923076923
+      packed_output_level: 6
+      ciphertext_ciphertext_multiplications: 1506
+      ciphertext_plaintext_multiplications: 177734
+      explicit_rotations: 8173
+      accumulate_sum_calls: 8776
+    metrics:
+      global_rel_inf: 4.35054978665743e-09
+      worst_token_rel_inf: 4.35054978665743e-09
+      max_abs_error: 6.975483973770125e-08
+      tolerance: 0.04
+      round_trips: 857
+      logical_boundary_instances: 129162
+      client_boundary_seconds_total: 213.35352870899993
+      server_linear_algebra_seconds: 4448.868146699
+      encrypted_evaluation_seconds: 4662.221675408
+      total_measured_stage_seconds: 4669.3142432
+      intermediate_decrypt_attempts: 0
+      final_decrypt_calls: 13
+    provenance:
+      result_sha256: "fe1016b5f6c690c04e794e3db8dfe86b69109c8d90dca68229849714784b11cb"
+      source_sha256: "6e8cd08efad1567d2f9001f69d10e302e45f4e634f3bd37e2245382d215fbe5e"
+      parent_source_sha256: "703a72d8dcc76cbe93234e04dcc953cce7daf0b48b64011ac1239129333d5ca2"
+      frozen_source_sha256: "70580ff0b4f12565921e0af8ce04e7b4c0d4253b51c0a8380ef0727ce85b2a0f"
+      schedule_sha256: "c6b221f365ba6326f615c5554458d7bd092990d23c4ba0d5106ca7577cb7c3aa"
+      fixture_manifest_sha256: "d2c90ba15c62c648495b51070eee585a3570dc174eb31e14782aaf016b31f8f6"
+      fixture_contract_sha256: "061d53bd25bbcaf75d4c12067ec77f032c3ba0e35300a0a6168c2ce15f3672db"
+      remote_run_log_sha256: "4e1da4ccae24d098fb3a62aa3b1527c1ad0963e279ea4ba13301aad154380fb1"
+    verdict: >
+      [V] PASS. This is the minimum passing MULT_DEPTH for the complete
+      released-weight T=103 Scheme B block, derived (not guessed): a
+      diagnostic fork measured 9 consumed CKKS levels at the LN2 output of
+      the deepest token group, and the frozen require_remaining_depth guard
+      needs 4 more, giving 13. Three depth-8-family forks failed first
+      (two at OpenFHE context construction over/under 4/3 HYBRID digits and
+      ring capacity, one with a FIDESlib-internal level-underflow crash, one
+      with an OpenFHE decode-precision failure at MULT_DEPTH=9/10 — see
+      docs/hybrid/tasks.md 2026-07-30/31 entries). Accuracy is 4.35e-9
+      relative infinity error against the block-0 oracle, tighter than the
+      depth-16 baseline's 4.78e-9, both far inside the unchanged 4e-2 gate.
+      [U] Encrypted evaluation (4662.22s vs the depth-16 baseline's
+      6281.75s) is directional only: both runs were co-tenant-contaminated
+      and this is a single sample, not the two-to-three repeats
+      docs/roadmap.md requires for a reported stable speedup. [U] This
+      remains one block, not the chained 12-block graph or task head.
+
+  - id: fhe_fides_real_d768_t103_block0_simd_full_t103_depth13_digits3_ring65536_scheme_b_vram_a100_20260731
+    task: "Process-specific GPU-memory telemetry for the first passing depth-8-family (MULT_DEPTH=13) T=103 packed Token-SIMD complete block"
+    status: "[V] measured; speed-contaminated"
+    backend: "nvidia-smi process-memory telemetry during FIDESlib CKKS/CUDA run"
+    environment: "Brev A100-SXM4-80GB physical GPU 4 [gpu]"
+    config:
+      sequence_length: 103
+      token_batch: 8
+      token_groups: 13
+      nominal_sampling_interval_seconds: 5
+      target_process_sample_count: 884
+    metrics:
+      target_process_initial_memory_mib: 5726
+      target_process_peak_memory_mib: 9834
+      target_process_final_memory_mib: 9728
+      peak_first_seen_utc: "2026-07-31T08:58:06Z"
+      whole_gpu_peak_memory_mib: 19273
+      cotenant_peak_process_memory_mib: 57412
+    provenance:
+      result_sha256: "c865500297124b690d70cda3d95e550004b2e67ec8694a92d3fb6b76251b5e73"
+      raw_log_sha256: "8a1e6c1e7fae2f40e09f9ab93fc2d5b1fa0d77ae84eb350166cea8396c4af279"
+      linked_correctness_result_sha256: "fe1016b5f6c690c04e794e3db8dfe86b69109c8d90dca68229849714784b11cb"
+    verdict: >
+      [V] The depth-13 complete T=103 block's target PID peaks at 9834 MiB,
+      lower than the depth-16 baseline's 12920 MiB peak (consistent with
+      fewer RNS towers, 14 vs 17), resolving single-block A100 capacity
+      positively at MULT_DEPTH=13 with headroom to spare. [U] Whole-GPU
+      memory and utilization are contaminated by pre-existing and
+      concurrent co-tenants and are not attributed to this run. [U] One
+      block fitting does not prove that a future 12-block composition
+      preserves the same bounded live set.

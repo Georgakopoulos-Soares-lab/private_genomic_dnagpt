@@ -1,0 +1,44 @@
+{
+  "schema_version": 1,
+  "task": "Process-specific GPU-memory telemetry for the first passing depth-8-family (MULT_DEPTH=13) T=103 packed Token-SIMD complete block-0 gate",
+  "measured_at_utc_start": "2026-07-31T08:09:56Z",
+  "measured_at_utc_end": "2026-07-31T09:27:41Z",
+  "status": "[V] measured; speed-contaminated",
+  "environment": "Brev A100-SXM4-80GB physical GPU 4 [gpu]",
+  "gpu": 4,
+  "process_pid": 3530648,
+  "sampling": {
+    "command": "nvidia-smi --query-gpu=index,uuid,memory.used,utilization.gpu --format=csv,noheader,nounits; nvidia-smi --query-compute-apps=pid,gpu_uuid,used_memory --format=csv,noheader,nounits",
+    "nominal_interval_seconds": 5,
+    "target_process_sample_count": 884,
+    "raw_log_sha256": "8a1e6c1e7fae2f40e09f9ab93fc2d5b1fa0d77ae84eb350166cea8396c4af279",
+    "run_log_sha256": "4e1da4ccae24d098fb3a62aa3b1527c1ad0963e279ea4ba13301aad154380fb1"
+  },
+  "process_memory_mib": {
+    "initial": 5726,
+    "minimum": 5726,
+    "final": 9728,
+    "peak": 9834,
+    "peak_first_seen_utc": "2026-07-31T08:58:06Z",
+    "interpretation": "[V] The depth-13/digits-3/ring-65536 complete block target process peaked at 9834 MiB -- well under one 80GB A100 and lower than the depth-16 baseline's 12920 MiB peak, consistent with fewer RNS towers (14 vs 17)."
+  },
+  "whole_gpu_observations": {
+    "peak_total_memory_mib": 19273,
+    "peak_utilization_percent": 94,
+    "peak_cotenant_process_memory_mib": 57412
+  },
+  "contamination": {
+    "present": true,
+    "effect": "[U] Preflight showed 4 pre-existing compute processes on physical GPU 4 (unlike the clean depth-9/depth-10 launches), and whole-host load was heavy throughout (other physical GPUs observed at 100% utilization from other tenants). Whole-GPU memory, utilization, and exact wall-clock throughput cannot be attributed only to this run. The target PID's process-memory samples and correctness result remain usable."
+  },
+  "linked_correctness_result": {
+    "path": "results/runs/fhe_fides_real_d768_t103_block0_simd_full_t103_depth13_digits3_ring65536_scheme_b_a100_20260731.json",
+    "sha256": "fe1016b5f6c690c04e794e3db8dfe86b69109c8d90dca68229849714784b11cb"
+  },
+  "limitations": [
+    "[U] nvidia-smi process memory is allocation-level telemetry, not a live-ciphertext object census.",
+    "[U] This is one complete block at T=103, not the chained 12-block graph or released task head.",
+    "[U] It proves that this block fits one 80GB A100 at MULT_DEPTH=13; it does not prove that a future composition keeps the same bounded live set.",
+    "[U] Timing (4662.22s total encrypted evaluation vs the depth-16 baseline's 6281.75s) is directional only -- both runs were co-tenant-contaminated and this is a single sample, not the two-to-three repeats required by docs/roadmap.md for a reported stable speedup."
+  ]
+}

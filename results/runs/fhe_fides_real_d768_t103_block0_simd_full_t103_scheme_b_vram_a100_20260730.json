@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "task": "Process-specific GPU-memory telemetry for the passing T=103 packed Token-SIMD complete block-0 gate",
+  "measured_at_utc_start": "2026-07-30T08:43:25Z",
+  "measured_at_utc_end": "2026-07-30T10:28:17Z",
+  "status": "[V] measured; speed-contaminated",
+  "environment": "Brev A100-SXM4-80GB physical GPU 0 [gpu]",
+  "gpu": 0,
+  "process_pid": 45476,
+  "sampling": {
+    "command": "nvidia-smi --query-gpu=index,uuid,memory.used,utilization.gpu --format=csv,noheader,nounits; nvidia-smi --query-compute-apps=pid,gpu_uuid,used_memory --format=csv,noheader,nounits",
+    "nominal_interval_seconds": 5,
+    "target_process_sample_count": 1196,
+    "raw_log_sha256": "dbb0ee603c445adcd79dad8117cbc0fdaa144c2e84c9edaa53c265c25fa4fc6c",
+    "run_log_sha256": "84480144fdb63f23e98223480485bb62276bfe87ba1303df06aad9fea1f9d59b"
+  },
+  "process_memory_mib": {
+    "initial": 4716,
+    "minimum": 4716,
+    "final": 12920,
+    "peak": 12920,
+    "peak_first_seen_utc": "2026-07-30T09:29:59Z",
+    "interpretation": "[V] The packed T=103 complete block target process peaked at 12920 MiB."
+  },
+  "whole_gpu_observations": {
+    "peak_total_memory_mib": 76757,
+    "peak_utilization_percent": 90,
+    "peak_cotenant_process_memory_mib": 65868
+  },
+  "contamination": {
+    "present": true,
+    "effect": "[U] Whole-GPU memory, utilization, and exact wall-clock throughput cannot be attributed only to this run. The target PID's process-memory samples and correctness result remain usable."
+  },
+  "linked_correctness_result": {
+    "path": "results/runs/fhe_fides_real_d768_t103_block0_simd_full_t103_scheme_b_a100_20260730.json",
+    "sha256": "333461fbd83aad670d57f11d418cdb525d33d09e9d90d0f0390aaba2e8b6d6f5"
+  },
+  "limitations": [
+    "[U] nvidia-smi process memory is allocation-level telemetry, not a live-ciphertext object census.",
+    "[U] This is one complete block at T=103, not the chained 12-block graph or released task head.",
+    "[U] It proves that this block fits one 80GB A100; it does not prove that a future composition keeps the same bounded live set."
+  ]
+}

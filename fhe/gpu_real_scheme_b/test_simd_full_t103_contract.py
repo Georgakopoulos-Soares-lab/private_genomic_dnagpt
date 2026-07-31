@@ -20,6 +20,7 @@ LINEAR_PARENT_SHA256 = (
 )
 FROZEN_T103_SHA256 = "70580ff0b4f12565921e0af8ce04e7b4c0d4253b51c0a8380ef0727ce85b2a0f"
 SCHEDULE_SHA256 = "c6b221f365ba6326f615c5554458d7bd092990d23c4ba0d5106ca7577cb7c3aa"
+FULL_SOURCE_SHA256 = "97727a5bb2145b32749b746c3fc1b576811dfcc3222088278962b029fc1aea4b"
 
 
 def sha256(path: Path) -> str:
@@ -184,6 +185,32 @@ class TokenSimdFullT103ContractTests(unittest.TestCase):
         self.assertIn(target, cmake)
         self.assertIn(target, build)
         self.assertIn(SOURCE.name, cmake)
+
+    def test_run_launch_and_capacity_gates_are_fail_closed(self) -> None:
+        run = (ROOT / "run_scheme_b_simd_full_t103.sh").read_text(encoding="utf-8")
+        launch = (ROOT / "launch_brev_scheme_b_simd_full_t103.sh").read_text(
+            encoding="utf-8"
+        )
+        wait = (ROOT / "wait_and_run_scheme_b_simd_full_t103.sh").read_text(
+            encoding="utf-8"
+        )
+        self.assertIn(FULL_SOURCE_SHA256, run)
+        for digest in (
+            LINEAR_PARENT_SHA256,
+            FROZEN_T103_SHA256,
+            SCHEDULE_SHA256,
+        ):
+            self.assertIn(digest, run)
+        self.assertIn("fixture_t103.sha256", run)
+        self.assertIn('if [[ -e "${OUTPUT}" ]]', run)
+        self.assertIn("run_scheme_b_simd_full_t103.sh", launch)
+        self.assertIn("gpucap_preflight_confirm_gpu", launch)
+        self.assertIn("nvidia-smi --query-compute-apps", launch)
+        self.assertIn("launch_brev_scheme_b_simd_full_t103.sh", wait)
+        self.assertIn("gpucap_wait_for_capacity", wait)
+        for script in (run, launch, wait):
+            self.assertIn("_simd_full_t103_", script)
+            self.assertNotIn("_simd_linear_t103_", script)
 
 
 if __name__ == "__main__":

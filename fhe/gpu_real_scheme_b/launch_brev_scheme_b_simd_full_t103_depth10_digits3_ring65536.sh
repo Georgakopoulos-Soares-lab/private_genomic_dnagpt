@@ -26,8 +26,8 @@ readonly OUTPUT="${SOURCE_DIR}/evidence/${RUN_TAG}.json"
 readonly CONTAINER_NAME="dnagpt-${RUN_TAG}"
 
 if [[ "${RUN_TAG}" != *"_scheme_b_"* ]] || \
-   [[ "${RUN_TAG}" != *"_simd_full_t103_"* ]]; then
-  echo "[FATAL] SIMD tag must contain _scheme_b_ and _simd_full_t103_" >&2
+   [[ "${RUN_TAG}" != *"_simd_full_t103_depth10_digits3_ring65536_"* ]]; then
+  echo "[FATAL] depth-10/digits-3/ring-65536 SIMD tag must contain _scheme_b_ and _simd_full_t103_depth10_digits3_ring65536_" >&2
   exit 2
 fi
 
@@ -81,7 +81,7 @@ nohup sh -c '
     -e "FIDES_RUN_ENVIRONMENT=Brev A100-SXM4-80GB physical GPU ${PHYSICAL_GPU} [gpu] (${PREFLIGHT_NOTE})" \
     --entrypoint /bin/bash \
     "${IMAGE_TAG}" \
-    "/work/${SOURCE_SUBDIR}/run_scheme_b_simd_full_t103.sh" \
+    "/work/${SOURCE_SUBDIR}/run_scheme_b_simd_full_t103_depth10_digits3_ring65536.sh" \
     0 \
     "/work/${FIXTURE_SUBDIR}" \
     "/work/${SOURCE_SUBDIR}/evidence/${RUN_TAG}.json" \

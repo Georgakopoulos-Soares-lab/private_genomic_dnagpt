@@ -1760,3 +1760,366 @@ fhe/gpu_real_scheme_b/run_scheme_b_simd_linear_t103.sh 0 \
   results/runs/<new_tag_containing_scheme_b_simd_linear_t103_serial_control_a100>.json \
   serial_control
 ```
+
+### Complete T=103 Token-SIMD block-0 gate (2026-07-30)
+
+The additive
+`real_dnagpt_fides_scheme_b_simd_full_t103.cpp` extends the proved B=8 layout
+through the complete released-weight block without changing any frozen Scheme B
+source. It evaluates LN1, Q/K/V, packed causal scores, exact stable softmax at
+the declared client boundary, encrypted weight/value accumulation, attention
+projection, the first residual, LN2, exact client GELU, all four MLP chunks,
+the MLP projection, and the final residual. The evaluator owns no secret key
+and makes no decrypt call.
+
+Fail-closed provenance:
+
+- source SHA-256:
+  `97727a5bb2145b32749b746c3fc1b576811dfcc3222088278962b029fc1aea4b`;
+- direct Token-SIMD linear parent:
+  `926be6b276006dd6435713efa168d189af02e02589d143684991380bae7e9233`;
+- frozen semantic T=103 anchor:
+  `70580ff0b4f12565921e0af8ce04e7b4c0d4253b51c0a8380ef0727ce85b2a0f`;
+- compiled schedule:
+  `c6b221f365ba6326f615c5554458d7bd092990d23c4ba0d5106ca7577cb7c3aa`;
+- static contract SHA-256:
+  `f7677e7a5bf4e68910d9e7a21af7f448ac14a3c886db5e5f38c7964a89f28a78`,
+  `11/11` pass;
+- complete local Scheme B discovery: `265/265` pass;
+- the target compiled cleanly under pinned FIDESlib commit
+  `786c7600fb2f16b724e0acf73df367b27b8afed6` before GPU allocation.
+
+`[V]` The real A100 full gate passes:
+
+- `global_rel_inf=4.777473702899847e-9`;
+- `worst_token_rel_inf=5.07508500941268e-9`;
+- `max_abs_error=7.659995376191331e-8`;
+- all values finite and the unchanged `4e-2` gate passes;
+- `156` encrypted dense products versus `1236` serial-equivalent
+  (`7.923076923x` exact reduction);
+- operation-count guards pass at `1506` ciphertext-ciphertext
+  multiplications, `177734` ciphertext-plaintext multiplications, `8173`
+  explicit rotations, and `8776` `AccumulateSum` calls;
+- protocol guards pass at `91` score-tile decryptions, `727` weight-tile
+  encryptions, `857` crossings, `129162` logical boundary instances, zero
+  intermediate decrypt attempts, and 13 final measurement decrypts;
+- `packed_output_level=6` under the conservative depth-16 context.
+
+Observed timing is `6281.748445232s` encrypted evaluation:
+`6140.143438612s` server linear algebra plus `141.605006620s` client
+boundaries. `[U]` This is correctness timing, not a dedicated-A100 benchmark.
+The run passed a clean preflight, but later acquired multiple co-tenants; one
+cotenant reached `65868 MiB` and whole-GPU allocation reached `76757 MiB`.
+
+`[V]` PID-specific telemetry contains 1196 five-second samples. The target
+process starts at `4716 MiB` and peaks/finalizes at `12920 MiB`. This resolves
+single-block T=103 capacity positively for an 80GB A100. `[U]` It does not
+prove that 12-block composition preserves the same bounded live set.
+
+Immutable evidence:
+
+- correctness:
+  `results/runs/fhe_fides_real_d768_t103_block0_simd_full_t103_scheme_b_a100_20260730.json`
+  (`sha256=333461fbd83aad670d57f11d418cdb525d33d09e9d90d0f0390aaba2e8b6d6f5`);
+- process-memory telemetry:
+  `results/runs/fhe_fides_real_d768_t103_block0_simd_full_t103_scheme_b_vram_a100_20260730.json`
+  (`sha256=9157f2e1188e68859ac9f2cb8ebe75a83f76952be7fdb84e4b3f87350c1fa752`);
+- raw remote run log:
+  `sha256=84480144fdb63f23e98223480485bb62276bfe87ba1303df06aad9fea1f9d59b`;
+- raw remote VRAM log:
+  `sha256=dbb0ee603c445adcd79dad8117cbc0fdaa144c2e84c9edaa53c265c25fa4fc6c`.
+
+Exact correctness reproduction (use a new immutable output/tag):
+
+```bash
+python3 fhe/gpu_real_scheme_b/test_simd_full_t103_contract.py -v
+# Build target real_dnagpt_fides_scheme_b_simd_full_t103 via
+# fhe/gpu_real_scheme_b/build_in_fideslib.sh in the pinned FIDESlib container.
+fhe/gpu_real_scheme_b/run_scheme_b_simd_full_t103.sh 0 \
+  checkpoints/fhe_exports/gsr_pos0_block0_t103_d63353abdc1a_52d046d1fcf0 \
+  results/runs/<new_tag_containing_scheme_b_simd_full_t103_a100>.json
+```
+
+`[A]` A naive 12-times multiplication of this contaminated block observation
+is `20.94h`; it is not a measured end-to-end result. `[U]` The next work is a
+minimum-depth/precision sweep, a clean complete-block benchmark, T=103
+multi-block refresh composition, and real multi-GPU sharding.
+
+`[V]` (2026-07-30) The plain depth-8 fork (`LARGE_DIGITS=4`, source SHA-256
+`58c257522eefe7a928e6efaa486af6dd3ac53c289fc07878bb41d5d5f9350882`, differing
+from the passing depth-16 source only in ten contract-enumerated
+identity/depth substitutions) **failed at OpenFHE context construction,
+before any encrypted evaluation**: nine towers could not be validly
+distributed over four HYBRID large digits. Its fork contract had passed
+`7/7`, full local discovery `272/272`, and the remote contract/compile had
+passed — the failure is a context-generation rejection, not an accuracy or
+runtime result, and produced no evidence JSON.
+
+`[V]` (2026-07-30) An additive `LARGE_DIGITS=3` fork
+(`real_dnagpt_fides_scheme_b_simd_full_t103_depth8_digits3.cpp`, source
+SHA-256 `c53e47123614bcddf6a577ca5cc1e22db786d234e953e5c31b6a488e3408c089`,
+parent = the depth-8/4-digit source above) passed the digit-distribution
+check but OpenFHE auto-selected a ring dimension below the 32,768-slot
+capacity the B=8 layout requires, and **also failed at context construction**
+("batch size cannot be larger than ring dimension / 2"). No evidence JSON.
+
+`[V]` (2026-07-30) A third additive fork
+(`real_dnagpt_fides_scheme_b_simd_full_t103_depth8_digits3_ring65536.cpp`,
+source SHA-256
+`65cc818cbb299af984cccdbe6a7df891cac5b7071f663edfac8c3f13be161365`, parent =
+the digits-3 source above) adds an explicit `SetRingDim(65536)`, which the
+B=8/32,768-slot layout requires independently of depth. Its local contract,
+full local discovery, remote contract, and CUDA target compile all pass. A
+detached capacity watcher (tag
+`fhe_fides_real_d768_t103_block0_simd_full_t103_depth8_digits3_ring65536_scheme_b_a100_20260730`)
+queued at host-load capacity; as of `2026-07-30T12:34:39Z` the gate cleared
+(`load1=170.49` vs threshold `250`) and the run launched on GPU 0.
+
+`[V]` (2026-07-30) This run **failed at `2026-07-30T13:04:09Z`, exit status
+`2`, this time during actual encrypted evaluation** (not context
+construction): the last logged stage is the final causal score tile
+`q=12 k=12` (the 13th/last partial token group), immediately followed by
+`error: vector::_M_range_check: __n (which is 18446744073709551615) >=
+this->size() (which is 9)` — an unsigned-underflow index (`__n` wrapped from
+`-1`) into a 9-element vector. `9` matches the depth-8 tower count (the same
+count the plain depth-8/4-digit fork's context construction rejected as
+undistributable over 4 digits). `[V]` The fork's own additive source has
+exactly one `std::vector::at()` call site (`baby_rotations`, loop `small`
+runs `1..BSGS_N1-1`, so `small - 1` never underflows) — the crash is **not**
+in this fork's own new code. `[U]` It therefore originates inside the linked
+FIDESlib/OpenFHE library's internal level/digit/tower bookkeeping, in a code
+path exercised specifically by this `depth=8`/`3-digit`/`ring=65536`
+combination that the passing depth-16 baseline never exercises; not yet
+isolated to a specific library function. This is a library-internal crash,
+not an accuracy, runtime, or memory result, and not fixable by editing only
+the additive `.cpp` fork. No evidence JSON was produced.
+Raw logs preserved and hashed: `run.log`
+`sha256=eee7b4c911ce33841acbd15bac8ba5cd6d9a7338cd3c3f9012ad7e34ff96880f`,
+`orchestrator.log`
+`sha256=26c5a5318e28eb85b1363fef5c7b25de51b36355791a9a6d869e5aba7986ccac`
+(both verified byte-identical to the remote host copies). Per the
+handoff prompt's evidence rules, any corrected fork must use a new source
+filename and run tag — this one must not be reused or reattempted in place.
+
+`[V]` (2026-07-30) Root cause narrowed further by reading the vendored
+FIDESlib source (local audit clone, commit `786c7600fb2f16b724e0acf73df367b27b8afed6`,
+matching `docker/README.md`'s pin): `Ciphertext::rescale()`
+(`src/CKKS/Ciphertext.cpp:435`) computes
+`cc.param.ModReduceFactor.at(c0.getLevel())`, where `ModReduceFactor` is
+sized `L+1` (9 for `MULT_DEPTH=8`) — an exact match for the crash's
+`size() == 9`. `RNSPoly::rescale()` (`RNSPoly.cpp:333-339,363`) decrements
+`level` unconditionally (`level -= 1;`) with no lower-bound guard (unlike
+`RNSPoly::setLevel()`, which does assert `level >= -1`). So one redundant
+rescale drives `level` to `-1`, and the *next* `rescale()` call reads
+`getLevel() == -1`, indexing `ModReduceFactor.at(size_t(-1))` — the observed
+underflow. This is consistent with the final tile's extra partial-group
+mask multiply (masking 7 real lanes out of 8 in the last, 13th token group)
+consuming one more level than the 12 full-group tiles need; at `MULT_DEPTH=16`
+there was enough headroom to absorb it, at `MULT_DEPTH=8` there is not.
+`[U]` Not confirmed against depth-16's own level trace; this is the
+most-consistent hypothesis from reading the code, not a step-by-step
+instrumented trace of the actual failing run.
+
+`[V]` (2026-07-30) Corrected fork: `real_dnagpt_fides_scheme_b_simd_full_t103_depth9_digits3_ring65536.cpp`
+(source SHA-256 `738da0c0c32bd14407ee14877925c6fe7e45fe17d6863f402d46f6bdf98ae235`,
+parent = the crashed depth8_digits3_ring65536 source above, parent SHA-256
+`65cc818cbb299af984cccdbe6a7df891cac5b7071f663edfac8c3f13be161365`). The
+fork changes only `MULT_DEPTH` (`8` → `9`, one extra level of headroom) and
+identity/log strings — verified by a diff-equivalence contract identical in
+method to the prior forks'. It does **not** patch the frozen FIDESlib
+library. Local CPU OpenFHE-Python probe (`docker run ... dnagpt-openfhe`,
+scratch-only, not committed) confirms `depth=9`/`3`-digit/`ring=65536`
+constructs without the OpenFHE-level rejection that killed the plain
+depth-8/4-digit and depth-8/3-digit-pre-ring-fix forks. Evidence chain before
+touching the capacity gate: local contract `7/7` pass; remote contract `7/7`
+pass (identical source hash); remote CUDA target compile succeeds cleanly
+(`real_dnagpt_fides_scheme_b_simd_full_t103_depth9_digits3_ring65536`, 27s
+build). A detached capacity watcher (tag
+`fhe_fides_real_d768_t103_block0_simd_full_t103_depth9_digits3_ring65536_scheme_b_a100_20260730`,
+watcher PID `1024611`) is now queued as of `2026-07-30T18:20:26Z`, waiting on
+host-load/idle-GPU capacity. `[U]` No accuracy, runtime, or memory claim
+exists until an immutable `results/runs` JSON lands.
+
+`[V]` (2026-07-30) The gate cleared and this run launched at
+`2026-07-30T18:33:27Z` on GPU 0 (preflight noted 4 pre-existing compute
+processes already on that physical GPU — `[U]` co-tenant-contaminated
+timing). It **made real progress past the depth-8 crash point**: all `91`
+causal score tiles (`13` token groups, upper-triangular schedule) completed
+successfully, including the final `q=12 k=12` tile that previously crashed
+the depth-8 fork. It then **failed differently** at
+`2026-07-30T19:19:28Z`, exit status `2` — not the vector-underflow crash
+again, but an OpenFHE-level decode error:
+`Decode(): The decryption failed because the approximation error is too
+high. Check the parameters.` (`ckkspackedencoding.cpp:453`). Reading the
+source pins this to `Client::reduce_score_tile`
+(`real_dnagpt_fides_scheme_b_simd_full_t103_depth9_digits3_ring65536.cpp:526`),
+the client-boundary decrypt of the score tile — called immediately after
+each tile, so it is specifically the decrypt of the last/deepest tile
+(`q=12 k=12`) that fails; the other `90` decrypted fine. `[U]` Read as
+depth `9` (10 towers) still leaving too little remaining CKKS precision at
+that one worst-case ciphertext for a trustworthy decode — one level short
+again, not proof of a distinct bug. No evidence JSON was produced. Raw logs
+preserved and hashed: `run.log`
+`sha256=d0c54ed03942c4fde1eb9772a0c3423508e657df35cc348d50f16a377bc39f11`,
+`orchestrator.log`
+`sha256=523535275e30a69748e9f54e139713458dd87e8f9435acd2b30f4dc0fd763da2`
+(both verified byte-identical to the remote host copies).
+
+`[V]` (2026-07-30) Fork 5: `real_dnagpt_fides_scheme_b_simd_full_t103_depth10_digits3_ring65536.cpp`
+(source SHA-256 `703a72d8dcc76cbe93234e04dcc953cce7daf0b48b64011ac1239129333d5ca2`,
+parent = the depth9 fork above, parent SHA-256
+`738da0c0c32bd14407ee14877925c6fe7e45fe17d6863f402d46f6bdf98ae235`). Changes
+only `MULT_DEPTH` (`9` → `10`, one more level, targeting the last score
+tile's decode-precision shortfall) and identity/log strings — same
+diff-equivalence contract method as prior forks; no FIDESlib patch. Local
+CPU OpenFHE-Python probe confirms `depth=10`/`3`-digit/`ring=65536`
+constructs. Evidence chain before touching the capacity gate: local
+contract `7/7`; remote contract `7/7` (identical source hash); remote CUDA
+compile clean (27s). Queued and **launched immediately**
+(`2026-07-30T19:59:15Z`, tag
+`fhe_fides_real_d768_t103_block0_simd_full_t103_depth10_digits3_ring65536_scheme_b_a100_20260730`,
+watcher PID `1453974`) — preflight was fully clean this time
+(`compute_processes=0`), unlike the contaminated depth-9 launch. `[U]` No
+accuracy, runtime, or memory claim exists until an immutable
+`results/runs` JSON lands.
+
+`[V]` (2026-07-30) This run made further real progress, then **failed a
+third, distinct way**: it got past all `91` score tiles (as depth-9 did)
+*and* past the previous decode-precision failure at the last tile, all the
+way through attention projection, residual, and the LN2 client boundary
+(`[boundary] ln2 logical=8`). It then failed at
+`2026-07-30T20:20:30Z`, exit status `2`, with a clean, self-diagnosing error
+from the fork's own code (not a library crash):
+`error: insufficient depth before Token-SIMD MLP group 0`. This comes from
+a pre-existing guard `require_remaining_depth(normalized2->GetLevel(), 4,
+"Token-SIMD MLP group 0")`
+(`real_dnagpt_fides_scheme_b_simd_full_t103_depth10_digits3_ring65536.cpp:811-813`,
+unchanged across all forks, part of the frozen schedule), which throws
+whenever `normalized2`'s current CKKS level leaves fewer than `4` levels of
+remaining budget under `MULT_DEPTH=10`. `[U]` The exact consumed level at
+that point was not printed (only QKV-stage levels are logged, at `level=3`
+— confirmed empirically in this run's log — LN2's output level is not
+logged anywhere in the current source). Hand-deriving it from the schedule
+is unreliable: the client-boundary "refresh" pattern (decrypt, plaintext
+compute, fresh re-encrypt) does not appear to zero the level of every
+downstream operand — only one branch of each subsequent multiply is fresh,
+and there is no explicit level-alignment call in the source, so the actual
+behavior depends on how FIDESlib's `EvalMult` handles mismatched operand
+levels internally. Rather than continue blindly incrementing `MULT_DEPTH`
+(costly at ~20–45 min per cycle), the next step is a diagnostic-only fork
+that prints `normalized2->GetLevel()` before this check, to read the exact
+number directly instead of guessing. No evidence JSON was produced. Raw
+logs preserved and hashed: `run.log`
+`sha256=0ab3e863cf22f0723107e984981f9fa48854da436143171911b5207d9364dcf9`,
+`orchestrator.log`
+`sha256=2fe76537ca9d56f870beb26704e4b010ca2348d0f9d6cd2a0fd5e7f91169fecf`
+(both verified byte-identical to the remote host copies).
+
+`[V]` (2026-07-30) Diagnostic-only fork:
+`real_dnagpt_fides_scheme_b_simd_full_t103_depth10_diag_digits3_ring65536.cpp`
+(source SHA-256 `258e0da1ece28ef8f42652097ed8c7b61218b2a76c2d297f879a860410c72e82`,
+parent = the depth10 fork above, parent SHA-256
+`703a72d8dcc76cbe93234e04dcc953cce7daf0b48b64011ac1239129333d5ca2`). `[V]`
+Changes **only** identity/log strings plus one added line —
+`std::cout << "[diag] ln2 group=" << group << " level=" << normalized2->GetLevel() << '\n';`
+— immediately before the existing `require_remaining_depth` guard.
+`MULT_DEPTH` stays `10`, unchanged; no crypto parameter or schedule
+operation is touched; no FIDESlib patch. Diff-equivalence contract `7/7`
+local, `7/7` remote (identical source hash), remote CUDA compile clean
+(32s). Queued (tag
+`fhe_fides_real_d768_t103_block0_simd_full_t103_depth10_diag_digits3_ring65536_scheme_b_a100_20260730`,
+watcher PID `1772313`) at `2026-07-30T20:48:23Z`. `[U]` This run is expected
+to fail identically to the depth-10 parent (same guard, same `MULT_DEPTH`)
+— its only purpose is to reveal the exact `normalized2` level via the added
+print, so the next real fork can pick the correct `MULT_DEPTH` in one step
+instead of continuing +1 increments.
+
+`[V]` (2026-07-31) Launched `2026-07-30T20:59:24Z` (mildly contaminated,
+1 pre-existing compute process at preflight), failed exactly as expected at
+`2026-07-30T21:22:39Z` with the same
+`insufficient depth before Token-SIMD MLP group 0` guard. The added line
+printed `[diag] ln2 group=0 level=9` immediately before the throw. `[V]`
+Since `require_remaining_depth` needs `4 <= MULT_DEPTH - current_level`,
+**the minimum passing `MULT_DEPTH` for this graph is `9 + 4 = 13`** — this
+answers the handoff prompt's main question 1 (pending confirmation by an
+actual passing run). Raw logs preserved and hashed: `run.log`
+`sha256=41d84f7a8fe535cc293413e419a9ca41b77dba7d188a1421027b46bed8c6d845`,
+`orchestrator.log`
+`sha256=f74135c16a2cf867266c306f5cb3a59ee62ee15460e7b7e6166524649fdc6986`
+(both verified byte-identical to the remote host copies). Local CPU OpenFHE
+probe confirms `depth=13`/`3`-digit/`ring=65536` constructs without
+rejection — proceeding directly to a depth-13 fork rather than any further
+intermediate increment.
+
+`[V]` (2026-07-31) Fork 7:
+`real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536.cpp`
+(source SHA-256 `6e8cd08efad1567d2f9001f69d10e302e45f4e634f3bd37e2245382d215fbe5e`,
+parent = the depth-10 fork, parent SHA-256
+`703a72d8dcc76cbe93234e04dcc953cce7daf0b48b64011ac1239129333d5ca2`). Changes
+only `MULT_DEPTH` (`10` → `13`, per the diagnostic finding above) and
+identity/log strings; no FIDESlib patch. Local contract `7/7`; remote
+contract `7/7` (identical source hash); remote CUDA compile clean (27s).
+Queued and launched immediately (tag
+`fhe_fides_real_d768_t103_block0_simd_full_t103_depth13_digits3_ring65536_scheme_b_a100_20260731`,
+watcher PID `3511176`) at `2026-07-31T07:55:49Z`. `[U]` No accuracy,
+runtime, or memory claim exists until an immutable `results/runs` JSON
+lands.
+
+`[V]` (2026-07-31) **This run passed — the first passing depth-8-family
+result.** Launched `2026-07-31T08:09:51Z` on physical GPU 4 (not GPU 0;
+preflight showed 4 pre-existing compute processes — `[U]`
+co-tenant-contaminated). It ran far longer than any prior fork before
+producing stdout (no `[stage]` lines visible for over an hour of checks);
+`docker top` confirmed the process was actively burning CPU throughout
+(rising from ~77 to ~110 core-equivalents), and this turned out to be
+ordinary fully-buffered stdio rather than a hang — the ~205-line run.log
+was written all at once near completion, and the process's own
+`context_keygen_load` timing field (`4.15s`) proves keygen itself was fast;
+the apparent "silence" was simply genuine, slow, contaminated compute
+(`server_linear_algebra_seconds=4448.87s`) with nothing to flush.
+
+Completed (`.done=0`) at `2026-07-31T09:27:41Z` with
+`REAL_DNAGPT_TOKEN_SIMD_FULL_DEPTH13_DIGITS3_RING65536_GATE_PASS`. `[V]`
+`global_rel_inf=4.35054978665743e-9`,
+`worst_token_rel_inf=4.35054978665743e-9`,
+`max_abs_error=6.975483973770125e-8` — tighter than the depth-16 baseline's
+`4.777e-9`, both far inside the unchanged `4e-2` block gate. `[V]`
+`packed_output_level=6`, identical to the depth-16 baseline — confirms the
+final output level is graph-invariant regardless of the depth budget,
+exactly as the handoff prompt's caveat warned ("evidence of headroom, not
+proof"): the deepest *mid-graph* point (LN2 output, level `9`) needed far
+more budget than the final level alone would suggest. `[V]` Encrypted
+evaluation: `4662.221675408s` total (`4448.868146699s` server +
+`213.353528709s` client) versus the depth-16 baseline's `6281.748445232s`
+(`6140.143438612s` server + `141.605006620s` client) — about `25.8%`
+faster overall, `27.5%` faster server-only. `[U]` **Directional only**: both
+runs were co-tenant-contaminated single samples; `docs/roadmap.md` requires
+two-to-three repeats for a reported stable speedup, which this is not.
+
+Peak PID-specific VRAM: `9834 MiB` (below the depth-16 baseline's
+`12920 MiB`, consistent with 14 towers versus 17 — `884` five-second
+samples, `2026-07-31T08:09:56Z`–`2026-07-31T09:27:41Z`).
+
+Immutable evidence:
+
+- correctness:
+  `results/runs/fhe_fides_real_d768_t103_block0_simd_full_t103_depth13_digits3_ring65536_scheme_b_a100_20260731.json`
+  (`sha256=fe1016b5f6c690c04e794e3db8dfe86b69109c8d90dca68229849714784b11cb`);
+- process-memory telemetry:
+  `results/runs/fhe_fides_real_d768_t103_block0_simd_full_t103_depth13_digits3_ring65536_scheme_b_vram_a100_20260731.json`
+  (`sha256=c865500297124b690d70cda3d95e550004b2e67ec8694a92d3fb6b76251b5e73`);
+- raw remote run log: `sha256=4e1da4ccae24d098fb3a62aa3b1527c1ad0963e279ea4ba13301aad154380fb1`;
+- raw remote orchestrator log: `sha256=c2a7fdeb02b65181db5cb6981dae332615793ffeeeed653b9cfeab57846b820f`;
+- raw remote VRAM log: `sha256=8a1e6c1e7fae2f40e09f9ab93fc2d5b1fa0d77ae84eb350166cea8396c4af279`.
+
+All four artifacts were pulled from the remote host and verified
+byte-identical (matching remote `sha256sum`) before being written into the
+repo. Manifest rows appended to `results/hybrid/manifest.yaml`
+(correctness + linked VRAM).
+
+**This answers the handoff prompt's main question 1**: the minimum passing
+CKKS modulus chain for the complete B=8 T=103 block at unchanged security
+is `MULT_DEPTH=13` (3 HYBRID digits, ring `65536`, scale `50`). `[U]`
+Main questions 2–7 (uncontended-A100 speed/memory delta, further
+error-budget tradeoffs, B=4 comparison, multi-GPU sharding, multi-block
+composition, and the final `<=3h` verdict) remain open.

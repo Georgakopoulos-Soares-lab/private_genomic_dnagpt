@@ -2,8 +2,8 @@
 set -euo pipefail
 
 readonly EXPECTED_COMMIT=786c7600fb2f16b724e0acf73df367b27b8afed6
-readonly EXPECTED_SOURCE=97727a5bb2145b32749b746c3fc1b576811dfcc3222088278962b029fc1aea4b
-readonly EXPECTED_PARENT=926be6b276006dd6435713efa168d189af02e02589d143684991380bae7e9233
+readonly EXPECTED_SOURCE=c53e47123614bcddf6a577ca5cc1e22db786d234e953e5c31b6a488e3408c089
+readonly EXPECTED_PARENT=58c257522eefe7a928e6efaa486af6dd3ac53c289fc07878bb41d5d5f9350882
 readonly EXPECTED_FROZEN=70580ff0b4f12565921e0af8ce04e7b4c0d4253b51c0a8380ef0727ce85b2a0f
 readonly EXPECTED_SCHEDULE=c6b221f365ba6326f615c5554458d7bd092990d23c4ba0d5106ca7577cb7c3aa
 readonly EXPECTED_MANIFEST=d2c90ba15c62c648495b51070eee585a3570dc174eb31e14782aaf016b31f8f6
@@ -21,11 +21,11 @@ fi
 readonly GPU="$1"
 readonly FIXTURE_DIR="$2"
 readonly OUTPUT="$3"
-readonly BINARY="${BUILD_DIR}/real_dnagpt_fides_scheme_b_simd_full_t103"
+readonly BINARY="${BUILD_DIR}/real_dnagpt_fides_scheme_b_simd_full_t103_depth8_digits3"
 
 if [[ "$(basename "${OUTPUT}")" != *"_scheme_b_"* ]] || \
-   [[ "$(basename "${OUTPUT}")" != *"_simd_full_t103_"* ]]; then
-  echo "[FATAL] SIMD evidence filename must contain _scheme_b_ and _simd_full_t103_" >&2
+   [[ "$(basename "${OUTPUT}")" != *"_simd_full_t103_depth8_digits3_"* ]]; then
+  echo "[FATAL] depth-8/digits-3 SIMD evidence filename must contain _scheme_b_ and _simd_full_t103_depth8_digits3_" >&2
   exit 2
 fi
 if [[ -e "${OUTPUT}" ]]; then
@@ -56,12 +56,12 @@ if [[ "${manifest_sha}" != "${EXPECTED_MANIFEST}" ]]; then
   echo "[FATAL] fixture manifest ${manifest_sha}; expected ${EXPECTED_MANIFEST}" >&2
   exit 2
 fi
-source_sha="$(sha256sum "${SCRIPT_DIR}/src/real_dnagpt_fides_scheme_b_simd_full_t103.cpp" | cut -d' ' -f1)"
+source_sha="$(sha256sum "${SCRIPT_DIR}/src/real_dnagpt_fides_scheme_b_simd_full_t103_depth8_digits3.cpp" | cut -d' ' -f1)"
 if [[ "${source_sha}" != "${EXPECTED_SOURCE}" ]]; then
-  echo "[FATAL] full SIMD source ${source_sha}; expected ${EXPECTED_SOURCE}" >&2
+  echo "[FATAL] depth-8/digits-3 full SIMD source ${source_sha}; expected ${EXPECTED_SOURCE}" >&2
   exit 2
 fi
-parent_sha="$(sha256sum "${SCRIPT_DIR}/src/real_dnagpt_fides_scheme_b_simd_linear_t103.cpp" | cut -d' ' -f1)"
+parent_sha="$(sha256sum "${SCRIPT_DIR}/src/real_dnagpt_fides_scheme_b_simd_full_t103_depth8.cpp" | cut -d' ' -f1)"
 if [[ "${parent_sha}" != "${EXPECTED_PARENT}" ]]; then
   echo "[FATAL] frozen parent ${parent_sha}; expected ${EXPECTED_PARENT}" >&2
   exit 2
