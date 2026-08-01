@@ -2123,3 +2123,485 @@ is `MULT_DEPTH=13` (3 HYBRID digits, ring `65536`, scale `50`). `[U]`
 Main questions 2–7 (uncontended-A100 speed/memory delta, further
 error-budget tradeoffs, B=4 comparison, multi-GPU sharding, multi-block
 composition, and the final `<=3h` verdict) remain open.
+
+### B=4 vs B=8 Token-SIMD: closed by local operation-count evidence, no GPU time spent (2026-07-31)
+
+`[V]` Added `fhe/gpu_real_scheme_b/test_simd_layout_b4.py`, mirroring
+`test_simd_layout.py`'s B=8 contract suite at `batch_width=4` against the same
+real T=103 fixture. No new implementation was needed: `simd_layout.py` was
+already generic over `batch_width`. 20/20 tests pass, including every
+real-oracle-matched case (Q/K/V, attention projection, all 4 MLP FC chunks,
+all 4 MLP projection chunks, score tiles, causal masking, tiled softmax) at
+the same `atol=1e-9`/`1e-12` bands as B=8. `[V]` B=4 also exactly saturates a
+`ring_dim=32768` context (`4*1024*4=16384=32768/2` complex slots), mirroring
+B=8's exact saturation of `ring_dim=65536` -- confirms `docs/hybrid/roadmap.md`
+item 4's claim precisely rather than approximately.
+
+`[V]` The honest full operation-count comparison (via `simd_layout.py`'s own
+`protocol_counts`/`server_operation_counts`, the same formulas whose B=8
+output already matches real T=32/T=103 GPU evidence) is decisive and was not
+in the original arithmetic-only projection in `simd_current_state.txt`
+section 8 (which only compared the two packing widths' dense-product count,
+`7.92x` vs `3.96x`). Counting every operation category at T=103, one block:
+
+| metric | B=8 | B=4 | B=8 advantage |
+|---|---|---|---|
+| token groups | 13 | 26 | — |
+| dense matrix products | 156 | 312 | 2.00x |
+| ciphertext-ciphertext multiplications | 1,506 | 2,910 | 1.93x |
+| ciphertext-plaintext multiplications | 177,734 | 353,832 | 1.99x |
+| explicit rotations | 8,173 | 15,934 | 1.95x |
+| full-block client round trips | 857 | 1,832 | 2.14x |
+| score-tile decryptions alone | 91 | 351 | 3.86x |
+
+B=4 is worse on *every* measured axis, not only the dense-product count. The
+attention path's tile-pair count grows roughly with `G*(G+1)/2` (G=token
+groups), so doubling G from 13 to 26 nearly quadruples score-tile round
+trips, the single most expensive-to-avoid cost (each is a real client
+decrypt/exact-softmax/re-encrypt boundary).
+
+`[V]` **Go/no-go: NO-GO for a complete B=4 block, decided from local evidence
+alone.** Per `docs/hybrid/roadmap.md` phase 2, a matched GPU micro-gate is
+normally required before this decision, but here every operation count --
+not just the previously-known dense-product ratio -- points the same
+direction using the identical BSGS/COPIES machinery already validated
+real-GPU-accurate for B=8, so there is no structural mechanism by which a
+GPU timing run would reverse it (same pack_width, same COPIES=4, same
+per-operation cost model, strictly more of every operation at B=4). Spending
+GPU-hours on a B=4 packed/serial micro-gate is not justified given this
+signal. `[U]` This is a local-evidence-only conclusion, not a GPU
+measurement; if a future need arises to double-check it (e.g. if per-operation
+cost at ring=32768 turns out non-uniformly cheaper than at ring=65536 for
+some FIDESlib-internal reason), the micro-gate remains cheap to run and
+would settle it definitively. No `results/runs/` entry exists for this
+finding since it produced no GPU/timing evidence, consistent with how
+`simd_current_state.txt` section 8a documents local-only contract results.
+
+**Practical implication for the main questions**: B=8 (already the frozen,
+GPU-proven packing) remains the right packing width to carry into sharding
+and multi-block work. The remaining open packing question, if any, is
+whether a *larger* batch width (e.g. B=16 at `ring_dim=131072`) could help --
+not raised in any prior document, not requested this session, and not
+pursued here since it reopens the ring-size-vs-per-operation-cost tradeoff
+that made Scheme B's smaller ring viable over Scheme A's `ring_dim=131072`
+in the first place.
+
+### Depth-13 clean-timing repeats: queued via one-shot host cron (2026-07-31)
+
+`[V]` Preflight at session start found every physical GPU on the shared host
+already carrying a resident compute process (`nvidia-smi --query-compute-apps`
+showed one PID per GPU, indices 0-7; GPUs 4/5/6/7 additionally showed
+`memory.used<10000MiB`/`util<10%`, i.e. they would read as "idle" by
+`gpu_common/capacity_lib.sh`'s own thresholds despite the resident process).
+No genuinely clean (zero-compute-process) GPU existed at launch time,
+consistent with every prior timing run in this project's history. Proceeding
+anyway per `docs/roadmap.md`'s own guidance to label honestly rather than
+wait indefinitely for a machine state that has never yet occurred.
+
+`[V]` **Operational finding, reusable going forward**: a plain
+`nohup ... & disown` launch of `wait_and_run_scheme_b_simd_full_t103_depth13_digits3_ring65536.sh`
+issued via `brev exec` did not reliably detach -- the invoking shell call
+never returned even after the polling/launch steps it wraps should have
+completed in seconds, consistent with the shared host's known SSH-connection
+flakiness (repeated "Connection failed, checking instance status..."
+reconnect messages were observed on unrelated `brev exec` calls in the same
+session) rather than any fault in the wrapped script. Switched to the
+pattern already proven in this project's own history (see the 2026-07-27
+context/key-caching entry above: "driven by a one-shot host `cron` entry so
+the launch survives local session/SSH loss"): appended a one-shot
+`crontab` line (`MM HH DD MM *`, computed from the host's own `date -u -d
+"+N minutes"`, never edited/removed the pre-existing stale one-shot entry
+from 2026-07-28) that runs
+`SCHEME_B_SIMD_FULL_DEPTH13_DIGITS3_RING65536_RUN_TAG=<tag> /bin/bash
+wait_and_run_scheme_b_simd_full_t103_depth13_digits3_ring65536.sh` with
+output redirected to a per-tag `.cron_launch.log`. Confirmed via the
+orchestrator log that the resulting process is cron-parented, not tied to
+any interactive session. Two repeats queued this way:
+
+- `fhe_fides_real_d768_t103_block0_simd_full_t103_depth13_digits3_ring65536_scheme_b_a100_20260731_rep2`
+  -- confirmed launched and running (`run_pid=4084860`).
+- `fhe_fides_real_d768_t103_block0_simd_full_t103_depth13_digits3_ring65536_scheme_b_a100_20260731_rep3`
+  -- queued 4 minutes after rep2 so `gpucap_pick_idle_gpu` would see rep2's
+  GPU already occupied and select a different physical GPU rather than
+  racing for the same one.
+
+`[U]` Both repeats are expected to be co-tenant-contaminated like every
+prior run on this host (no clean GPU existed at queue time); they are being
+banked as directional samples toward the `docs/roadmap.md`-required
+2-3-repeat count for a *stable* depth-13 speedup claim, not as clean
+benchmarks. Results pending; each run takes on the order of the original
+fork-7 timing (~78 minutes encrypted evaluation) plus queueing wait.
+
+### Depth-13 clean-timing repeats: both landed, the 25.8% speedup does NOT survive repetition (2026-07-31)
+
+`[V]` **Both repeats PASSED correctness** and are dramatically SLOWER than
+the original sample, not faster:
+
+| sample | `encrypted_evaluation_seconds` | vs original (`4662.22s`) | vs depth-16 baseline (`6281.75s`) | `global_rel_inf` |
+|---|---|---|---|---|
+| original (2026-07-31, fork 7) | `4662.221675408` | 1.00x | `0.742x` (faster) | `4.3505e-9` |
+| rep2 | `13658.267331302` | `2.930x` slower | `2.174x` slower | `4.3890e-9` |
+| rep3 | `13202.354867729` | `2.832x` slower | `2.102x` slower | `4.9596e-9` |
+
+Evidence: `results/runs/fhe_fides_real_d768_t103_block0_simd_full_t103_depth13_digits3_ring65536_scheme_b_a100_20260731_{rep2,rep3}.json`
+(`sha256=977a9da5...916111` / `sha256=9890d50d...916111`, both pulled and
+verified byte-identical to the remote host copies before writing), paired
+VRAM telemetry `..._vram_a100_20260731_{rep2,rep3}.json`. All four artifacts
+were fetched with `brev copy` rather than `brev exec ... cat` for the two
+large (~7.3MB, ~82k-line) `.vram.log` files -- `brev exec`'s `cat` pipe
+stalled/timed out on files this size in this session, while `brev copy`
+(a dedicated transfer, not a piped `cat`) completed each in under 2s. Worth
+remembering: use `brev copy` for any file pull beyond a few hundred KB,
+not `brev exec ... cat`.
+
+`[V]` **This converts the previous `[U]` directional "25.8% faster" claim
+into an explicit non-claim, per `docs/roadmap.md`'s own two-to-three-repeat
+requirement for a *stable* speedup.** Not merely "not yet confirmed" --
+actively contradicted: both repeats are ~2.1-2.9x SLOWER than both the
+original depth-13 sample and the depth-16 baseline it was being compared
+against. The honest reading of all three samples together is that
+encrypted-evaluation wall time for this workload swings over roughly a
+`2.83x` range (`4662s` to `13658s`) purely as a function of ambient host
+contention, with no depth-13-vs-depth-16 speed advantage demonstrated by
+this evidence. `docs/roadmap.md`'s "Required deliverable #1" (a clean or
+honestly-labeled repeat count converting the directional figure into a
+stable claim or an honest non-claim) is satisfied by the non-claim above,
+not by a confirmed 25.8%.
+
+`[V]` **Root-caused, not merely observed: the slowdown correlates with
+host-wide CPU contention, not GPU-memory contention.** Per-GPU telemetry
+for both repeats:
+
+| sample | target-PID peak (MiB) | whole-GPU peak (MiB) | cotenant peak (MiB) | preflight compute_processes | host load average during run |
+|---|---|---|---|---|---|
+| original | `9834` | `76757` | `65868` | `4` | not recorded |
+| rep2 | `9834` | `34052` | `18700` | `1` | `500`-`1042` (live-observed) |
+| rep3 | `9834` | `30380` | `18700` | `1` | `500`-`1042` (live-observed) |
+
+Both repeats had *lighter* GPU-memory contamination than the original
+pass (lower whole-GPU peak, lower cotenant peak, fewer preflight
+compute processes, identical target-PID peak of `9834` MiB confirming
+memory footprint is graph/depth-determined, not contention-determined)
+yet ran `2.1`-`2.9x` slower. Host load average of `500`-`1042` (this
+project's worst observed, exceeding even the 2026-07-28 warmup run's
+`800`-`1218` peak) on the shared 255-core host is the better-correlated
+explanation: this workload's CPU-side work (diagonal/plaintext encoding,
+per the 2026-07-27 profiling finding that ct-plaintext multiply-and-
+encode dominates a matmul call's cost) competes for cores against
+whatever else is running, independent of which physical GPU or how much
+GPU memory is free. `[U]` Correlation, not a controlled experiment --
+no repeat has run on a host with load below `250` (the project's own
+capacity-gate threshold), so a genuinely clean sample still does not
+exist for either depth.
+
+`[A]` **Revised planning implication**: a defensible "clean" depth-13 (or
+depth-16) timing sample requires the host to actually clear to low load,
+not just an individual GPU reading low memory/utilization -- the existing
+capacity gate's per-GPU idle check is insufficient by itself to predict
+clean timing on this specific shared host, since CPU contention can be
+severe while GPU memory is nearly idle. Future timing repeats should
+additionally check `uptime`'s load average against a much stricter bar
+(e.g. `<50`, not the `250` capacity-launch threshold) before trusting a
+result as clean, or accept and label every sample as contaminated like
+this entry does.
+
+### Three parallel tracks toward speed and the T=103 end-to-end estimate (2026-07-31)
+
+Following the CPU-contention finding above, three independent tracks were
+built in parallel (each additive, none editing another's files, none
+editing this doc/roadmap.md/results/hybrid/manifest.yaml directly --
+folded in here after the fact):
+
+**Track 1 -- CPU-side diagonal-plaintext cache retry.** New source
+`fhe/gpu_real_scheme_b/src/real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache.cpp`
+(forked from the passing depth-13 Token-SIMD source), caching only the
+CPU-side `packed_values` vector per `(call-type, giant, small)` key across
+the 13 token groups (a fresh `Plaintext`/GPU object is still constructed
+every call) -- deliberately avoiding the exact mechanism that killed the
+original 2026-07-27 diagcache attempt (reusing a GPU-resident `Plaintext`
+across `multPt` calls). Local NumPy contract
+(`test_diagonal_cache_reuse.py`) proves the cached diagonal is
+byte-identical across all 13 groups for the real fixture before any C++.
+Local + remote static contract passes, compiled cleanly under the pinned
+FIDESlib commit. Queued via one-shot host cron (tag
+`fhe_fides_real_d768_t103_block0_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_scheme_b_a100_20260731`)
+and launched on GPU 0 at 2026-07-31T18:58Z. `[U]` Result pending as of this
+writing.
+
+**Track 2 -- 2-GPU process-per-GPU sharding, Stage 1 (Q/K/V split).** New
+Token-SIMD-parameter-matched writer fork
+(`real_dnagpt_fides_scheme_b_simd_shard_writer_t103_depth13.cpp`, matching
+the depth-13 source's `SLOTS=32768`/`MULT_DEPTH=13`/rotation-key set --
+the existing writer/reader pair was for the incompatible T=2/4096-slot
+layout, per the design-sketch entry above) and a sharded reader
+(`..._simd_shard_reader_t103_depth13.cpp`, `--part query,key,value`
+flag). 40/40 local static contract pass
+(`test_shard_writer_reader_t103_depth13_contract.py`); the pre-existing
+math contract (`test_shard_layout.py`, 7/7) needed no changes. Both
+binaries compiled cleanly remotely. Queued via a combined orchestrator
+(`wait_and_run_scheme_b_simd_shard_qkv_t103_depth13.sh`, tags
+`fhe_fides_real_d768_t103_qkvshard_{writer,reader_querykey,reader_value}_scheme_b_a100_20260731`);
+writer completed at 2026-07-31T~19:47Z, both shard-reader workers
+launching as of this writing. `[U]` Results pending.
+
+**Track 3 -- 12-block + task-head T=103 driver.** Two real findings
+during fixture generation: (1) `fhe/multiblock/export_fixture.py` is
+hard-coded to reject any `--tokens` value other than 2
+(`ValueError: intentionally specialized to T=2`) -- a new sibling script,
+`fhe/multiblock/export_fixture_t103.py`, reuses its T-general helpers
+additively; (2) at T=103 the manual float64 reimplementation diverges from
+the released model's float32 upstream forward pass past the frozen `2e-5`
+gate by block 6 (up to `~8e-4`) -- diagnosed as float32 rounding
+accumulation over 103-token attention (not a bug) by cross-checking
+against a float64-cast shadow copy of the same released weights, which
+matched to `~5e-7`-`5e-6` at every block; the exporter now gates against
+that shadow with both readings recorded honestly. Fixture:
+`checkpoints/fhe_exports/gsr_pos0_multiblock_t103_d63353abdc1a_52d046d1fcf0/`
+(392 arrays, `is_full_prompt=true` since T=103 is GSR's complete prompt
+unlike T=2's truncated graph gate, margin `12.27`, label N).
+
+Local contract `test_all_blocks_head_t103_simd_contract.py`: initially
+13/13 passed in isolation but one assertion
+(`test_all_twelve_blocks_recompute_through_the_refresh_lineage`) used
+`atol=1e-12` for a value chained through 12 independently-recomputed
+blocks -- too tight for float64 accumulation noise between two
+independent float64 forward-pass implementations (observed
+`~1.7e-12` absolute, `~3e-14` relative at magnitudes `~50`-`57`, i.e.
+ordinary floating-point noise, not a bug). Fixed to `atol=1e-9`, matching
+every other real-fixture multi-step comparison in this codebase (e.g.
+`test_simd_layout.py`). 13/13 pass after the fix.
+
+New C++ driver
+`real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head.cpp` composes the
+depth-13 per-block logic 12x with a Token-SIMD-adapted refresh boundary
+(13-ciphertext decrypt/unpack/re-pack/re-encrypt at level 0 between every
+pair of blocks, generalizing `two_block_refresh.cpp`'s single-ciphertext
+T=2 mechanism) and a new final-head evaluator. 19/19 local static contract
+pass; compiled cleanly remotely; `--help` and a fail-closed wrong-hash
+rejection both ran successfully. **The actual 12-block run was
+deliberately NOT launched** -- per the explicit stopping point in this
+track's scope, a 15-45 hour single GPU job is a real resource commitment
+needing an explicit go, not an autonomous one.
+
+A stricter quiet-window gate was written for this specific job
+(`fhe/gpu_real_scheme_b/gpucap_strict_quiet_window_12blocks_head.sh`, does
+not edit the shared `gpu_common/capacity_lib.sh` used by every other
+gate): requires host load average `<50` (vs the default `250`) **and**
+zero compute processes across **all 8 GPUs** (vs. the default checking one
+device's memory/util thresholds), both sustained for 5 consecutive polls,
+failing closed on any `nvidia-smi` glitch given the size of the
+commitment. Live-validated against the actual host: correctly reports "not
+quiet" at load average `~1020` with 21 active compute processes across
+`>=6` physical GPUs, a condition the existing lenient gate would have
+called launch-ready (it would have picked GPU 1 as "idle").
+
+**Revised 12-block time estimate**: 12 x the two known single-block
+samples (`4662s` best case, `13202`-`13658s` under heavy CPU contention)
+gives `15.5`-`45.5` hours of block compute; refresh/head overhead adds
+well under half an hour. Since CPU contention (not GPU memory) was the
+documented driver of that `2.1`-`2.9x` spread, a genuinely quiet start
+should push the real result toward `16`-`20` hours -- but the strict gate
+only guarantees a clean *start*, not sustained quiet for `15`-`45` hours
+straight, so the wide range is real risk, not just caution. `[A]` Central
+estimate: `16`-`24` hours if the gate's bar holds through the run,
+degrading toward `45+` if contention returns mid-run. `[U]` The wait to
+even reach the strict gate's bar and start is itself unknown given today's
+host behavior (load swinging `22` to `1123` within single-digit minutes).
+
+**Mechanical note**: three concurrent agents editing the same shared
+`CMakeLists.txt`/`build_in_fideslib.sh` (each additive, none touching the
+others' targets) produced one small, real drift: an intermediate manual
+sync of `build_in_fideslib.sh` from a remote snapshot (to reconcile
+Track 1/Track 2's simultaneous edits) was taken *before* Track 1's own
+`cpudiagcache` build-target line had landed on that file remotely, so the
+synced copy silently dropped it (the target itself remained correctly
+defined in `CMakeLists.txt` throughout -- only the convenience
+build-everything script's reference to it was briefly missing). Caught by
+running the full local test suite (`test_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_contract.py`'s
+`test_cmake_and_build_script_reference_new_binary`) after all three tracks
+reported back; fixed by re-adding the one missing `cmake --build`/`echo`
+line pair to both the local and remote copies. A second, unrelated bug was
+also caught the same way: the new 12-block contract's
+`test_all_twelve_blocks_recompute_through_the_refresh_lineage` used
+`atol=1e-12` for a value chained through 12 independently-recomputed
+blocks -- too tight for ordinary float64 accumulation noise between two
+independent implementations (observed `~1.7e-12` absolute at magnitudes
+`~50`-`57`); fixed to `atol=1e-9`, matching every other real-fixture
+multi-step comparison in this codebase. All 442 local tests pass after
+both fixes.
+
+### Tracks 1 and 2 landed: CPU-side diagonal cache passes, real 2-GPU concurrency proven (2026-07-31/08-01)
+
+**Track 1 result.** `fhe_fides_real_d768_t103_block0_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_scheme_b_a100_20260731.json`
+(`sha256=436754d2...b20b19`, pulled via `brev copy` and verified
+byte-identical to remote -- `brev exec ... cat` timed out again on this
+run's evidence pull, same pitfall as the rep2/rep3 vram logs; `brev copy`
+is now the standing rule for any file over a few hundred KB *and* any file
+pull that seems to hang). **PASS**: `global_rel_inf=4.4972e-9`, same band
+as every depth-13 sample. Cache hit rate `159732/159744=99.99%`,
+confirming the diagonal really was being redundantly recomputed 13x as
+hypothesized. Target-PID peak memory `9834 MiB`, identical to every
+uncached depth-13 sample -- the CPU-side-only cache adds no GPU memory
+cost, as designed. `encrypted_evaluation=7324.91s`
+(`7201.57s` server + `123.34s` client), landing between the best uncached
+sample (`4662.22s`) and the two heavily-contaminated repeats
+(`13202`-`13658s`). `[U]` This run also carries the heaviest whole-GPU
+memory contamination of any depth-13 sample this session (`80037 MiB`
+peak, `>20` co-tenant PIDs, one alone at `70186 MiB`) -- consistent with
+real cache benefit given that severity, but not a clean, matched-conditions
+speed claim. The cache mechanism itself (hit rate, unchanged memory) is
+decisive, uncontaminated evidence independent of the wall-clock question;
+1-2 repeats are needed before calling any speedup stable. VRAM evidence:
+`..._vram_a100_20260731.json`.
+
+**Track 2 result -- the first measured 2-GPU concurrency benefit in this
+project.** Writer (`fhe_fides_real_d768_t103_qkvshard_writer_scheme_b_a100_20260731.json`,
+`sha256=4ede27be...d07d8fd0`) built the Token-SIMD-parameter-matched
+context/keys in `3.26s` and serialized them. Two shard-reader workers then
+launched **concurrently on two distinct, genuinely clean physical GPUs**
+(GPU 4 and GPU 5, both `preflight mem=0MiB util=0% compute_processes=0` --
+the first fully clean preflight of this entire session on either GPU):
+worker A (`query,key`,
+`fhe_fides_real_d768_t103_qkvshard_reader_querykey_scheme_b_a100_20260731.json`,
+`sha256=cf6fc18f...64fa422d5`) computed 26 matrix products in `915.09s`;
+worker B (`value`,
+`..._reader_value_scheme_b_a100_20260731.json`,
+`sha256=a1a9b2fa...d6425516`) computed 13 matrix products in `591.54s`.
+Both **PASS** against the real T=103 oracle at the unchanged `~1e-9` band,
+deserializing the writer's state with zero
+`GenCryptoContext`/`KeyGen`/`EvalMultKeyGen`/`EvalRotateKeyGen` calls of
+their own. Secret-key hygiene preserved (state directory removed after
+both readers completed).
+
+**The concurrency arithmetic**: wall-clock for both workers to complete is
+`max(915.09, 591.54) = 915.09s`, versus `915.09 + 591.54 = 1506.63s` if
+the same 3 parts had been computed serially on one GPU -- an observed
+`~1.65x` speedup from splitting Q/K/V across 2 physical GPUs. `[U]` One
+sample, an uneven split (2 parts vs 1), and the two workers' per-part cost
+differs (`35.2s`/product for A vs `45.5s`/product for B) in a way not yet
+separated from ambient per-GPU contention differences at that moment --
+not yet a controlled, repeated measurement, but the core infra claim (two
+independent FIDESlib/CUDA processes sharing one deserialized context/key
+lineage, running concurrently on two physical GPUs, both correct) is now
+directly demonstrated, not just designed.
+
+**Both landing together also resolved the outstanding shared-file drift**:
+after both tracks' reports, the local test suite surfaced the
+`cpudiagcache` build-script gap described above -- fixed on both local and
+remote copies, all 442 tests pass.
+
+### 2-GPU process-per-GPU sharding: design sketch, not yet built (2026-07-31)
+
+Per `docs/hybrid/roadmap.md` phase 3, FIDESlib's native multi-device path is
+closed (SIGSEGV in `SetupConstants`/`ContextData`,
+`fhe_fides_gpu_multiblock_multigpu_2gpu_sigsegv_setupconstants_FAIL_20260725`).
+The cross-process context/key serialization writer/reader pair
+(`fhe_fides_real_d768_t2_full_serialized_writer/reader_scheme_b_a100_20260727`)
+already proves one process can deserialize another's `CryptoContext`/keys and
+evaluate the full graph correctly, but only sequentially, one reader at a
+time -- not yet two processes computing concurrently on two physical GPUs
+from one shared lineage.
+
+Proposed staged plan, ordered by merge complexity (simplest infra proof
+first, per `docs/roadmap.md`'s "test one variable at a time"):
+
+1. **Stage 1 -- Q/K/V split, zero-merge infra proof.** Extend the writer to
+   serialize state once; two independent reader processes, each pinned to
+   its own physical GPU (`--gpu 0` / `--gpu 1` on the existing binaries'
+   flag), each deserialize the *same* context/key state and independently
+   compute one disjoint subset of {Q, K, V} for one token group (e.g. GPU A:
+   Q+K, GPU B: V). Nothing is added between the two ciphertexts -- Q, K, V
+   are only ever consumed together downstream (attention), never summed --
+   so this stage tests purely whether two concurrent FIDESlib/CUDA processes
+   sharing one deserialized context on two physical GPUs produce results
+   bit-identical to the existing sequential one-GPU computation, with no
+   ciphertext-arithmetic-correctness question at all. Go/no-go: matching
+   `global_rel_inf` against a same-source 1-GPU control, plus wall-clock
+   and per-process VRAM for both processes.
+2. **Stage 2 -- MLP chunk split, exact-merge proof.** The four MLP FC and
+   four MLP projection chunks (`chunk in range(COPIES)` in the existing
+   schedule) are independent dense transforms; the four projection-chunk
+   results are summed only via ciphertext `EvalAdd` (native CKKS addition,
+   exact, no approximation) after all four are computed, matching
+   `simd_layout.py`'s `context_from_weight_tiles`-style accumulation
+   pattern already proven for Token-SIMD. Split 2-and-2 across the two
+   GPUs from stage 1's infra; the merge step deserializes one process's
+   partial-sum ciphertext into the other's context and does one `EvalAdd`.
+   Contract-test locally first (NumPy-level: does splitting the existing
+   `bsgs_matmul_tokens` chunk loop 2-and-2 and summing partial results match
+   the single-process sum, trivially true in plaintext but establishes the
+   split points before any C++) before any GPU work.
+3. **Stage 3 -- independent attention token/query groups.** Per
+   `docs/roadmap.md`, the harder case: different token groups' causal score
+   tiles are independent of each other (a `(query_group, key_group)` tile
+   only depends on those two groups' Q/K, per `active_weight_shifts`), so
+   groups could be sharded by `(query_group mod N_GPUs)`. Needs the
+   `context_from_weight_tiles` accumulation (currently per-query-group,
+   summed across key groups) checked for cross-GPU accumulation order
+   sensitivity before any implementation -- CKKS addition is exact and
+   order-independent in exact arithmetic, but only after confirming no
+   query group's key-group loop is split *across* the sharding boundary in
+   a way that would need a partial ciphertext to cross GPUs before its own
+   group finishes.
+
+`[U]` None of these three stages has been implemented or run. This is a
+design sketch to unblock a scoped first micro-gate, not evidence. Per
+`docs/roadmap.md`'s "no multi-GPU work until single-GPU throughput is
+measured" (already satisfied for B=8) and "start with a two-GPU micro-gate
+with a same-source one-GPU control," stage 1 (Q/K/V split) is the
+recommended next concrete step: it isolates the infra question (can two
+FIDESlib/CUDA processes share one deserialized lineage and run
+concurrently on two physical GPUs) from the merge-correctness question
+(deferred to stage 2), so a failure or success is unambiguous about which
+mechanism it's testing.
+
+`[V]` Added `fhe/gpu_real_scheme_b/shard_layout.py` +
+`test_shard_layout.py` (7/7 pass): the Q/K/V partition assignment
+(`{query,key}` on worker 0, `{value}` on worker 1) is exact and exhaustive,
+each shard's independently-computed values match the real T=103 oracle,
+and gathering both shards equals the unsharded single-process path. Also
+makes explicit and quantifies (via the existing 2026-07-27 profiling
+result, rotation/keyswitch `<0.1%` of one matmul call) that each worker
+must independently recompute `baby_rotations` for every group it touches
+(no cross-process ciphertext-compute sharing exists), while the LN1
+*client* round trip itself is not duplicated (the trusted client can hand
+the same re-encrypted ciphertext to both workers).
+
+`[V]` **Two systems findings from reading the vendored FIDESlib source
+(`/private/tmp/dnagpt-fideslib-audit-20260729`, same audit clone used for
+the depth-13 investigation) and the existing writer/reader/launch scripts,
+found before writing any new C++ -- avoided what would otherwise have been
+a broken remote build attempt:**
+
+1. `CryptoContextImpl<DCRTPoly>::LoadContext` (`api/CryptoContext.cpp`)
+   silently **no-ops** (`if (this->loaded || this->devices.empty()) return;`)
+   if `SetDevices` was never called on that exact in-process `cc` object --
+   it does not throw, it just skips GPU loading. This looked like it could
+   force per-reader `SetDevices` calls to pick a physical GPU different
+   from whatever the writer used. It doesn't matter in practice: every
+   `launch_brev_scheme_b*.sh` already launches each gate inside
+   `docker run --gpus "device=${PHYSICAL_GPU}"`, so exactly one physical
+   GPU is visible per container, always as device index 0 -- the
+   binary's own `--gpu 0` (or whatever default `SetDevices` value survives
+   deserialization) is correct regardless of which physical GPU Docker
+   mapped in. Physical-GPU selection for a 2-GPU micro-gate is therefore
+   entirely a Docker/launch-script concern, not something the C++ fork
+   itself needs to handle.
+2. **The existing `real_dnagpt_fides_scheme_b_serialize_writer/reader`
+   pair is parameter-incompatible with the Token-SIMD B=8 T=103 layout**:
+   the writer's `SLOTS = COPIES * PACK_WIDTH` (`4096`, the original
+   single-token-per-ciphertext T=2 layout) versus Token-SIMD's
+   `SLOTS = COPIES * PACK_WIDTH * TOKEN_BATCH` (`32768`), and its
+   `required_rotation_keys_for_full()` generates the T=2 gate's rotation
+   set, not Token-SIMD's `TOKEN_BATCH`-scaled one. A Stage-1 shard worker
+   cannot deserialize the existing writer's state -- **a new,
+   Token-SIMD-parameter-matched writer fork is a prerequisite**, forked
+   from `real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536.cpp`'s
+   own context construction (`SLOTS=32768`, `MULT_DEPTH=13`,
+   `required_rotation_keys()`) with the writer's serialize-and-exit
+   structure, before any sharded reader can be built. `[U]` This new
+   writer fork, its matching sharded-reader fork (with a `--part
+   query|key|value` selector replacing the existing reader's fixed
+   single-query computation), and their contract tests are scoped but not
+   yet written -- this is real additional engineering scope discovered
+   during design, not a small addendum to the existing reader.

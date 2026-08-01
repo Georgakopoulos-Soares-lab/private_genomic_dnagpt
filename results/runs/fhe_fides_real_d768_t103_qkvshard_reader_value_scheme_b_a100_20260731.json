@@ -1,0 +1,58 @@
+{
+  "schema_version": 1,
+  "task": "Scheme B Token-SIMD T=103 depth-13/digits-3/ring-65536 2-GPU process-per-GPU sharding, Stage 1 (Q/K/V split) -- SHARDED READER phase",
+  "implementation_version": "t103-scheme-b-token-simd-shard-reader-depth13-v1",
+  "scheme": "B (hybrid client-assisted CKKS; server-only linear algebra, client-only decrypt at pre-declared nonlinearity boundaries)",
+  "label": "one of two concurrent shard workers computing a disjoint subset of {query,key,value} from a context/key lineage deserialized from a separate writer process's --state-dir; zero ciphertext merge with the other worker at this stage -- Q/K/V are only ever consumed together downstream (attention), never combined via any encrypted operation",
+  "parts_requested": ["value"],
+  "measured_at_utc": "2026-07-31T20:56:33Z",
+  "backend": "FIDESlib CKKS/CUDA",
+  "backend_commit": "786c7600fb2f16b724e0acf73df367b27b8afed6",
+  "container_image": "dnagpt-fideslib:786c-asymfix2",
+  "environment": "Brev A100-SXM4-80GB physical GPU 5 [gpu] (preflight_confirmed mem=0MiB util=0%)",
+  "gpu": 0,
+  "security": "HEStd_128_classic",
+  "source_sha256": "3261398e2d17c3261260ab87fca625963fc662d993b977aeb27d004363bc5c89",
+  "structural_parent_sha256": "4dbb003fe8407046c852bf10f0c45b23b579cd1bbc7390099966999b6d6ab5d6",
+  "schedule_parent_sha256": "6e8cd08efad1567d2f9001f69d10e302e45f4e634f3bd37e2245382d215fbe5e",
+  "fixture_manifest_sha256": "d2c90ba15c62c648495b51070eee585a3570dc174eb31e14782aaf016b31f8f6",
+  "fixture_contract_sha256": "23004c7ed61d167e257cdbefefa5de9e08f9643b87ea6947404364cd54d57ac7",
+  "config": {
+    "D": 768, "T": 103, "token_batch": 8, "token_groups": 13,
+    "pack_width": 1024, "copies": 4, "batch_slots": 32768, "ring_dim": 65536,
+    "multiplicative_depth": 13,
+    "rotation_keys": 80,
+    "matrix_products": 13, "expected_matrix_products": 13
+  },
+  "cross_process_breakdown": {
+    "writer_keygen_seconds": 1.4391284529999999,
+    "writer_serialize_to_disk_seconds": 1.821324073,
+    "reader_deserialize_seconds": 3.191124683,
+    "reader_load_context_gpu_seconds": 3.6433460559999999
+  },
+  "load_verified_fixture_seconds": 0.015774666999999999,
+  "timings_seconds": {
+    "encrypt_embedded_inputs": 1.989727284,
+    "encrypted_evaluation": 591.54026660800002,
+    "client_boundary_seconds_total": 4.7260213540000002,
+    "server_linear_algebra_seconds": 586.81424525400007
+  },
+  "protocol": {
+    "round_trips": 13,
+    "logical_boundary_instances": 103,
+    "note": "LN1 client round trips are shared across every requested part -- one boundary crossing per token group covers all parts this worker computes, since LN1 happens once per group before any Q/K/V matmul"
+  },
+  "metrics_by_part": {
+    "value": {
+      "global_rel_inf": 3.4809393947793893e-09,
+      "worst_token_rel_inf": 6.9912235960523596e-09,
+      "max_abs_error": 1.8166062598634625e-08,
+      "all_finite": true,
+      "passed": true
+    }
+  },
+  "tol": 0.040000000000000001,
+  "passed": true,
+  "intermediate_decrypt_attempts": 0,
+  "evaluator_has_private_key": false
+}

@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "task": "Process-specific GPU-memory telemetry for depth-13/digits-3/ring-65536 T=103 packed Token-SIMD complete block-0 gate, clean-timing repeat #3",
+  "measured_at_utc_start": "2026-07-31T10:40:02Z",
+  "measured_at_utc_end": "2026-07-31T14:20:14Z",
+  "status": "[V] measured; speed-contaminated (worse than the original depth-13 sample)",
+  "environment": "Brev A100-SXM4-80GB physical GPU 5 [gpu]",
+  "gpu": 5,
+  "process_pid": 4102008,
+  "sampling": {
+    "command": "docker top; nvidia-smi --query-gpu=index,uuid,memory.used,utilization.gpu --format=csv,noheader,nounits; nvidia-smi --query-compute-apps=pid,gpu_uuid,used_memory --format=csv,noheader,nounits",
+    "nominal_interval_seconds": 5,
+    "target_process_sample_count": 2502,
+    "raw_log_sha256": "adb99ef1f02e1ddab3edd923527b1272661881336d2dfc472366f71a52c31ad1",
+    "correctness_run_sha256": "9890d50dd62302e66e44dfcc66084d47a047fe2a1621de821fa77d56b68cbd38"
+  },
+  "process_memory_mib": {
+    "initial": 5726,
+    "minimum": 5726,
+    "final": 9834,
+    "peak": 9834,
+    "peak_first_seen_utc": "2026-07-31T11:58:24Z",
+    "interpretation": "[V] Identical peak (9834 MiB) to both the original depth-13 pass and rep2, confirming target-process memory footprint is graph/depth-determined and independent of ambient contention."
+  },
+  "whole_gpu_observations": {
+    "peak_total_memory_mib": 30380,
+    "peak_utilization_percent": 100,
+    "peak_cotenant_process_memory_mib": 18700
+  },
+  "contamination": {
+    "present": true,
+    "effect": "[V] Preflight showed 1 pre-existing compute process on physical GPU 5 (lighter GPU co-tenancy than the original pass's 4 processes and lower peak whole-GPU/cotenant memory), but host-wide load average was far worse throughout this run (500-1042 observed live during the run) and other physical GPUs were observed at 91-96% utilization from other tenants for the whole duration. server_linear_algebra_seconds (13060.99s) is roughly 2.1x the original pass's 6140.14s despite lower GPU-memory contention here, consistent with host CPU/scheduler contention (not GPU memory pressure) dominating this run's slowdown."
+  },
+  "linked_correctness_result": {
+    "path": "results/runs/fhe_fides_real_d768_t103_block0_simd_full_t103_depth13_digits3_ring65536_scheme_b_a100_20260731_rep3.json",
+    "sha256": "9890d50dd62302e66e44dfcc66084d47a047fe2a1621de821fa77d56b68cbd38"
+  },
+  "limitations": [
+    "[U] nvidia-smi process memory is allocation-level telemetry, not a live-ciphertext object census.",
+    "[U] This is one complete block at T=103, not the chained 12-block graph or released task head.",
+    "[V] Encrypted evaluation (13202.35s total = 13060.99s server + 141.36s client) is markedly slower than both the original depth-13 pass (4662.22s) and the depth-16 baseline (6281.75s) -- see docs/hybrid/tasks.md's 2026-07-31 clean-repeat entry for the combined 3-sample analysis; the earlier directional 25.8% speedup claim does not survive this repeat and no stable speedup is claimed."
+  ]
+}

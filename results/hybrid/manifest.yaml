@@ -1408,3 +1408,384 @@ runs:
       concurrent co-tenants and are not attributed to this run. [U] One
       block fitting does not prove that a future 12-block composition
       preserves the same bounded live set.
+
+  - id: fhe_fides_real_d768_t103_block0_simd_full_t103_depth13_digits3_ring65536_scheme_b_a100_20260731_rep2
+    task: "Clean-timing repeat #2 of the depth-13 complete T=103 block, same unmodified binary/tag scheme, new run tag only"
+    status: "[V] PASS; timing heavily speed-contaminated (worse than the original sample)"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 4 [gpu] (1 pre-existing compute process at preflight; host load average 500-1042 throughout, other physical GPUs at 91-96% utilization from other tenants for the whole run)"
+    config:
+      dimension: 768
+      sequence_length: 103
+      token_batch: 8
+      token_groups: 13
+      batch_slots: 32768
+      ring_dim: 65536
+      multiplicative_depth: 13
+      scale_bits: 50
+      rotation_keys: 80
+      matrix_products: 156
+      frozen_equivalent_matrix_products: 1236
+      dense_call_reduction: 7.923076923076923
+      packed_output_level: 6
+      ciphertext_ciphertext_multiplications: 1506
+      ciphertext_plaintext_multiplications: 177734
+      explicit_rotations: 8173
+      accumulate_sum_calls: 8776
+    metrics:
+      global_rel_inf: 4.389037958679804e-09
+      worst_token_rel_inf: 4.470770076509693e-09
+      max_abs_error: 7.0371942495484063e-08
+      tolerance: 0.04
+      round_trips: 857
+      logical_boundary_instances: 129162
+      client_boundary_seconds_total: 134.42583558199993
+      server_linear_algebra_seconds: 13523.84149572
+      encrypted_evaluation_seconds: 13658.267331302
+      intermediate_decrypt_attempts: 0
+      final_decrypt_calls: 13
+    provenance:
+      result_sha256: "977a9da5d256b3a4a91c794adf2f2a7a5fd20902bb59df65f0361344a8916111"
+      source_sha256: "6e8cd08efad1567d2f9001f69d10e302e45f4e634f3bd37e2245382d215fbe5e"
+      parent_source_sha256: "703a72d8dcc76cbe93234e04dcc953cce7daf0b48b64011ac1239129333d5ca2"
+      frozen_source_sha256: "70580ff0b4f12565921e0af8ce04e7b4c0d4253b51c0a8380ef0727ce85b2a0f"
+      schedule_sha256: "c6b221f365ba6326f615c5554458d7bd092990d23c4ba0d5106ca7577cb7c3aa"
+      fixture_manifest_sha256: "d2c90ba15c62c648495b51070eee585a3570dc174eb31e14782aaf016b31f8f6"
+      fixture_contract_sha256: "061d53bd25bbcaf75d4c12067ec77f032c3ba0e35300a0a6168c2ce15f3672db"
+      remote_run_log_sha256: "48d0bf58ff4fd5c5de4cdf65323459225f8de1821268dc1cca8c178f4900c5f4"
+    verdict: >
+      [V] PASS. Same source/fixture/config as the original depth-13 pass,
+      launched via a one-shot host cron entry (no genuinely idle GPU existed
+      at queue time) to gather the two-to-three repeats docs/roadmap.md
+      requires for a stable speedup claim. Accuracy is consistent
+      (4.39e-9), well inside the 4e-2 gate. [V] Encrypted evaluation
+      (13658.27s) is roughly 2.9x the original pass's 4662.22s and 2.2x the
+      depth-16 baseline's 6281.75s -- combined with rep3 below, this
+      converts the previous [U] directional "25.8% faster" claim into an
+      honest non-claim: see docs/hybrid/tasks.md's 2026-07-31 clean-repeat
+      entry for the full 3-sample analysis. The slowdown correlates with
+      host-wide load average (500-1042 during this run) rather than
+      GPU-memory contention (whole-GPU/cotenant peaks here are lower than
+      the original pass's).
+
+  - id: fhe_fides_real_d768_t103_block0_simd_full_t103_depth13_digits3_ring65536_scheme_b_a100_20260731_rep3
+    task: "Clean-timing repeat #3 of the depth-13 complete T=103 block, same unmodified binary/tag scheme, new run tag only"
+    status: "[V] PASS; timing heavily speed-contaminated (worse than the original sample)"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 5 [gpu] (1 pre-existing compute process at preflight; host load average 500-1042 throughout, other physical GPUs at 91-96% utilization from other tenants for the whole run)"
+    config:
+      dimension: 768
+      sequence_length: 103
+      token_batch: 8
+      token_groups: 13
+      batch_slots: 32768
+      ring_dim: 65536
+      multiplicative_depth: 13
+      scale_bits: 50
+      rotation_keys: 80
+      matrix_products: 156
+      frozen_equivalent_matrix_products: 1236
+      dense_call_reduction: 7.923076923076923
+      packed_output_level: 6
+      ciphertext_ciphertext_multiplications: 1506
+      ciphertext_plaintext_multiplications: 177734
+      explicit_rotations: 8173
+      accumulate_sum_calls: 8776
+    metrics:
+      global_rel_inf: 4.9596303787869407e-09
+      worst_token_rel_inf: 5.3236193601391511e-09
+      max_abs_error: 7.9520575374525393e-08
+      tolerance: 0.04
+      round_trips: 857
+      logical_boundary_instances: 129162
+      client_boundary_seconds_total: 141.36375940099992
+      server_linear_algebra_seconds: 13060.991108328
+      encrypted_evaluation_seconds: 13202.354867729
+      intermediate_decrypt_attempts: 0
+      final_decrypt_calls: 13
+    provenance:
+      result_sha256: "9890d50dd62302e66e44dfcc66084d47a047fe2a1621de821fa77d56b68cbd38"
+      source_sha256: "6e8cd08efad1567d2f9001f69d10e302e45f4e634f3bd37e2245382d215fbe5e"
+      parent_source_sha256: "703a72d8dcc76cbe93234e04dcc953cce7daf0b48b64011ac1239129333d5ca2"
+      frozen_source_sha256: "70580ff0b4f12565921e0af8ce04e7b4c0d4253b51c0a8380ef0727ce85b2a0f"
+      schedule_sha256: "c6b221f365ba6326f615c5554458d7bd092990d23c4ba0d5106ca7577cb7c3aa"
+      fixture_manifest_sha256: "d2c90ba15c62c648495b51070eee585a3570dc174eb31e14782aaf016b31f8f6"
+      fixture_contract_sha256: "061d53bd25bbcaf75d4c12067ec77f032c3ba0e35300a0a6168c2ce15f3672db"
+      remote_run_log_sha256: "6140dc5e1b3060c1883d93ae5825eaf23f9c7036c1ea380683de72d22695bfc6"
+    verdict: >
+      [V] PASS. Same source/fixture/config as the original depth-13 pass.
+      Accuracy is consistent (4.96e-9), well inside the 4e-2 gate. [V]
+      Encrypted evaluation (13202.35s) is roughly 2.8x the original pass's
+      4662.22s and 2.1x the depth-16 baseline's 6281.75s. Combined with
+      rep2, both repeats land far slower than the original single sample,
+      not faster or even comparable -- see docs/hybrid/tasks.md's
+      2026-07-31 clean-repeat entry for the full 3-sample analysis and
+      verdict.
+
+  - id: fhe_fides_real_d768_t103_block0_simd_full_t103_depth13_digits3_ring65536_scheme_b_vram_a100_20260731_rep2
+    task: "Process-specific GPU-memory telemetry for depth-13 clean-timing repeat #2"
+    status: "[V] measured; speed-contaminated"
+    backend: "nvidia-smi process-memory telemetry during FIDESlib CKKS/CUDA run"
+    environment: "Brev A100-SXM4-80GB physical GPU 4 [gpu]"
+    config:
+      sequence_length: 103
+      token_batch: 8
+      token_groups: 13
+      nominal_sampling_interval_seconds: 5
+      target_process_sample_count: 2585
+    metrics:
+      target_process_initial_memory_mib: 5726
+      target_process_peak_memory_mib: 9834
+      target_process_final_memory_mib: 9834
+      peak_first_seen_utc: "2026-07-31T11:58:01Z"
+      whole_gpu_peak_memory_mib: 34052
+      whole_gpu_peak_utilization_percent: 100
+      cotenant_peak_process_memory_mib: 18700
+    provenance:
+      raw_log_sha256: "9849673db413d1103c6e2d52d95a4030786e3b1c659e30b0c9a42743e5c2e04f"
+      linked_correctness_result_sha256: "977a9da5d256b3a4a91c794adf2f2a7a5fd20902bb59df65f0361344a8916111"
+    verdict: >
+      [V] Target PID peak (9834 MiB) is identical to the original depth-13
+      pass, confirming memory footprint is graph/depth-determined,
+      independent of ambient contention. [V] Whole-GPU peak (34052 MiB) and
+      cotenant peak (18700 MiB) are both LOWER than the original pass's
+      contamination (76757/65868 MiB), yet this run's encrypted evaluation
+      is far slower -- direct evidence that host CPU/scheduler contention,
+      not GPU memory pressure, drove this run's slowdown.
+
+  - id: fhe_fides_real_d768_t103_block0_simd_full_t103_depth13_digits3_ring65536_scheme_b_vram_a100_20260731_rep3
+    task: "Process-specific GPU-memory telemetry for depth-13 clean-timing repeat #3"
+    status: "[V] measured; speed-contaminated"
+    backend: "nvidia-smi process-memory telemetry during FIDESlib CKKS/CUDA run"
+    environment: "Brev A100-SXM4-80GB physical GPU 5 [gpu]"
+    config:
+      sequence_length: 103
+      token_batch: 8
+      token_groups: 13
+      nominal_sampling_interval_seconds: 5
+      target_process_sample_count: 2502
+    metrics:
+      target_process_initial_memory_mib: 5726
+      target_process_peak_memory_mib: 9834
+      target_process_final_memory_mib: 9834
+      peak_first_seen_utc: "2026-07-31T11:58:24Z"
+      whole_gpu_peak_memory_mib: 30380
+      whole_gpu_peak_utilization_percent: 100
+      cotenant_peak_process_memory_mib: 18700
+    provenance:
+      raw_log_sha256: "adb99ef1f02e1ddab3edd923527b1272661881336d2dfc472366f71a52c31ad1"
+      linked_correctness_result_sha256: "9890d50dd62302e66e44dfcc66084d47a047fe2a1621de821fa77d56b68cbd38"
+    verdict: >
+      [V] Target PID peak (9834 MiB) matches both the original pass and
+      rep2. [V] Whole-GPU peak (30380 MiB) and cotenant peak (18700 MiB)
+      are both lower than the original pass's contamination, yet this run
+      is also far slower -- consistent with rep2's finding that host
+      CPU/scheduler contention, not GPU memory pressure, is the dominant
+      confound for this workload's wall-clock measurement.
+
+  - id: fhe_fides_real_d768_t103_block0_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_scheme_b_a100_20260731
+    task: "CPU-side-only diagonal-plaintext cache retry (avoids the 2026-07-27 GPU-resident-Plaintext-reuse crash mechanism): complete depth-13 Token-SIMD T=103 block"
+    status: "[V] PASS; timing directional only (heaviest GPU contamination of any depth-13 sample)"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 0 [gpu] (preflight mem=8793MiB util=0%; whole-GPU peaked 80037 MiB with >20 co-tenant PIDs during the run)"
+    config:
+      dimension: 768
+      sequence_length: 103
+      token_batch: 8
+      token_groups: 13
+      batch_slots: 32768
+      ring_dim: 65536
+      multiplicative_depth: 13
+      scale_bits: 50
+      rotation_keys: 80
+      matrix_products: 156
+      diagonal_cache_hits: 159732
+      diagonal_cache_misses: 12
+    metrics:
+      global_rel_inf: 4.4971984360313134e-09
+      worst_token_rel_inf: 4.7979749962471375e-09
+      max_abs_error: 7.2106140960870313e-08
+      tolerance: 0.04
+      round_trips: 857
+      logical_boundary_instances: 129162
+      client_boundary_seconds_total: 123.34161173500013
+      server_linear_algebra_seconds: 7201.5727508460004
+      encrypted_evaluation_seconds: 7324.9143625810002
+      intermediate_decrypt_attempts: 0
+      final_decrypt_calls: 13
+    provenance:
+      result_sha256: "436754d2235da434020e81a70d6eb7b92fd765b341bef5309db3456b53b20b19"
+      source_sha256: "686c8b766436fde0fd4422f6a29f80361f8c8a2565768577857e9264b2976fd5"
+      parent_source_sha256: "6e8cd08efad1567d2f9001f69d10e302e45f4e634f3bd37e2245382d215fbe5e"
+    verdict: >
+      [V] PASS. Caches only the CPU-side packed_values vector per
+      (call-type, giant, small) key across the 13 token groups -- a fresh
+      Plaintext/GPU object is still constructed every call, so this
+      structurally cannot hit the 2026-07-27 crash's exact mechanism
+      (reusing a GPU-resident Plaintext across multPt calls). Cache hit
+      rate 159732/159744 = 99.99%, confirming the diagonal reconstruction
+      really was being redundantly recomputed 13x as hypothesized.
+      Accuracy 4.50e-9, same band as every other depth-13 sample. Target
+      PID peak memory 9834 MiB, identical to every uncached depth-13
+      sample -- the cache adds no GPU memory cost. [U] encrypted_evaluation
+      (7324.91s) falls between the best uncached sample (4662.22s) and the
+      two heavily-contaminated uncached repeats (13202-13658s), but this
+      run also carries the heaviest whole-GPU memory contamination of any
+      depth-13 sample (80037 MiB peak, >20 co-tenant PIDs) -- consistent
+      with real cache benefit given that severity, but not a clean,
+      matched-conditions speed claim. 1-2 repeats needed before treating
+      any speedup as stable.
+
+  - id: fhe_fides_real_d768_t103_block0_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_scheme_b_vram_a100_20260731
+    task: "Process-specific GPU-memory telemetry for the CPU-side diagonal-plaintext cache retry"
+    status: "[V] measured; both CPU- and GPU-contaminated"
+    backend: "nvidia-smi process-memory telemetry during FIDESlib CKKS/CUDA run"
+    environment: "Brev A100-SXM4-80GB physical GPU 0 [gpu]"
+    config:
+      sequence_length: 103
+      token_batch: 8
+      token_groups: 13
+      nominal_sampling_interval_seconds: 5
+      target_process_sample_count: 1392
+    metrics:
+      target_process_initial_memory_mib: 7786
+      target_process_peak_memory_mib: 9834
+      target_process_final_memory_mib: 9834
+      whole_gpu_peak_memory_mib: 80037
+      whole_gpu_peak_utilization_percent: 90
+      diagonal_cache_hit_rate: 0.9999249
+    provenance:
+      linked_correctness_result_sha256: "686c8b766436fde0fd4422f6a29f80361f8c8a2565768577857e9264b2976fd5"
+    verdict: >
+      [V] Target PID peak (9834 MiB) matches every other depth-13 sample
+      exactly. [V] Whole-GPU peak (80037 MiB) is the heaviest observed
+      contamination of any depth-13 sample this session, with over 20
+      distinct co-tenant PIDs on this physical GPU during the run, one
+      alone peaking at 70186 MiB -- the timing result above must be read
+      against this contamination level, not as a clean benchmark.
+
+  - id: fhe_fides_real_d768_t103_qkvshard_writer_scheme_b_a100_20260731
+    task: "2-GPU process-per-GPU sharding, Stage 1 (Q/K/V split): WRITER phase -- Token-SIMD depth-13-parameter-matched context/key generation and serialization"
+    status: "[V] PASS"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 1 [gpu] (preflight mem=2716MiB util=0%, 4 pre-existing compute processes)"
+    config:
+      dimension: 768
+      pack_width: 1024
+      copies: 4
+      token_batch: 8
+      batch_slots: 32768
+      ring_dim: 65536
+      multiplicative_depth: 13
+      scale_bits: 50
+      large_digits: 3
+      rotation_keys: 80
+    metrics:
+      keygen_seconds: 1.4391284529999999
+      serialize_to_disk_seconds: 1.821324073
+    provenance:
+      result_sha256: "4ede27be39076333236aaeefef00c7c8c82227c09374d24751739d67d07d8fd0"
+      source_sha256: "c826e0393919272f6cfd0916ca7a9e49deb4ea9dd98cd9b1ca1e7f4ae1a2cbb4"
+      structural_parent_sha256: "ea720f1b6c49524f1b49853b67622307fd55c9fb751317fee4b30c6750f69403"
+      token_simd_parent_sha256: "6e8cd08efad1567d2f9001f69d10e302e45f4e634f3bd37e2245382d215fbe5e"
+    verdict: >
+      [V] PASS. First writer built with the Token-SIMD B=8 T=103
+      depth-13/digits-3/ring-65536 CCParams and its exact
+      required_rotation_keys() schedule (the pre-existing writer/reader
+      pair was built for the incompatible T=2/4096-slot layout and could
+      not be reused as-is). Serializes CryptoContext/PublicKey/PrivateKey/
+      EvalMultKey/EvalAutomorphismKey to a state directory in 3.26s total;
+      never calls LoadContext, matching the existing writer/reader design's
+      separation of concerns. Secret-key file hygiene (chmod 0600, never
+      logged) preserved; state directory removed after both readers
+      completed.
+
+  - id: fhe_fides_real_d768_t103_qkvshard_reader_querykey_scheme_b_a100_20260731
+    task: "2-GPU process-per-GPU sharding, Stage 1 (Q/K/V split): shard worker A (query+key) on physical GPU 4, concurrent with worker B on GPU 5"
+    status: "[V] PASS"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 4 [gpu] (preflight_confirmed mem=0MiB util=0%, 0 pre-existing compute processes -- genuinely clean)"
+    config:
+      dimension: 768
+      sequence_length: 103
+      token_batch: 8
+      token_groups: 13
+      batch_slots: 32768
+      ring_dim: 65536
+      multiplicative_depth: 13
+      rotation_keys: 80
+      matrix_products: 26
+      parts_requested: ["query", "key"]
+    metrics:
+      query_global_rel_inf: 3.4112250214106537e-09
+      key_global_rel_inf: 3.0493741464524422e-09
+      tolerance: 0.04
+      round_trips: 13
+      logical_boundary_instances: 103
+      reader_deserialize_seconds: 3.0487041050000001
+      reader_load_context_gpu_seconds: 3.5884310949999998
+      client_boundary_seconds_total: 4.6390992320000004
+      server_linear_algebra_seconds: 910.44635242899994
+      encrypted_evaluation_seconds: 915.08545166099998
+    provenance:
+      result_sha256: "cf6fc18f7f03296a165d20bd098bc471e80558841ea271c0d0ef99c64fa422d5"
+      source_sha256: "3261398e2d17c3261260ab87fca625963fc662d993b977aeb27d004363bc5c89"
+      structural_parent_sha256: "4dbb003fe8407046c852bf10f0c45b23b579cd1bbc7390099966999b6d6ab5d6"
+      schedule_parent_sha256: "6e8cd08efad1567d2f9001f69d10e302e45f4e634f3bd37e2245382d215fbe5e"
+      writer_result_sha256: "4ede27be39076333236aaeefef00c7c8c82227c09374d24751739d67d07d8fd0"
+    verdict: >
+      [V] PASS. Both query and key match the real T=103 oracle at the
+      unchanged ~1e-9 band. Deserialized the writer's state (no
+      GenCryptoContext/KeyGen/EvalMultKeyGen/EvalRotateKeyGen in this
+      process) and computed 26 matrix products (13 groups x 2 parts) in
+      915.09s encrypted evaluation, launched concurrently with the
+      value-only worker below on a distinct physical GPU from one shared
+      writer-produced lineage -- proves two independent FIDESlib/CUDA
+      processes can share one deserialized context/key lineage and run
+      concurrently on two physical GPUs. [U] Single sample; not repeated.
+
+  - id: fhe_fides_real_d768_t103_qkvshard_reader_value_scheme_b_a100_20260731
+    task: "2-GPU process-per-GPU sharding, Stage 1 (Q/K/V split): shard worker B (value) on physical GPU 5, concurrent with worker A on GPU 4"
+    status: "[V] PASS"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 5 [gpu] (preflight_confirmed mem=0MiB util=0%, 0 pre-existing compute processes -- genuinely clean)"
+    config:
+      dimension: 768
+      sequence_length: 103
+      token_batch: 8
+      token_groups: 13
+      batch_slots: 32768
+      ring_dim: 65536
+      multiplicative_depth: 13
+      rotation_keys: 80
+      matrix_products: 13
+      parts_requested: ["value"]
+    metrics:
+      value_global_rel_inf: 3.4809393947793893e-09
+      tolerance: 0.04
+      round_trips: 13
+      logical_boundary_instances: 103
+      reader_deserialize_seconds: 3.191124683
+      reader_load_context_gpu_seconds: 3.6433460559999999
+      client_boundary_seconds_total: 4.7260213540000002
+      server_linear_algebra_seconds: 586.81424525400007
+      encrypted_evaluation_seconds: 591.54026660800002
+    provenance:
+      result_sha256: "a1a9b2fa8a7c8074d74c4868aa1d51b862b1a31fcb8c35ddbabfafe3d6425516"
+      source_sha256: "3261398e2d17c3261260ab87fca625963fc662d993b977aeb27d004363bc5c89"
+      structural_parent_sha256: "4dbb003fe8407046c852bf10f0c45b23b579cd1bbc7390099966999b6d6ab5d6"
+      schedule_parent_sha256: "6e8cd08efad1567d2f9001f69d10e302e45f4e634f3bd37e2245382d215fbe5e"
+      writer_result_sha256: "4ede27be39076333236aaeefef00c7c8c82227c09374d24751739d67d07d8fd0"
+    verdict: >
+      [V] PASS. Value matches the real T=103 oracle at the unchanged
+      ~1e-9 band. 13 matrix products (13 groups x 1 part) in 591.54s
+      encrypted evaluation, concurrent with the query+key worker above.
+      [V] **First measured 2-GPU concurrency benefit in this project**:
+      wall-clock for both workers to complete concurrently is
+      max(915.09, 591.54) = 915.09s, versus 915.09 + 591.54 = 1506.63s if
+      the same 3 parts had been computed serially on one GPU -- an
+      observed ~1.65x speedup from splitting Q/K/V across 2 physical GPUs.
+      [U] Single sample, uneven split (2 parts vs 1), and per-part cost
+      differs between workers (35.2s/product vs 45.5s/product) in a way
+      not yet separated from ambient per-GPU contention differences at
+      that moment -- not a controlled, repeated measurement.

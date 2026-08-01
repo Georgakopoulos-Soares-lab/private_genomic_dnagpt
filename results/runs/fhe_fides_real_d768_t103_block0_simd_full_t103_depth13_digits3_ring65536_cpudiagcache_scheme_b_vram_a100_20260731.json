@@ -1,0 +1,43 @@
+{
+  "schema_version": 1,
+  "task": "Process-specific GPU-memory telemetry for the CPU-side diagonal-plaintext-cache retry (depth-13 Token-SIMD T=103 complete block)",
+  "measured_at_utc_start": "2026-07-31T18:59:04Z",
+  "measured_at_utc_end": "2026-07-31T21:00:16Z",
+  "status": "[V] measured; both CPU- and GPU-contaminated",
+  "environment": "Brev A100-SXM4-80GB physical GPU 0 [gpu]",
+  "gpu": 0,
+  "process_pid": 1695364,
+  "sampling": {
+    "command": "docker top; nvidia-smi --query-gpu=index,uuid,memory.used,utilization.gpu --format=csv,noheader,nounits; nvidia-smi --query-compute-apps=pid,gpu_uuid,used_memory --format=csv,noheader,nounits",
+    "nominal_interval_seconds": 5,
+    "target_process_sample_count": 1392,
+    "raw_log_lines": 35574,
+    "correctness_run_sha256": "686c8b766436fde0fd4422f6a29f80361f8c8a2565768577857e9264b2976fd5"
+  },
+  "process_memory_mib": {
+    "initial": 7786,
+    "minimum": 7786,
+    "final": 9834,
+    "peak": 9834,
+    "interpretation": "[V] Identical peak (9834 MiB) to every other depth-13 Token-SIMD sample (fork-7, rep2, rep3) -- confirms the CPU-side-only cache design does not increase GPU memory footprint, as intended (only a host-side std::vector<double> is cached; a fresh Plaintext/GPU object is still constructed every call)."
+  },
+  "whole_gpu_observations": {
+    "peak_total_memory_mib": 80037,
+    "peak_utilization_percent": 90,
+    "note": "[U] This is the heaviest whole-GPU memory contamination of any depth-13 sample this session (vs 76757/34052/30380 MiB for fork-7/rep2/rep3), with >20 distinct co-tenant PIDs observed on this physical GPU during the run, one peaking at 70186 MiB alone."
+  },
+  "diagonal_cache_effectiveness": {
+    "diagonal_cache_hits": 159732,
+    "diagonal_cache_misses": 12,
+    "hit_rate": 0.9999249
+  },
+  "linked_correctness_result": {
+    "path": "results/runs/fhe_fides_real_d768_t103_block0_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_scheme_b_a100_20260731.json",
+    "sha256": "686c8b766436fde0fd4422f6a29f80361f8c8a2565768577857e9264b2976fd5"
+  },
+  "limitations": [
+    "[U] This run's whole-GPU memory contamination is the heaviest of any depth-13 sample this session, so its encrypted_evaluation (7324.91s) cannot be cleanly attributed to the cache alone against the uncached samples (4662.22s clean-ish / 13202-13658s heavily contaminated) -- it sits between them, consistent with meaningful cache benefit given the severity of contamination present, but this is one uncontrolled sample, not a matched-conditions repeat.",
+    "[U] A defensible speed claim for this cache requires 1-2 repeats under conditions matched (or at least comparably characterized) to an existing uncached sample, per docs/roadmap.md's repeat-count discipline.",
+    "[V] The near-total cache hit rate (99.99%) and unchanged peak memory are decisive, uncontaminated structural evidence that the cache mechanism itself works as designed, independent of the wall-clock question above."
+  ]
+}

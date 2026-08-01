@@ -144,3 +144,71 @@ correctness failure" condition below is met. Full comparison and rationale in
     subsequently passes as recorded in item 8. `[U]` The remaining gates are a
     clean dedicated-A100 speed measurement, minimum-depth/precision sweep,
     T=103 multi-block refresh composition, all 12 blocks, and the task head.
+11. **Minimum `MULT_DEPTH` re-derived and B=4 packing width closed.** `[done,
+    2026-07-31]` Minimum passing `MULT_DEPTH=13` (3 HYBRID digits, ring
+    `65536`) found via the diagnostic-print method and confirmed passing,
+    `~25.8%` directionally faster than depth 16. `[done, 2026-07-31]` B=4 vs
+    B=8 Token-SIMD packing width closed by local operation-count evidence
+    (no GPU time spent): B=4 is worse on every measured operation category
+    (dense products, ct-ct/ct-pt multiplications, rotations, round trips),
+    not only the previously-known dense-product ratio -- B=8 remains the
+    packing width to carry forward. See [tasks.md](tasks.md)'s 2026-07-31
+    entries for both. `[V]` Two clean-timing repeats for depth 13 landed via
+    one-shot host cron (the reliable detached-launch mechanism on this host,
+    since plain `nohup`/`disown` did not reliably detach) -- **both PASS
+    correctness but are `2.1`-`2.9x` SLOWER than the original single sample
+    and the depth-16 baseline alike** (`13658.27s`/`13202.35s` vs
+    `4662.22s`), despite *lighter* GPU-memory contamination than the
+    original run. This converts the earlier directional "25.8% faster"
+    figure into an explicit non-claim: no depth-13-vs-depth-16 speed
+    advantage is demonstrated by the evidence in hand, and host-wide CPU
+    contention (load average `500`-`1042`, this project's worst observed)
+    rather than GPU-memory pressure is the better-correlated explanation.
+    See [tasks.md](tasks.md)'s 2026-07-31 "both landed" entry for the full
+    3-sample table and root-cause analysis. A 2-GPU process-per-GPU
+    sharding design (Q/K/V split first as a zero-merge infra proof, then
+    MLP-chunk split as an exact-`EvalAdd`-merge proof, then independent
+    attention token/query groups) is sketched, and a local math contract
+    for the Q/K/V split passes (`shard_layout.py`/`test_shard_layout.py`,
+    7/7); the actual C++ (a new Token-SIMD-parameter-matched writer fork is
+    a discovered prerequisite -- the existing writer/reader pair is built
+    for the incompatible T=2/4096-slot layout) is scoped but not yet
+    written, on hold pending user direction.
+12. **Three parallel tracks: CPU-diagonal-cache retry PASSES, 2-GPU Q/K/V
+    sharding proves real concurrency, 12-block+head T=103 driver built and
+    ready.** `[done, 2026-08-01]` **CPU-side diagonal-plaintext cache**
+    (caches only the host `packed_values` vector, never a GPU-resident
+    `Plaintext` -- structurally avoids the 2026-07-27 crash mechanism):
+    PASSES (`global_rel_inf=4.50e-9`), `99.99%` cache hit rate confirming
+    the redundant-recompute hypothesis, target-PID memory unchanged
+    (`9834 MiB`, identical to every uncached sample). `[U]` Its
+    `7324.91s` timing sits between the best and worst uncached samples
+    under this run's own (heaviest-yet) GPU contamination -- directionally
+    consistent with real benefit, not yet a clean speed claim.
+    **2-GPU process-per-GPU sharding, Stage 1 (Q/K/V split)**: writer
+    built with Token-SIMD-matched context params, two shard-reader workers
+    ran **concurrently on two genuinely clean physical GPUs** (first fully
+    clean preflight of the session) and both PASSED against the real
+    oracle. Measured `~1.65x` wall-clock speedup from splitting Q/K/V
+    across 2 GPUs (`max(915.09s, 591.54s)` concurrent vs `1506.63s` serial
+    equivalent) -- the first measured (not just designed) 2-GPU
+    concurrency benefit in this project, though a single, unrepeated,
+    unevenly-split sample. **12-block + released GSR head T=103 driver**
+    is built and compiled (new source
+    `real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head.cpp`,
+    Token-SIMD-adapted refresh between every block pair, final head
+    driver is built and compiled (new source
+    `real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head.cpp`,
+    Token-SIMD-adapted refresh between every block pair, final head
+    evaluator) with its own T=103 12-block+head fixture (a new
+    `export_fixture_t103.py` sibling was required -- the existing exporter
+    hard-rejects any T other than 2) and passing local contract, but **the
+    actual 15-45 hour run was deliberately not launched** pending an
+    explicit go and a quiet host window (a new, much stricter quiet-window
+    gate requiring load `<50` and zero compute processes across all 8 GPUs,
+    sustained 5 polls, was written and live-validated as correctly
+    reporting "not quiet" against the actual host). See
+    [tasks.md](tasks.md)'s 2026-07-31 "Three parallel tracks" entry for
+    full detail, the revised 16-45h time estimate, and a mechanical
+    concurrent-edit drift in the shared build script that was caught and
+    fixed (all 442 local tests pass).
