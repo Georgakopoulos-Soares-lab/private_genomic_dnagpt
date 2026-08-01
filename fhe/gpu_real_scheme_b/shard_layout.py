@@ -46,6 +46,61 @@ def shard_of(part: str, num_gpus: int) -> int:
     raise ValueError(f"part {part!r} not assigned for num_gpus={num_gpus}")
 
 
+# ---- Stage 2: MLP down-projection chunk split (the merge stage) ----
+#
+# Grounded in the real C++ structure: in the depth-13 full-block source's
+# EncryptedEvaluator::evaluate, the MLP down-projection is
+#     Ct mlp;
+#     for (chunk = 0..COPIES-1)
+#         mlp = chunk==0 ? matmul(baby(hidden[chunk]), mlp_projection[chunk])
+#                        : EvalAdd(mlp, matmul(...));
+#     block_output = EvalAdd(residual1, mlp);
+# i.e. COPIES=4 independent D x D matrix products whose results are SUMMED
+# (EvalAdd) into the same output ciphertext. Unlike Stage 1's Q/K/V (three
+# independent output ciphertexts, never combined), this is a genuine
+# partial-sum accumulation -- so sharding it REQUIRES an exact ciphertext
+# EvalAdd merge of the workers' partial sums. That merge is the Stage-2
+# novelty. Because EvalAdd is exact and associative, any partition of the four
+# chunks reproduces the full sum; the 2-and-2 split assigns two chunks per
+# worker.
+MLP_CHUNKS: tuple[int, ...] = (0, 1, 2, 3)
+
+
+def mlp_chunk_shard_assignment(num_gpus: int) -> dict[int, tuple[int, ...]]:
+    """Deterministic, exhaustive 2-and-2 assignment of the four MLP
+    down-projection chunks to workers.
+
+    The 2-GPU split gives worker 0 the primary half {0,1} and worker 1 the
+    half {2,3}. Worker 0 is "primary": it additionally serializes residual1,
+    which the merge step needs to form
+    block_output = residual1 + (partial_{0,1} + partial_{2,3}). The two
+    partial sums are combined with a single exact EvalAdd per token group.
+    """
+
+    if num_gpus == 1:
+        return {0: MLP_CHUNKS}
+    if num_gpus == 2:
+        return {0: (0, 1), 1: (2, 3)}
+    raise ValueError(f"no defined MLP chunk assignment for num_gpus={num_gpus}")
+
+
+def mlp_shard_of(chunk: int, num_gpus: int) -> int:
+    if chunk not in MLP_CHUNKS:
+        raise ValueError(f"unknown MLP chunk {chunk!r}")
+    assignment = mlp_chunk_shard_assignment(num_gpus)
+    for worker, chunks in assignment.items():
+        if chunk in chunks:
+            return worker
+    raise ValueError(f"chunk {chunk!r} not assigned for num_gpus={num_gpus}")
+
+
+def mlp_chunk_tag(chunks: tuple[int, ...]) -> str:
+    """Concatenated chunk-index tag used to name a worker's serialized
+    partials, matching the C++ reader's Options::chunk_tag()."""
+
+    return "".join(str(chunk) for chunk in chunks)
+
+
 class DuplicatedWorkerCost:
     """What each worker in the 2-GPU split must independently (re)compute.
 

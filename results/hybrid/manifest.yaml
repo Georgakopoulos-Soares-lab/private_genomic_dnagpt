@@ -1664,6 +1664,66 @@ runs:
       alone peaking at 70186 MiB -- the timing result above must be read
       against this contamination level, not as a clean benchmark.
 
+  - id: fhe_fides_real_d768_t103_block0_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_scheme_b_a100_20260801_rep2
+    task: "CPU-side diagonal-plaintext cache repeat (rep2) of the complete depth-13 Token-SIMD T=103 block: tests whether the diagcache yields a repeatable speedup vs contamination (open-question #1)"
+    status: "[U-leaning-positive] PASS; fastest of all completed depth-13 samples at the lightest contamination, but does not cleanly isolate cache benefit"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 4 [gpu] (preflight_confirmed mem=0MiB util=0%; whole-GPU peaked 30241 MiB -- light, essentially just this job, no 80GB co-tenant)"
+    config:
+      dimension: 768
+      sequence_length: 103
+      token_batch: 8
+      token_groups: 13
+      batch_slots: 32768
+      ring_dim: 65536
+      multiplicative_depth: 13
+      scale_bits: 50
+      rotation_keys: 80
+      matrix_products: 156
+      diagonal_cache_hits: 159732
+      diagonal_cache_misses: 12
+    metrics:
+      global_rel_inf: 4.0986609248206564e-09
+      worst_token_rel_inf: 4.3994630614707011e-09
+      max_abs_error: 6.5716162317430715e-08
+      tolerance: 0.04
+      round_trips: 857
+      logical_boundary_instances: 129162
+      client_boundary_seconds_total: 114.59079343500007
+      server_linear_algebra_seconds: 2871.6706602649997
+      encrypted_evaluation_seconds: 2986.2614536999999
+      intermediate_decrypt_attempts: 0
+      final_decrypt_calls: 13
+    provenance:
+      result_sha256: "6407e132edda1e3ff06c7c3b03e0ccebd4af5a4a50b9474bf2a3570a32d272fb"
+      source_sha256: "686c8b766436fde0fd4422f6a29f80361f8c8a2565768577857e9264b2976fd5"
+      parent_source_sha256: "6e8cd08efad1567d2f9001f69d10e302e45f4e634f3bd37e2245382d215fbe5e"
+    verdict: >
+      [U-leaning-positive] PASS. Repeat of the identical cpudiagcache binary
+      (same source_sha256/parent_source_sha256 as the 2026-07-31 cached run),
+      with identical cache behavior (159732 hits / 12 misses = 99.99%),
+      confirming the diagonal reconstruction is deterministically cached 13x
+      as before. rep2 is the FASTEST of all completed depth-13 T=103 samples:
+      encrypted_evaluation 2986.26s / server 2871.67s, vs original cached
+      7324.91s/7201.57s, best uncached 4662.22s/4448.87s, and the two
+      heavily-contaminated uncached repeats 13658.27s/13523.84s and
+      13202.35s/13060.99s. It also ran at the lightest contamination of any
+      sample: whole-GPU peak 30241 MiB (essentially just this job, no 80GB
+      co-tenant), host load1 trajectory 6.2 at 07:41Z (launch, after 5
+      sustained sub-50 polls) -> 155.16 at 07:46Z -> 240.79 at 08:06Z ->
+      159.63 at 08:26Z, run ended ~08:31Z; i.e. it ran mostly under load
+      ~150-240 vs the original cached run's sustained 500+. [U] Does NOT
+      cleanly isolate cache benefit: (1) both cached runs share identical
+      cache behavior, so the 7324->2986s gap between them is PURE
+      contamination, not cache; (2) rep2 (cached) beats the best uncached
+      (4662s) but under lighter contamination, so still not a matched-
+      conditions comparison. A clean cache-vs-nocache isolation needs both
+      run under identical light load, which this shared host will not
+      reliably provide (quiet windows collapse from load~6 back to 150+
+      within ~5 min; a cached rep1 was killed after launching into a
+      load-961 spike). [V] Correctness unaffected: PASS at global_rel_inf
+      4.099e-9, same band as every depth-13 sample.
+
   - id: fhe_fides_real_d768_t103_qkvshard_writer_scheme_b_a100_20260731
     task: "2-GPU process-per-GPU sharding, Stage 1 (Q/K/V split): WRITER phase -- Token-SIMD depth-13-parameter-matched context/key generation and serialization"
     status: "[V] PASS"
@@ -1789,3 +1849,157 @@ runs:
       differs between workers (35.2s/product vs 45.5s/product) in a way
       not yet separated from ambient per-GPU contention differences at
       that moment -- not a controlled, repeated measurement.
+
+  - id: fhe_fides_real_d768_t103_qkvshard_writer_cpudiagcache_scheme_b_a100_20260801_rep2
+    task: "Combined-lever correctness micro-gate: 2-GPU process-per-GPU Q/K/V sharding (Stage 1) PLUS the CPU-side diagonal-vector cache -- WRITER phase (unchanged; reused verbatim from the uncached shard-writer gate, since the cache lever only touches the reader's matmul())"
+    status: "[V] PASS"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 0 [gpu] (preflight_confirmed mem=543MiB util=0%, 1 pre-existing compute process)"
+    config:
+      dimension: 768
+      pack_width: 1024
+      copies: 4
+      token_batch: 8
+      batch_slots: 32768
+      ring_dim: 65536
+      multiplicative_depth: 13
+      scale_bits: 50
+      large_digits: 3
+      rotation_keys: 80
+    metrics:
+      keygen_seconds: 1.151948566
+      serialize_to_disk_seconds: 1.237246968
+    provenance:
+      result_sha256: "190201d5bb03e66d16e52b61357506ab8c66ef641c932400c040f433238d28d5"
+      source_sha256: "c826e0393919272f6cfd0916ca7a9e49deb4ea9dd98cd9b1ca1e7f4ae1a2cbb4"
+      structural_parent_sha256: "ea720f1b6c49524f1b49853b67622307fd55c9fb751317fee4b30c6750f69403"
+      token_simd_parent_sha256: "6e8cd08efad1567d2f9001f69d10e302e45f4e634f3bd37e2245382d215fbe5e"
+    verdict: >
+      [V] PASS. Writer binary is byte-identical to the uncached shard-qkv
+      gate's writer (source_sha256 matches
+      fhe_fides_real_d768_t103_qkvshard_writer_scheme_b_a100_20260731's
+      source_sha256 exactly) -- no fork was needed for the writer since the
+      diagonal-vector cache lever only changes the reader's matmul()/
+      cached_packed_values(). Serialized CryptoContext/PublicKey/
+      PrivateKey/EvalMultKey/EvalAutomorphismKey to a fresh state directory
+      in 2.39s total. First attempt this session (untagged _rep1) failed
+      downstream at the reader phase due to a reader-side bug (see the
+      querykey reader entry below); this writer run is the one whose state
+      directory the passing rep2 readers actually consumed.
+
+  - id: fhe_fides_real_d768_t103_qkvshard_cpudiagcache_reader_querykey_scheme_b_a100_20260801_rep2
+    task: "Combined-lever correctness micro-gate: 2-GPU process-per-GPU Q/K/V sharding (Stage 1) PLUS the CPU-side diagonal-vector cache -- shard worker A (query+key) on physical GPU 0, concurrent with worker B (value) on GPU 1"
+    status: "[V] PASS"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 0 [gpu] (preflight_confirmed mem=543MiB util=0%, 1 pre-existing compute process -- NOT genuinely clean; host under a concurrent Stage-2 MLP workstream's activity, load average 180-212 during this run)"
+    config:
+      dimension: 768
+      sequence_length: 103
+      token_batch: 8
+      token_groups: 13
+      batch_slots: 32768
+      ring_dim: 65536
+      multiplicative_depth: 13
+      rotation_keys: 80
+      matrix_products: 26
+      parts_requested: ["query", "key"]
+      diagonal_cache_hits: 26622
+      diagonal_cache_misses: 2
+    metrics:
+      query_global_rel_inf: 3.7430936251137469e-09
+      key_global_rel_inf: 2.873085692092595e-09
+      tolerance: 0.04
+      round_trips: 13
+      logical_boundary_instances: 103
+      reader_deserialize_seconds: 3.0645370989999998
+      reader_load_context_gpu_seconds: 6.1872610669999997
+      client_boundary_seconds_total: 3.9085927459999996
+      server_linear_algebra_seconds: 639.14939817300001
+      encrypted_evaluation_seconds: 643.05799091899996
+      gpu_vram_peak_mib_note: "device-wide peak 74351 MiB observed, but GPU0 was not genuinely clean (1 pre-existing compute process at preflight, plus erratic 8335-74351 MiB samples through the run) -- not a clean isolated reading; own-process compute-app samples (host PID 3675909) show a 14320->66548 MiB ramp"
+    provenance:
+      result_sha256: "412ba2ddc8e3d05400642f8dd18e35daeec1057a3b7dfd52720edcacd2f22013"
+      source_sha256: "b665de51ca35b0068bf675870ae092be477d0c5eb88254adf1252be22e57685a"
+      shard_reader_parent_sha256: "3261398e2d17c3261260ab87fca625963fc662d993b977aeb27d004363bc5c89"
+      structural_parent_sha256: "4dbb003fe8407046c852bf10f0c45b23b579cd1bbc7390099966999b6d6ab5d6"
+      schedule_parent_sha256: "6e8cd08efad1567d2f9001f69d10e302e45f4e634f3bd37e2245382d215fbe5e"
+      cpudiagcache_parent_sha256: "686c8b766436fde0fd4422f6a29f80361f8c8a2565768577857e9264b2976fd5"
+      writer_result_sha256: "190201d5bb03e66d16e52b61357506ab8c66ef641c932400c040f433238d28d5"
+    verdict: >
+      [V] PASS. Query and key both match the real T=103 oracle at the
+      unchanged ~1e-9 band, combining the two previously-independently-
+      passing levers (2-GPU Q/K/V sharding + CPU-side diagonal cache) in
+      one process for the first time. Diagonal cache hit/miss invariant
+      holds exactly: 2 misses (one per distinct weight this worker
+      touches) and 26622 hits
+      (= 2 * (13 token groups * 1024 BSGS diagonals - 1)), confirming the
+      cache is reused across all 13 token groups per weight and not
+      leaking across the other worker's weights (each worker's cache is a
+      separate process-local std::map; no cross-process sharing). [U]
+      First attempt (_rep1, not recorded as a separate immutable run since
+      it produced no evidence file) failed closed with a
+      "diagonal-cache hit/miss count mismatch" -- an arithmetic bug in the
+      NEW invariant assertion itself (it assumed one cache lookup per
+      matmul() call; cached_packed_values() is actually called
+      BSGS_N1*BSGS_N2=1024 times per matmul() call, same as the full-block
+      cpudiagcache gate's own EXPECTED_DIAGONAL_CACHE_HITS formula). Not a
+      correctness issue in the cache or the sharding -- both workers had
+      already completed all 13 token groups' encrypted evaluation when the
+      assertion fired; only the evidence JSON was never written. Fixed,
+      re-verified with an independent Python cache simulation
+      (test_shard_reader_cpudiagcache_contract.py's
+      SimulatedCacheHitMissFormulaTests), rebuilt, and re-run as rep2
+      (this entry). Timing is informational only per the task brief's
+      instruction -- this host showed load average 180-212 during this run
+      from the concurrent Stage-2 MLP workstream's own activity (a
+      separate, longer-running session on this shared host), and GPU0 was
+      not genuinely clean at preflight (1 pre-existing compute process);
+      no speedup claim is made.
+
+  - id: fhe_fides_real_d768_t103_qkvshard_cpudiagcache_reader_value_scheme_b_a100_20260801_rep2
+    task: "Combined-lever correctness micro-gate: 2-GPU process-per-GPU Q/K/V sharding (Stage 1) PLUS the CPU-side diagonal-vector cache -- shard worker B (value) on physical GPU 1, concurrent with worker A (query+key) on GPU 0"
+    status: "[V] PASS"
+    backend: "FIDESlib CKKS/CUDA asymfix2, HEStd_128_classic"
+    environment: "Brev A100-SXM4-80GB physical GPU 1 [gpu] (preflight_confirmed mem=0MiB util=0%, 0 pre-existing compute processes -- genuinely clean)"
+    config:
+      dimension: 768
+      sequence_length: 103
+      token_batch: 8
+      token_groups: 13
+      batch_slots: 32768
+      ring_dim: 65536
+      multiplicative_depth: 13
+      rotation_keys: 80
+      matrix_products: 13
+      parts_requested: ["value"]
+      diagonal_cache_hits: 13311
+      diagonal_cache_misses: 1
+    metrics:
+      value_global_rel_inf: 3.2457810070869003e-09
+      tolerance: 0.04
+      round_trips: 13
+      logical_boundary_instances: 103
+      reader_deserialize_seconds: 3.0677999499999999
+      reader_load_context_gpu_seconds: 3.413455586
+      client_boundary_seconds_total: 4.5798404360000005
+      server_linear_algebra_seconds: 435.05458583200004
+      encrypted_evaluation_seconds: 439.63442626800003
+      gpu_vram_peak_mib: 14033
+      gpu_vram_peak_note: "GPU1 genuinely clean at preflight (0MiB/0%); 14033 MiB is a clean device-wide reading, not contaminated by another process"
+    provenance:
+      result_sha256: "48039bf28e5e7ced6ce187ebe6b883cd743471f6c0a72b883a0e3a268f474061"
+      source_sha256: "b665de51ca35b0068bf675870ae092be477d0c5eb88254adf1252be22e57685a"
+      shard_reader_parent_sha256: "3261398e2d17c3261260ab87fca625963fc662d993b977aeb27d004363bc5c89"
+      structural_parent_sha256: "4dbb003fe8407046c852bf10f0c45b23b579cd1bbc7390099966999b6d6ab5d6"
+      schedule_parent_sha256: "6e8cd08efad1567d2f9001f69d10e302e45f4e634f3bd37e2245382d215fbe5e"
+      cpudiagcache_parent_sha256: "686c8b766436fde0fd4422f6a29f80361f8c8a2565768577857e9264b2976fd5"
+      writer_result_sha256: "190201d5bb03e66d16e52b61357506ab8c66ef641c932400c040f433238d28d5"
+    verdict: >
+      [V] PASS. Value matches the real T=103 oracle at the unchanged
+      ~1e-9 band. Diagonal cache hit/miss invariant holds exactly: 1 miss,
+      13311 hits (= 13 token groups * 1024 BSGS diagonals - 1), confirming
+      the cache is reused across all 13 token groups for this worker's one
+      weight. Ran concurrently with the query+key worker above on a
+      distinct, genuinely clean physical GPU. Timing is informational
+      only (see the querykey entry above for the host-contention caveat
+      that applies equally here); no speedup claim is made.

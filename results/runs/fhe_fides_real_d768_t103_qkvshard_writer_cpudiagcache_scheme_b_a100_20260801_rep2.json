@@ -1,0 +1,40 @@
+{
+  "schema_version": 1,
+  "task": "Scheme B (hybrid) cross-process context/key serialization prototype, Token-SIMD B=8 T=103 depth-13/digits-3/ring-65536-parameter-matched fork -- WRITER phase (2-GPU process-per-GPU sharding, Stage 1: Q/K/V split prerequisite)",
+  "implementation_version": "t103-scheme-b-token-simd-shard-writer-depth13-v1",
+  "phase": "writer",
+  "label": "process-A: one-time CPU-bound GenCryptoContext/KeyGen/EvalMultKeyGen/EvalRotateKeyGen using the Token-SIMD depth-13/digits-3/ring-65536 CCParams and rotation-key schedule, then serialize CryptoContext+PublicKey+PrivateKey+EvalMultKey+EvalAutomorphismKey to --state-dir; never calls LoadContext/GenCryptoContextGPU (sharded-reader-only) and never evaluates anything",
+  "secret_key_handling": "secret-key file written to --state-dir with chmod 0600; its path and contents are never printed to stdout/stderr or recorded in this JSON; this cross-process split is a testbed simplification of the client role for measurement only, not a production client/server key-custody design (out of scope per CLAUDE.md)",
+  "measured_at_utc": "2026-08-01T09:30:03Z",
+  "backend": "FIDESlib CKKS/CUDA",
+  "backend_commit": "786c7600fb2f16b724e0acf73df367b27b8afed6",
+  "gpu": 0,
+  "security": "HEStd_128_classic",
+  "source_sha256": "c826e0393919272f6cfd0916ca7a9e49deb4ea9dd98cd9b1ca1e7f4ae1a2cbb4",
+  "structural_parent_sha256": "ea720f1b6c49524f1b49853b67622307fd55c9fb751317fee4b30c6750f69403",
+  "token_simd_parent_sha256": "6e8cd08efad1567d2f9001f69d10e302e45f4e634f3bd37e2245382d215fbe5e",
+  "config": {
+    "D": 768,
+    "pack_width": 1024,
+    "copies": 4,
+    "token_batch": 8,
+    "batch_slots": 32768,
+    "ring_dim": 65536,
+    "multiplicative_depth": 13,
+    "scale_bits": 50,
+    "large_digits": 3,
+    "rotation_keys": 80,
+    "rotation_key_source": "Token-SIMD depth-13/digits-3/ring-65536 complete-block required_rotation_keys()"
+  },
+  "timings_seconds": {
+    "keygen_seconds": 1.151948566,
+    "serialize_to_disk_seconds": 1.237246968
+  },
+  "serialized_artifacts": [
+    "crypto-context.txt", "crypto-context.txt.dev",
+    "public-key.txt",
+    "eval-mult-key.bin", "eval-automorphism-key.bin",
+    "writer_timing.txt"
+  ],
+  "serialized_artifacts_note": "one additional file (the secret key) was also written to --state-dir with restricted permissions; its filename is intentionally omitted from this list per the secret_key_handling hygiene rule above"
+}

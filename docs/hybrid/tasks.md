@@ -2490,6 +2490,53 @@ after both tracks' reports, the local test suite surfaced the
 `cpudiagcache` build-script gap described above -- fixed on both local and
 remote copies, all 442 tests pass.
 
+### Diagcache rep2: fastest of all samples, but does NOT cleanly isolate cache benefit (2026-08-01)
+
+`[V]` **A repeat of the Track-1 CPU-side diagcache run (identical binary)
+PASSED and is the fastest of all completed depth-13 T=103 samples**, but
+the measurement is confounded and does not isolate the cache from ambient
+host contention. Evidence:
+`results/runs/fhe_fides_real_d768_t103_block0_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_scheme_b_a100_20260801_rep2.json`
+(`sha256=6407e132...d272fb`). Identical cache behavior to the original
+cached run (`159732` hits / `12` misses = `99.99%`), so the two cached runs
+are byte-for-byte the same computation.
+
+All five completed depth-13 T=103 samples (a sixth, a cached rep1, was
+killed after launching into a load-961 spike):
+
+| sample | `encrypted_evaluation_seconds` | `server_linear_algebra_seconds` | cache | contamination / host load1 | `global_rel_inf` |
+|---|---|---|---|---|---|
+| **rep2 (cached, NEW 2026-08-01)** | `2986.26` | `2871.67` | yes (159732 hits) | **light**: whole-GPU `30241` MiB, load `~150`-`240` | `4.099e-9` |
+| original cached (2026-07-31) | `7324.91` | `7201.57` | yes (159732 hits) | heavy: whole-GPU `80037` MiB, `>20` cotenant, load `500`+ | `4.497e-9` |
+| uncached best / fork 7 (2026-07-31) | `4662.22` | `4448.87` | no | moderate (whole-GPU `76757` MiB); host load not recorded | `4.351e-9` |
+| uncached rep2 (2026-07-31) | `13658.27` | `13523.84` | no | severe: load `500`-`1042` | `4.389e-9` |
+| uncached rep3 (2026-07-31) | `13202.35` | `13060.99` | no | severe: load `500`-`1042` | `4.960e-9` |
+
+`[V]` **Light contamination, live-observed load trajectory.** GPU 4, clean
+preflight (`mem=0MiB util=0%`), whole-GPU peaked at only `30241` MiB --
+essentially just this job, no 80GB co-tenant. Host load1 trajectory as
+observed by the monitor: gate launched at load1 `~6.2` (`07:41Z`, after 5
+sustained sub-50 polls), then `155.16` at `07:46Z`, `240.79` at `08:06Z`,
+`159.63` at `08:26Z`; run ended `~08:31Z`. So rep2 ran mostly under load
+`~150`-`240` -- much lighter than the original cached run's sustained
+`500`+.
+
+`[U-leaning-positive]` **Verdict.** rep2 is the fastest of all samples at
+the lightest contamination, but it does NOT cleanly isolate cache benefit:
+(1) both cached runs have identical cache behavior (`159732` hits), so the
+`7324`->`2986s` gap between the two cached runs is PURE contamination, not
+cache; (2) rep2 (cached) is faster than the best uncached (`4662s`) but ran
+under lighter contamination, so still not a matched-conditions comparison.
+A clean cache-vs-nocache isolation needs both to run under identical light
+load, which this shared host will not reliably provide (this session: quiet
+windows collapse from load `~6` back to `150`+ within `~5` min; rep1 was
+killed after launching into a load-961 spike). `[V]` Correctness is
+unaffected: PASS at `4.099e-9`, same band as every depth-13 sample. This
+leaves open-question #1 (does the diagcache give a real repeatable speedup?)
+in the same `[U]` state as after Track 1: the cache mechanism (hit rate,
+unchanged GPU memory) is decisive, but the wall-clock speedup cannot be
+separated from host contention on this shared host.
+
 ### 2-GPU process-per-GPU sharding: design sketch, not yet built (2026-07-31)
 
 Per `docs/hybrid/roadmap.md` phase 3, FIDESlib's native multi-device path is
@@ -2605,3 +2652,160 @@ a broken remote build attempt:**
    single-query computation), and their contract tests are scoped but not
    yet written -- this is real additional engineering scope discovered
    during design, not a small addendum to the existing reader.
+
+### 2-GPU Stage-2 MLP-chunk sharding: NOT buildable on the pinned FIDESlib -- dropped as infeasible (2026-08-01)
+
+`[V]` **The staged plan's Stage 2 (split the four MLP down-projection
+chunks 2-and-2 across two GPU processes and merge the partial-sum
+ciphertexts with `EvalAdd`, per the "2-GPU process-per-GPU sharding"
+design sketch above) is NOT buildable on the pinned FIDESlib** (commit
+`786c7600`, container `dnagpt-fideslib:786c-asymfix2`, CUDA 13.0). A
+2026-08-01 remote compile of both Stage-2 sources fails `nvcc` on exactly
+one thing: **FIDESlib exposes no ciphertext serialization.**
+`/usr/local/include/fideslib/Serialize.hpp` declares
+`SerializeToFile`/`DeserializeFromFile` only for `CryptoContext`,
+`PublicKey`, and `PrivateKey` -- never `Ciphertext`. This is consistent
+with the library's `SetCiphertextAutoload(true)` design: ciphertexts stay
+GPU-resident and have no host serialization path. The reader source fails
+with `error: no instance of overloaded function
+"fideslib::Serial::SerializeToFile" matches ... (std::string, const Ct,
+fideslib::SerType)`, and the merge source fails with the
+`DeserializeFromFile` analogue. **Everything else in both sources compiled
+clean** -- the block is solely the cross-process ciphertext transport that
+an `EvalAdd` merge between two GPU processes fundamentally requires.
+
+`[V]` **Why Stage 1 (Q/K/V split) is unaffected**: Stage 1 serializes only
+`context` + keys and never a ciphertext, so it hits none of this. Stage 1
+built, ran concurrently on two clean physical GPUs, and passed
+(2026-07-31 "Tracks 1 and 2 landed" entry). It remains valid.
+
+`[V]` **The merge MATH is proven; only the transport is missing.** The
+`EvalAdd` partial-sum merge is exact by construction (CKKS addition, no
+approximation); its local NumPy contract passes at `max abs error
+2.84e-14`. What is unavailable on this pinned FIDESlib is the cross-GPU,
+2-process ciphertext transport that the sharded merge needs -- not the
+correctness of the merge itself. The idea is not wrong; the library it
+would run on cannot move a ciphertext between two processes.
+
+`[U]` **Two forward directions exist, neither being pursued (each needs an
+explicit go-ahead):** (1) a single-binary, in-process merge that avoids
+serialization -- but this only re-associates `EvalAdd`s that the existing
+complete-block gate already exercises and passes (`global_rel_inf`
+`4.099e-9`), so it yields ~no new accuracy signal and no cross-GPU speed
+proof; (2) extend FIDESlib itself with a `Ciphertext` serialize/deserialize
+overload (library surgery on the pinned commit).
+
+`[V]` **Decision: 2-GPU Stage-2 MLP-chunk sharding is DROPPED as infeasible
+on the current pinned FIDESlib**, kept as a documented limitation.
+Stage-1 Q/K/V sharding is unaffected. The two Stage-2 orphan sources
+(`src/real_dnagpt_fides_scheme_b_simd_shard_mlp_reader_t103_depth13.cpp`,
+`sha256=68ac9e6b...`, and the `..._mlp_merge_...` sibling,
+`sha256=5ef44118...`) exist inert on the remote and are **not** wired into
+the shared build -- `CMakeLists.txt` and `build_in_fideslib.sh` were
+restored pristine. The local contract
+(`test_shard_mlp_reader_merge_t103_depth13_contract.py`, 38 tests) passes,
+capturing the proven merge math for the record. No run JSON: this was a
+compile-time infeasibility, not an executed gate.
+
+### Combined-lever correctness micro-gate: CPU-diagonal-cache + Q/K/V Stage-1 sharding, run together for the first time (2026-08-01)
+
+`[V]` **Scope**: the two previously-independently-passing Scheme B speed levers --
+the CPU-side diagonal-plaintext cache (`..._cpudiagcache.cpp`, `global_rel_inf
+4.4972e-9`, 99.99% hit rate) and the 2-GPU process-per-GPU Q/K/V sharding
+(Stage 1, `..._simd_shard_writer/reader_t103_depth13.cpp`) -- had each passed
+correctness on their own but had never been combined with each other. This is
+a **correctness-only** micro-gate: does the combined recipe still pass, not a
+speed run, not the 12-block end-to-end run.
+
+`[V]` **Design**: forked the shard reader into
+`src/real_dnagpt_fides_scheme_b_simd_shard_reader_cpudiagcache_t103_depth13.cpp`
+(three pinned parents: the shard-reader, its own structural
+`serialize_reader.cpp` grandparent, the Token-SIMD schedule source, and the
+cpudiagcache source), porting `cached_packed_values()`/the cache-gated
+`matmul()` in verbatim from the cpudiagcache parent. The writer needed **no
+fork at all** -- the cache lever only touches the reader's `matmul()`, so
+`wait_and_run_scheme_b_simd_shard_qkv_cpudiagcache_t103_depth13.sh` reuses the
+existing (unchanged) shard-writer launch script unmodified. Per-shard cache
+keying (by weight-vector stable address) needed no change: each of the two
+shard workers is its own OS process with its own `std::map`, and each only
+ever calls `matmul()` with the 1-2 weight addresses in its own `--part`
+selection, so there is no cross-part or cross-process cache-sharing question
+-- confirmed before coding, not just asserted after.
+
+`[V]` **Local contract first**: `test_shard_reader_cpudiagcache_contract.py`
+(27 tests) -- static/structural contract (parent hashes pinned, cache gates
+`matmul()` not an inline rebuild, a fresh `Plaintext` still built every call,
+per-shard hit/miss invariant asserted in `main()`, build/run/launch/
+orchestrator scripts wired) plus a from-scratch Python simulation of the
+cache's own hit/miss bookkeeping (`SimulatedCacheHitMissFormulaTests`) that
+independently re-derives the exact counts the C++ invariant asserts. Did not
+re-derive math already proved elsewhere: the per-shard Q/K/V split's exactness
+against the real oracle is `test_shard_layout.py`'s job; the BSGS diagonal
+construction being a pure function of `(weight, giant, small)` for each real
+QKV matrix individually is `test_diagonal_cache_reuse.py`'s job. Full local
+suite: 507/507 pass.
+
+`[V]` **Remote build + fail-closed smoke checks**: built clean on the pinned
+FIDESlib commit (`786c7600`, `dnagpt-fideslib:786c-asymfix2`). `--help`
+exits 0; a deliberately wrong `--shard-reader-parent-sha256` is refused
+(`[FATAL] refusing changed shard-reader parent`); the `run_scheme_b_*.sh`
+wrapper refuses a missing `--state-dir` before ever invoking the binary.
+
+`[U]` **First attempt (`_rep1`) failed closed on a bug in the NEW invariant
+itself, not on the cache or the sharding.** Both workers ran all 13 token
+groups to completion, then `main()`'s own
+`diagonal_cache_hits`/`diagonal_cache_misses` assertion threw
+`"diagonal-cache hit/miss count mismatch"` right before the evidence JSON
+would have been written -- so `_rep1` produced no evidence file and is not
+recorded as a manifest row. Root cause: the assertion assumed one
+`cached_packed_values()` lookup per `matmul()` call; it is actually called
+`BSGS_N1*BSGS_N2=1024` times per `matmul()` call (once per BSGS diagonal, all
+built and cached together on the first call for a weight) -- exactly the
+counting the frozen cpudiagcache gate's own
+`EXPECTED_DIAGONAL_CACHE_HITS`/`_MISSES` constants already used, which this
+fork's first draft failed to carry over correctly. Fixed
+(`expected_hits = (TOKEN_GROUPS * BSGS_N1 * BSGS_N2 - 1) * requested.size()`),
+re-verified against the from-scratch Python simulation above, rebuilt, and
+re-run as `_rep2`.
+
+`[V]` **`_rep2` PASS, both workers, combined levers confirmed compatible.**
+Launched concurrently: worker A (`query,key`) on physical GPU 0, worker B
+(`value`) on physical GPU 1.
+
+| worker | parts | matrix products | diagonal cache hits/misses | global_rel_inf | encrypted_evaluation_seconds |
+|---|---|---|---|---|---|
+| A | query, key | 26 | 26622 / 2 | query `3.743e-9`, key `2.873e-9` | 643.06 (informational) |
+| B | value | 13 | 13311 / 1 | `3.246e-9` | 439.63 (informational) |
+
+Both at the unchanged `~1e-9` band, both cache hit/miss counts exactly match
+the corrected formula (`(TOKEN_GROUPS*BSGS_N1*BSGS_N2 - 1) * requested.size()`
+hits, `requested.size()` misses -- i.e. 2 and 1 distinct weights respectively,
+each cached once and reused for the other 12 token groups' worth of BSGS
+lookups). No cross-process cache leakage: each worker's map only ever holds
+the weight address(es) it requested.
+
+`[U]` **Timing is explicitly not a speed claim, per this gate's own scope.**
+This host showed load average `180-212` during the `_rep2` run from the
+concurrent Stage-2 MLP workstream's own activity documented immediately above
+in this file (a separate, longer session on this shared Brev host) -- the
+same class of host-wide CPU contention that invalidated the depth-13
+clean-timing repeat samples (see the 2026-07-31 retraction entry). GPU0 was
+also not genuinely clean at preflight (1 pre-existing compute process, `543
+MiB`); GPU1 was genuinely clean (`0 MiB`/`0%`). VRAM: worker B's device-wide
+peak (`14033 MiB`) is a clean reading on an uncontaminated GPU; worker A's
+device-wide peak (`74351 MiB`, erratic `8335`-`74351 MiB` samples) sits on a
+GPU shared with another process and is not a clean isolated reading -- its
+own compute-app samples (host PID `3675909`) show a `14320`->`66548 MiB`
+ramp, reported as the more trustworthy per-process figure.
+
+`[V]` Evidence: 3 immutable run JSONs under `results/runs/`
+(`fhe_fides_real_d768_t103_qkvshard_writer_cpudiagcache_scheme_b_a100_20260801_rep2.json`,
+`..._reader_querykey_..._rep2.json`, `..._reader_value_..._rep2.json`) + 3
+new rows in `results/hybrid/manifest.yaml`. New source
+(`real_dnagpt_fides_scheme_b_simd_shard_reader_cpudiagcache_t103_depth13.cpp`)
++ run/launch/orchestrator scripts + contract test, all additive; the
+concurrent Stage-2 MLP workstream's own in-flight `CMakeLists.txt`/
+`build_in_fideslib.sh` edits on the shared remote host were detected and
+preserved (idempotent single-round-trip patch applied on top of whatever was
+live there, rather than a blind overwrite, after an earlier overwrite/
+clobber collision was caught and corrected).

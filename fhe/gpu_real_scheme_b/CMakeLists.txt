@@ -124,6 +124,32 @@ set_target_properties(
     CUDA_SEPARABLE_COMPILATION ON
     POSITION_INDEPENDENT_CODE ON)
 
+# Correctness-only micro-gate combining the two independently-passing
+# levers: 2-GPU process-per-GPU Q/K/V sharding (Stage 1) PLUS the CPU-side
+# diagonal-vector cache. Forks the shard reader, portin the cpudiagcache
+# lever's matmul()/cached_packed_values() verbatim. Additive; touches no
+# other target in this file.
+add_executable(
+    real_dnagpt_fides_scheme_b_simd_shard_reader_cpudiagcache_t103_depth13
+    src/real_dnagpt_fides_scheme_b_simd_shard_reader_cpudiagcache_t103_depth13.cpp)
+set_source_files_properties(
+    src/real_dnagpt_fides_scheme_b_simd_shard_reader_cpudiagcache_t103_depth13.cpp
+    PROPERTIES LANGUAGE CUDA)
+target_link_libraries(
+    real_dnagpt_fides_scheme_b_simd_shard_reader_cpudiagcache_t103_depth13 PRIVATE
+    fideslib::fideslib
+    OpenMP::OpenMP_CXX)
+target_compile_options(
+    real_dnagpt_fides_scheme_b_simd_shard_reader_cpudiagcache_t103_depth13 PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>
+    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wall,-Wextra,-Wpedantic>)
+set_target_properties(
+    real_dnagpt_fides_scheme_b_simd_shard_reader_cpudiagcache_t103_depth13
+    PROPERTIES
+    CUDA_RESOLVE_DEVICE_SYMBOLS ON
+    CUDA_SEPARABLE_COMPILATION ON
+    POSITION_INDEPENDENT_CODE ON)
+
 add_executable(real_dnagpt_fides_scheme_b_profiled src/real_dnagpt_fides_scheme_b_profiled.cpp)
 set_source_files_properties(src/real_dnagpt_fides_scheme_b_profiled.cpp PROPERTIES LANGUAGE CUDA)
 target_link_libraries(real_dnagpt_fides_scheme_b_profiled PRIVATE
@@ -493,6 +519,53 @@ target_compile_options(
     $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wall,-Wextra,-Wpedantic>)
 set_target_properties(
     real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head
+    PROPERTIES
+    CUDA_RESOLVE_DEVICE_SYMBOLS ON
+    CUDA_SEPARABLE_COMPILATION ON
+    POSITION_INDEPENDENT_CODE ON)
+
+# Stage-2 2-GPU process-per-GPU sharding: MLP down-projection chunk split with
+# an exact ciphertext EvalAdd merge. The reader computes a disjoint 2-chunk
+# partial down-projection sum and serializes it; the merge EvalAdds the two
+# workers' partials + residual1 and measures the reconstructed block output.
+# Additive; touches no other target in this file.
+add_executable(
+    real_dnagpt_fides_scheme_b_simd_shard_mlp_reader_t103_depth13
+    src/real_dnagpt_fides_scheme_b_simd_shard_mlp_reader_t103_depth13.cpp)
+set_source_files_properties(
+    src/real_dnagpt_fides_scheme_b_simd_shard_mlp_reader_t103_depth13.cpp
+    PROPERTIES LANGUAGE CUDA)
+target_link_libraries(
+    real_dnagpt_fides_scheme_b_simd_shard_mlp_reader_t103_depth13 PRIVATE
+    fideslib::fideslib
+    OpenMP::OpenMP_CXX)
+target_compile_options(
+    real_dnagpt_fides_scheme_b_simd_shard_mlp_reader_t103_depth13 PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>
+    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wall,-Wextra,-Wpedantic>)
+set_target_properties(
+    real_dnagpt_fides_scheme_b_simd_shard_mlp_reader_t103_depth13
+    PROPERTIES
+    CUDA_RESOLVE_DEVICE_SYMBOLS ON
+    CUDA_SEPARABLE_COMPILATION ON
+    POSITION_INDEPENDENT_CODE ON)
+
+add_executable(
+    real_dnagpt_fides_scheme_b_simd_shard_mlp_merge_t103_depth13
+    src/real_dnagpt_fides_scheme_b_simd_shard_mlp_merge_t103_depth13.cpp)
+set_source_files_properties(
+    src/real_dnagpt_fides_scheme_b_simd_shard_mlp_merge_t103_depth13.cpp
+    PROPERTIES LANGUAGE CUDA)
+target_link_libraries(
+    real_dnagpt_fides_scheme_b_simd_shard_mlp_merge_t103_depth13 PRIVATE
+    fideslib::fideslib
+    OpenMP::OpenMP_CXX)
+target_compile_options(
+    real_dnagpt_fides_scheme_b_simd_shard_mlp_merge_t103_depth13 PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>
+    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wall,-Wextra,-Wpedantic>)
+set_target_properties(
+    real_dnagpt_fides_scheme_b_simd_shard_mlp_merge_t103_depth13
     PROPERTIES
     CUDA_RESOLVE_DEVICE_SYMBOLS ON
     CUDA_SEPARABLE_COMPILATION ON

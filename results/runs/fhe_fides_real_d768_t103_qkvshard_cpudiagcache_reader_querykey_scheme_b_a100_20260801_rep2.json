@@ -1,0 +1,72 @@
+{
+  "schema_version": 1,
+  "task": "Scheme B Token-SIMD T=103 depth-13/digits-3/ring-65536 2-GPU process-per-GPU sharding (Stage 1, Q/K/V split) COMBINED with the CPU-side diagonal-vector cache -- correctness-only micro-gate, one of two concurrent shard workers",
+  "implementation_version": "t103-scheme-b-token-simd-shard-reader-cpudiagcache-depth13-v1",
+  "scheme": "B (hybrid client-assisted CKKS; server-only linear algebra, client-only decrypt at pre-declared nonlinearity boundaries)",
+  "label": "combines two previously-independently-passing levers: (1) this worker computes a disjoint subset of {query,key,value} from a context/key lineage deserialized from a separate writer process's --state-dir, concurrent with a second worker on a different physical GPU (zero ciphertext merge between them); (2) this worker's own BSGS diagonal std::vector<double> construction is cached per distinct weight address, independently of the other worker's cache (no cross-process cache sharing)",
+  "parts_requested": ["query", "key"],
+  "measured_at_utc": "2026-08-01T09:41:13Z",
+  "backend": "FIDESlib CKKS/CUDA",
+  "backend_commit": "786c7600fb2f16b724e0acf73df367b27b8afed6",
+  "container_image": "dnagpt-fideslib:786c-asymfix2",
+  "environment": "Brev A100-SXM4-80GB physical GPU 0 [gpu] (preflight_confirmed mem=543MiB util=0%)",
+  "gpu": 0,
+  "security": "HEStd_128_classic",
+  "source_sha256": "b665de51ca35b0068bf675870ae092be477d0c5eb88254adf1252be22e57685a",
+  "shard_reader_parent_sha256": "3261398e2d17c3261260ab87fca625963fc662d993b977aeb27d004363bc5c89",
+  "structural_parent_sha256": "4dbb003fe8407046c852bf10f0c45b23b579cd1bbc7390099966999b6d6ab5d6",
+  "schedule_parent_sha256": "6e8cd08efad1567d2f9001f69d10e302e45f4e634f3bd37e2245382d215fbe5e",
+  "cpudiagcache_parent_sha256": "686c8b766436fde0fd4422f6a29f80361f8c8a2565768577857e9264b2976fd5",
+  "fixture_manifest_sha256": "d2c90ba15c62c648495b51070eee585a3570dc174eb31e14782aaf016b31f8f6",
+  "fixture_contract_sha256": "23004c7ed61d167e257cdbefefa5de9e08f9643b87ea6947404364cd54d57ac7",
+  "config": {
+    "D": 768, "T": 103, "token_batch": 8, "token_groups": 13,
+    "pack_width": 1024, "copies": 4, "batch_slots": 32768, "ring_dim": 65536,
+    "multiplicative_depth": 13,
+    "rotation_keys": 80,
+    "matrix_products": 26, "expected_matrix_products": 26,
+    "diagonal_cache_hits": 26622,
+    "diagonal_cache_misses": 2,
+    "expected_diagonal_cache_misses": 2,
+    "expected_diagonal_cache_hits": 26622
+  },
+  "cross_process_breakdown": {
+    "writer_keygen_seconds": 1.151948566,
+    "writer_serialize_to_disk_seconds": 1.237246968,
+    "reader_deserialize_seconds": 3.0645370989999998,
+    "reader_load_context_gpu_seconds": 6.1872610669999997
+  },
+  "load_verified_fixture_seconds": 0.018158438999999998,
+  "timings_seconds": {
+    "encrypt_embedded_inputs": 2.5225117780000001,
+    "encrypted_evaluation": 643.05799091899996,
+    "client_boundary_seconds_total": 3.9085927459999996,
+    "server_linear_algebra_seconds": 639.14939817300001
+  },
+  "timings_note": "informational only -- this host has shown severe, documented CPU contention (load average 500-1042, see docs/hybrid/tasks.md's 2026-07-31 depth-13 repeat-run retraction) that invalidates any single wall-clock sample as a speedup claim; no speedup is claimed from this run",
+  "protocol": {
+    "round_trips": 13,
+    "logical_boundary_instances": 103,
+    "note": "LN1 client round trips are shared across every requested part -- one boundary crossing per token group covers all parts this worker computes, since LN1 happens once per group before any Q/K/V matmul"
+  },
+  "metrics_by_part": {
+    "query": {
+      "global_rel_inf": 3.7430936251137469e-09,
+      "worst_token_rel_inf": 7.2556351608480784e-09,
+      "max_abs_error": 2.175867797049591e-08,
+      "all_finite": true,
+      "passed": true
+    },
+    "key": {
+      "global_rel_inf": 2.873085692092595e-09,
+      "worst_token_rel_inf": 6.0540712901769295e-09,
+      "max_abs_error": 1.8691881445431768e-08,
+      "all_finite": true,
+      "passed": true
+    }
+  },
+  "tol": 0.040000000000000001,
+  "passed": true,
+  "intermediate_decrypt_attempts": 0,
+  "evaluator_has_private_key": false
+}

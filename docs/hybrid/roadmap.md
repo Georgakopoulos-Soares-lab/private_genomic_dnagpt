@@ -212,3 +212,27 @@ correctness failure" condition below is met. Full comparison and rationale in
     full detail, the revised 16-45h time estimate, and a mechanical
     concurrent-edit drift in the shared build script that was caught and
     fixed (all 442 local tests pass).
+    `[V]` **2-GPU Stage-2 MLP-chunk sharding is DROPPED as infeasible on
+    the pinned FIDESlib** (commit `786c7600`): the library exposes no
+    `Ciphertext` serialization (only `CryptoContext`/`PublicKey`/
+    `PrivateKey` in `Serialize.hpp`), so the cross-GPU `EvalAdd` partial-sum
+    merge cannot be transported between two processes -- both Stage-2 sources
+    fail `nvcc` on exactly the `SerializeToFile`/`DeserializeFromFile`
+    ciphertext call, everything else compiles clean. The merge math itself is
+    exact (`[V]` local contract `max abs error 2.84e-14`); only the transport
+    is unavailable. Stage-1 Q/K/V sharding (which serializes only context+keys,
+    never a ciphertext) is unaffected and remains valid. See
+    [tasks.md](tasks.md)'s 2026-08-01 "2-GPU Stage-2 MLP-chunk sharding: NOT
+    buildable on the pinned FIDESlib" entry.
+    `[V]` **Combined-lever correctness micro-gate PASSES**: the CPU-side
+    diagonal-vector cache and 2-GPU Q/K/V Stage-1 sharding -- each previously
+    proven correct in isolation -- run together for the first time and both
+    concurrent shard workers pass against the real T=103 oracle at the
+    unchanged `~1e-9` band, with an exact per-shard cache hit/miss invariant
+    (`(TOKEN_GROUPS*BSGS_N1*BSGS_N2 - 1) * requested.size()` hits). A first
+    attempt failed closed on an arithmetic bug in the new invariant itself
+    (not the cache or the sharding); fixed, cross-checked against an
+    independent Python simulation, and re-run clean. Timing not claimed as a
+    speedup (host under concurrent contention from the Stage-2 workstream
+    above). See [tasks.md](tasks.md)'s 2026-08-01 "Combined-lever correctness
+    micro-gate" entry.
