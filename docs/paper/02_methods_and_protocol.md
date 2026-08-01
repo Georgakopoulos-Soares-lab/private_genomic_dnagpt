@@ -51,7 +51,7 @@ The selected software separates correctness from performance:
 - **OpenFHE** supplies CKKS context construction, security-parameter selection, encoding, rotations,
   polynomial evaluation, and approximate bootstrap semantics.
 - **FIDESlib** supplies CUDA CKKS operations and interoperability with the OpenFHE representation.
-- **Python/NumPy/PyTorch** supply independent plaintext oracles and fixture construction; they are not
+- **Python/NumPy/PyTorch** supply independent plaintext oracles and test-input construction; they are not
   the encrypted performance path.
 
 CKKS is the selected approach among the software paths evaluated in this project, not the only

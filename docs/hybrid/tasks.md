@@ -1546,7 +1546,7 @@ server-GPU-dominated split seen at every prior gate.
 
 `[U]` No speed claim: not compared against any smaller-`T` anchor (T differs, host
 load uncontrolled — this run itself waited on GPU capacity). `[U]` This closes the
-T=32 growth-trend/packing-fix milestone (`docs/hybrid/roadmap.md` item 8); T=32
+then-active T=32 growth-trend/packing-fix milestone; T=32
 still sits comfortably under the raised `T<=85` ceiling, and task-representative
 `T~103` remains blocked on the chunked/streaming softmax design scoped above. `[U]`
 Single block-0 gate only — no multi-block composition attempted, consistent with
@@ -2134,15 +2134,14 @@ real-oracle-matched case (Q/K/V, attention projection, all 4 MLP FC chunks,
 all 4 MLP projection chunks, score tiles, causal masking, tiled softmax) at
 the same `atol=1e-9`/`1e-12` bands as B=8. `[V]` B=4 also exactly saturates a
 `ring_dim=32768` context (`4*1024*4=16384=32768/2` complex slots), mirroring
-B=8's exact saturation of `ring_dim=65536` -- confirms `docs/hybrid/roadmap.md`
-item 4's claim precisely rather than approximately.
+B=8's exact saturation of `ring_dim=65536`; this confirms the fixed-four-copy
+comparison precisely rather than approximately.
 
 `[V]` The honest full operation-count comparison (via `simd_layout.py`'s own
 `protocol_counts`/`server_operation_counts`, the same formulas whose B=8
-output already matches real T=32/T=103 GPU evidence) is decisive and was not
-in the original arithmetic-only projection in `simd_current_state.txt`
-section 8 (which only compared the two packing widths' dense-product count,
-`7.92x` vs `3.96x`). Counting every operation category at T=103, one block:
+output already matches real T=32/T=103 GPU evidence) is decisive and goes
+beyond the earlier dense-product-only projection (`7.92x` vs `3.96x`).
+Counting every operation category at T=103, one block:
 
 | metric | B=8 | B=4 | B=8 advantage |
 |---|---|---|---|
@@ -2174,17 +2173,14 @@ measurement; if a future need arises to double-check it (e.g. if per-operation
 cost at ring=32768 turns out non-uniformly cheaper than at ring=65536 for
 some FIDESlib-internal reason), the micro-gate remains cheap to run and
 would settle it definitively. No `results/runs/` entry exists for this
-finding since it produced no GPU/timing evidence, consistent with how
-`simd_current_state.txt` section 8a documents local-only contract results.
+finding since it produced no GPU/timing evidence. The executable local evidence
+is `simd_layout.py` plus `test_simd_layout_b4.py`.
 
-**Practical implication for the main questions**: B=8 (already the frozen,
-GPU-proven packing) remains the right packing width to carry into sharding
-and multi-block work. The remaining open packing question, if any, is
-whether a *larger* batch width (e.g. B=16 at `ring_dim=131072`) could help --
-not raised in any prior document, not requested this session, and not
-pursued here since it reopens the ring-size-vs-per-operation-cost tradeoff
-that made Scheme B's smaller ring viable over Scheme A's `ring_dim=131072`
-in the first place.
+**Practical implication at the time of this experiment**: B=8 remains the
+right width under the fixed four-copy layout. This comparison does not close
+the later design space in which B=16 uses two copies or B=32 uses one copy;
+those alternatives require a different downstream packing schedule and are
+tracked in the current roadmap.
 
 ### Depth-13 clean-timing repeats: queued via one-shot host cron (2026-07-31)
 

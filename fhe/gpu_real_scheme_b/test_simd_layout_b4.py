@@ -1,13 +1,11 @@
 """Local contracts for the additive Scheme B Token-SIMD design at B=4.
 
 Mirrors test_simd_layout.py's B=8 contract suite exactly, but at batch_width=4
-and (per docs/hybrid/roadmap.md item 4 / simd_current_state.txt section 7) the
-smaller ring dimension 32768 that B=4 is intended to run at. simd_layout.py
+and the smaller ring dimension 32768 that B=4 is intended to run at. simd_layout.py
 is already generic over batch_width, so this file adds no new implementation
 -- it proves the same properties hold at the other candidate packing width
 before any C++ work, per docs/roadmap.md's "test one change at a time" and
-this repo's go/no-go gate discipline (results/README.md, docs/hybrid/roadmap.md
-"Required local correctness" / "Required projected leverage").
+this repo's go/no-go gate discipline (results/README.md and docs/hybrid/roadmap.md).
 
 No CUDA/FIDESlib code is built or launched here.
 """
@@ -83,9 +81,8 @@ class TokenSimdB4CapacityTests(unittest.TestCase):
     def test_batch_capacity_is_exactly_four_at_ring_32768(self) -> None:
         """B=4 must exactly saturate ring=32768, mirroring B=8/ring=65536.
 
-        docs/hybrid/roadmap.md item 4 states a smaller ring would require a
-        separate B<=4 layout; this proves the exact match, not an
-        approximation, at the honest smaller ring rather than reusing the
+        This fixed-four-copy comparison tests a separate B<=4 layout and
+        proves the exact match, not an approximation, at the honest smaller ring rather than reusing the
         existing ring=65536/32768-slot context (which would under-use the
         halved ring and not test the claim this comparison is meant to make).
         """

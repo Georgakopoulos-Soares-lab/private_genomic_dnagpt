@@ -1,108 +1,65 @@
-# FHE feasibility overview
+# Encrypted-inference feasibility overview
 
-## Question
+## Question and boundary
 
-Can DNAGPT evaluate encrypted embedded genomic-token vectors and return encrypted
-outputs so an untrusted compute provider never sees plaintext DNA?
+Can DNAGPT evaluate encrypted embedded genomic-token vectors while an untrusted compute provider sees
+neither the input nor derived plaintext activations?
 
-Two architectures are tracked as of 2026-07-25
-(see [architecture_options.md](architecture_options.md) for the full comparison):
+The current boundary starts after embedding and ends, in the intended complete experiment, at the
+released task head. Private token-index lookup is unresolved. Production transport and key custody are
+not implemented.
 
-- **Scheme A (frozen baseline):** pure non-interactive CKKS, one uninterrupted
-  ciphertext lineage, zero intermediate decrypt.
-- **Scheme B (active path):** hybrid client-assisted CKKS — linear algebra stays
-  encrypted end to end on GPU; only the data-owning client (already the secret-key
-  holder) decrypts, at pre-declared nonlinearity boundaries, its own data only.
+## Evaluated architectures
 
-The current answer is deliberately split:
+| Architecture | What passed | Why it is or is not active |
+|---|---|---|
+| Pure non-interactive CKKS | Required operators, complete toy block, CUDA parity, and one complete real-weight block | Frozen baseline. Three chained-composition configurations failed during GPU setup because evaluation material exceeded the tested A100 memory envelope. |
+| Client-assisted CKKS | Exact client nonlinearities, general causal attention, eight-token SIMD packing, one complete 103-token real-weight block, and two-block refresh at two tokens | Active. It removes bootstrap/nonlinear depth accumulation while keeping server-side model arithmetic encrypted. |
+| CKKS/FHEW scheme switching | Design-only option | Deferred because no suitable GPU-accelerated implementation was available in the evaluated stack. |
 
-- `[V]` The required CKKS primitives and a depth-refresh operation work independently
-  at 128-bit security.
-- `[V]` The complete `D=8`, `T=4`, two-head toy block passes the arithmetic-closure
-  gate with no intermediate decrypt.
-- `[V]` The same complete toy graph passes in C++/CUDA on one A100 with one final
-  decrypt and `93.405 s [gpu]` encrypted evaluation.
-- `[V]` Released DNAGPT block-0 weights pass encrypted `D=768`, `T=2` LayerNorm
-  and complete 12-head attention/projection gates.
-- `[V]` Scheme B's own complete real-weight `D=768`, `T=2` block-0 gate (LN1,
-  attention, MLP, LN2, residuals, pack) passes at `ring_dim=65536`/depth 16 --
-  roughly 6.6x faster wall time than Scheme A's equivalent gate on half the ring
-  dimension, since every nonlinearity resets to level 0 at the client boundary
-  instead of consuming Chebyshev depth. Naive 12-block linear extrapolation at
-  `T=2` (not yet scaled to real sequence lengths): `~74.6 min` total.
-- `[V/A]` A fixed, publicly calibrated approximation schedule passes the plaintext
-  oracle through all 12 released blocks and the GSR head; broader calibration and
-  encrypted composition remain open.
-- `[V]` Local screens validate rotation/depth-reducing schedules without changing the
-  encrypted result.
-- `[U]` The rest of the real-width block, multi-block composition, and task-level
-  encrypted inference have not yet closed under Scheme A; Scheme A is now frozen as the
-  paper's non-interactive baseline/ablation after three chained-composition attempts
-  failed closed on a root-caused GPU memory wall (not accuracy). Work continues under
-  Scheme B.
-- `[U]` Encrypted token-index embedding lookup is outside the current backbone input
-  boundary.
+The architecture comparison and threat-model consequences are in
+[architecture_options.md](architecture_options.md). Backend selection is in
+[backend_selection.md](backend_selection.md).
 
-The toy proof starts after embedding: the client encrypts numeric embedding vectors.
-The server-side arithmetic is LayerNorm, Q/K/V projections, multi-head causal softmax
-attention, output projection, second LayerNorm, GELU MLP, and residual additions.
+## Strongest verified claims
 
-## Acceptance contract
+- `[V]` The three plaintext task families pass and supply frozen oracles.
+- `[V]` Pure non-interactive CKKS establishes that a real-weight DNAGPT block is arithmetically viable
+  without intermediate decryption.
+- `[V]` Client-assisted CKKS evaluates one complete real-weight block at the full 103-token GSR prompt
+  length with approximately `4e-9` relative error.
+- `[V]` Eight-token SIMD packing reduces dense products from 1,236 serial-equivalent products to 156.
+- `[V]` The retained task-length block uses minimum demonstrated depth 13 and approximately `9.8 GiB`
+  process peak GPU memory.
+- `[V]` Two released blocks compose at two tokens using a fixed client full-state refresh.
+- `[V]` A 12-block plus GSR-head task-length driver builds and passes local contracts.
 
-Every encrypted correctness gate uses:
+## Unresolved claims
 
-- OpenFHE CKKS with `HEStd_128_classic`
-- one context and key lineage
-- no intermediate `Decrypt` call
-- one final decrypt for oracle measurement
-- finite output
-- global and worst-token relative-infinity error no greater than `4e-2`
+- `[U]` The complete 12-block classifier has not executed at 103 tokens.
+- `[U]` No encrypted task-length logits or label have been compared with the final plaintext task oracle.
+- `[U]` Existing task-length wall times are contaminated by shared-host CPU/GPU load.
+- `[U]` The current multi-GPU result covers only Q/K/V projection and is not connected to full-block
+  execution.
+- `[U]` The prototype has no real client/server ciphertext transport, so cryptographic boundary counts
+  are not network round-trip measurements.
+- `[U]` Private token lookup, malicious-server security, traffic leakage, and side channels are outside
+  the present result.
 
-The result harness homomorphically packs all toy token outputs into one ciphertext before
-that final decrypt. `fhe/oracle.py` supplies the plaintext reference and gate.
+## Current execution decision
 
-## Evidence progression
+Do not treat the existing long 12-block driver as the final performance experiment. First obtain a
+dedicated current-block profile, test the exact-model optimization gates in
+[../hybrid/roadmap.md](../hybrid/roadmap.md), integrate retained changes, and then run the complete
+classifier on a dedicated host.
 
-| Result | New claim | State | Evidence |
-|---|---|---|---|
-| Primitive closure | Every required operator and bootstrap refresh works in isolation | `[V]` complete | `fhe_operator_matrix_d8_20260724.json`, `fhe_bootstrap_d8_20260724.json` |
-| Complete toy block | A DNAGPT-shaped block closes in one encrypted lineage | `[V]` complete | `fhe_toy_block.json` |
-| Optimization screens | BSGS/hoisting, numerator-first attention, and GELU degree candidates preserve correctness | `[V]` complete | `fhe_local_optimizations_20260724.json` |
-| GPU parity | The complete toy arithmetic survives C++/CUDA execution | `[V]` complete | `fhe_fides_toy_a100_asymfix2_20260724.json` |
-| Real-width block | Released 0.1b block-0 gates work at `D=768`, 12 heads, real weights | `[V]` LayerNorm + attention complete (original schedule) | `fhe_fides_real_d768_t2_attention_a100_asymfix2_20260724.json` |
-| Original real full-block schedule | Determine whether exp-plus-reciprocal attention fits depth 43 | `[V]` fails closed at token-1 MLP; no decrypt | `fhe_fides_real_d768_t2_block0_depth43_FAIL_20260724.json` |
-| Sigmoid-schedule attention gate | Replace exp-plus-reciprocal with the T=2 sigmoid identity to recover depth for the MLP | `[V]` LN1+attention pass at `packed_output_level=22/43`, 709.3s vs 1347.1s | `fhe_fides_real_d768_t2_attention_sigmoid13_a100_asymfix2_20260724.json` |
-| Complete real-width block | Close block 0 (LN1+attention+MLP+LN2+pack) at depth 43 with the sigmoid schedule | `[V]` complete: packed at level 41/43, rel_inf `6.41e-6`, `2461.8 s [gpu]` | `fhe_fides_real_d768_t2_block0_sigmoid13_a100_asymfix2_20260724.json` |
-| Twelve-block nonlinear schedule | Fixed public domains, stable T=2 attention, scaled LayerNorm, and full-domain GELU preserve all blocks/head | `[V/A]` plaintext preflight passes; not FHE | `fhe_range_control_t2_12block_optimized_v2_20260724.json` |
-| Scale and composition | Refreshes, two encrypted blocks, all 12 blocks, and task head close | `[V]` native-GPU refresh gate and the complete block-0 sigmoid gate both pass in isolation; `[V]` the chained two-block (`gpu_multiblock`, depth 64) gate fails closed -- root cause confirmed via a symbolized backtrace (`AddBootstrapPlaintexts -> GPUmalloc`) as GPU memory footprint (batch_slots=4096, 63 rotation keys) exceeding one A100's 80GB, not depth- or digit-count-specific; `[U]` 12-block closure remains | `fhe_fides_refresh_d768_t2_native_a100_asymfix2_20260724.json`, `fhe_fides_real_d768_t2_block0_sigmoid13_a100_asymfix2_20260724.json`, `fhe_fides_gpu_multiblock_blocks0_1_refresh_FAIL_20260724.json`, `fhe_fides_gpu_multiblock_bisect_depth50_FAIL_20260724.json`, `fhe_fides_gpu_multiblock_bisect_depth58_backtrace_FAIL_20260724.json` |
-| Scheme B complete real-width block | Close block 0 (LN1+attention+MLP+LN2+pack) under hybrid client-assisted CKKS | `[V]` complete: `rel_inf=3.32e-10`, 24 client round trips, `372.27s [gpu]` (`365.78s` server + `6.49s` client boundary) at `ring_dim=65536`/depth 16 -- vs Scheme A's `2461.8s` at `ring_dim=131072`/depth 43; `[A]` naive 12-block T=2 extrapolation `~74.6 min`; `[V]` general (T>2) causal-attention circuit designed and passes real-GPU `attention`/`full` gates at T=3 (`rel_inf` `3.19e-10`/`3.65e-10`, no speed claim); `[U]` scaling beyond T=3 unmeasured | `fhe_fides_real_d768_t2_ln1_scheme_b_a100_20260725.json`, `fhe_fides_real_d768_t2_attention_scheme_b_a100_20260725.json`, `fhe_fides_real_d768_t2_block0_scheme_b_a100_20260725.json`, `fhe_fides_real_d768_t3_attention_general_attention_scheme_b_a100_20260728.json`, `fhe_fides_real_d768_t3_full_general_attention_scheme_b_a100_20260728.json` |
+The current driver may be run immediately to close arithmetic correctness. Its result must be labeled
+as baseline feasibility, not optimized latency.
 
-A twelve-layer CPU run is intentionally skipped: it would repeat arithmetic already
-established by the complete block while measuring a rejected performance path.
+## Evidence ownership
 
-## Performance path
-
-Python remains the oracle and evidence harness. The performance implementation is
-C++/CUDA using OpenFHE/FIDESlib interoperability. The pinned FIDESlib 2.1.3 commit needs
-the repository's two-branch asymmetric-Chebyshev correction; the unpatched GPU path
-failed at `rel_inf=0.292889`, while the corrected path passes at `1.5282e-5`.
-The preferred path keeps the complete server pass GPU resident. CPU fallback is used
-only if a current GPU operator fails the same correctness gate.
-
-GPU parity is complete. The real-width implementation now uses 4096 power-of-two slots,
-32×32 BSGS, hoisted baby rotations, and numerator-first `T=2` attention. Each further
-change keeps the same oracle and receives a new immutable result. Longer-sequence
-packing, refresh placement, encoded-weight reuse, kernel fusion, and multi-GPU sharding
-remain later gates.
-
-The original full-block schedule has a measured depth failure rather than an accuracy
-failure: its token-1 branch needs packed level 46 with a depth-43 chain. The next
-version preserves T=2 softmax exactly as a single sigmoid of the score difference,
-which removes the reciprocal polynomial and is expected to fit within depth 43.
-
-See [roadmap.md](../roadmap.md) for the gate definitions,
-[backend_selection.md](backend_selection.md) for the backend decision,
-[../pure/operator_matrix.md](../pure/operator_matrix.md) for primitive measurements, and
-[architecture_options.md](architecture_options.md) for the Scheme A/B/C
-comparison and the active Scheme B decision. The passing block and derived 0.1b
-boundary are in [../pure/measurements.md](../pure/measurements.md).
+- Pure non-interactive measurements: [../pure/measurements.md](../pure/measurements.md)
+- Client-assisted detailed history: [../hybrid/tasks.md](../hybrid/tasks.md)
+- Current client-assisted roadmap: [../hybrid/roadmap.md](../hybrid/roadmap.md)
+- Paper-oriented results and limitations: [../paper/03_results_and_limits.md](../paper/03_results_and_limits.md)
+- Immutable evidence: [`../../results/`](../../results/)

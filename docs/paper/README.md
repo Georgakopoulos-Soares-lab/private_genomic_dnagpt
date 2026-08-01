@@ -37,6 +37,7 @@ the canonical repository document rather than treating this directory as a compe
 | What did pure non-interactive CKKS establish? | [Pure CKKS measurements](../pure/measurements.md) |
 | What is the detailed client-assisted evidence? | [Client-assisted task history](../hybrid/tasks.md) |
 | Which optimizations worked or failed? | [Optimization synthesis](../hybrid/optimizations_and_combinations_report.md) |
+| What must run next, and in what order? | [Client-assisted execution roadmap](../hybrid/roadmap.md) |
 
 Quantitative manuscript prose should be checked against the canonical source immediately before it
 is used. The development documents contain more detail than belongs here, including failed launch
@@ -56,7 +57,10 @@ mechanics, source-integrity checks, and experimental bookkeeping.
    attention, chunked softmax, token-SIMD packing, and a complete real-weight block.
 6. Separate correctness from practicality. Correctness is strong at the measured scope; clean
    latency, all-block composition, the task head, and private embedding lookup remain open.
-7. Report negative results that explain the final design and constrain future work.
+7. Report negative results that explain the retained design and constrain future work.
+8. Keep the optimization audit visible: the current driver can close arithmetic correctness, but
+   copy-fused projections, fuller use of client boundaries, attention packing, and encoded-weight
+   reuse must be resolved before claiming optimized latency.
 
 ## Terminology and evidence rules
 

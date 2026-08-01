@@ -7,8 +7,8 @@ EncryptedEvaluator::evaluate (the per-group loop around
 ``baby_rotations(normalized)`` value feeds all three of the Q/K/V matmuls
 for a group. There is no ciphertext-arithmetic dependency *between* Q, K,
 and V -- they are three independent dense transforms of the same input --
-so this is a zero-merge sharding candidate per docs/hybrid/roadmap.md phase
-3 / docs/hybrid/tasks.md's 2026-07-31 "2-GPU process-per-GPU sharding"
+so this is a zero-merge sharding candidate per docs/hybrid/tasks.md's
+2026-07-31 "2-GPU process-per-GPU sharding"
 entry: the two shards' outputs are only ever consumed together downstream
 (attention), never combined via any encrypted operation.
 

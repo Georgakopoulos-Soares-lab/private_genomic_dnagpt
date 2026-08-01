@@ -194,6 +194,14 @@ The strongest completed encrypted result is therefore one full real-weight block
 prompt length. The strongest composition result is two blocks at two tokens. These results make the
 remaining experiment concrete, but they do not substitute for it.
 
+A subsequent optimization audit changed the execution order without changing those claims. The
+existing complete-model driver is sufficient to test arithmetic composition, but the task-length block
+has not received a current stage-level CPU/CUDA profile. The audit also identified unused parallelism
+across the four packed copies, an opportunity to compute complete LayerNorm at its existing client
+boundary, unresolved encoded-plaintext reuse, and specialized attention reductions and layouts. The
+performance plan therefore became: establish a clean profiled block baseline, resolve those exact-model
+gates, rebuild the driver, and only then measure optimized full-model latency.
+
 The paper must leave four boundaries visible:
 
 1. all twelve blocks and the task head have not run together under encryption;

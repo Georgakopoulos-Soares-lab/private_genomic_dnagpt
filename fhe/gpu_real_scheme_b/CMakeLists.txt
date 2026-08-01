@@ -524,13 +524,13 @@ set_target_properties(
     CUDA_SEPARABLE_COMPILATION ON
     POSITION_INDEPENDENT_CODE ON)
 
-# Stage-2 2-GPU process-per-GPU sharding: MLP down-projection chunk split with
-# an exact ciphertext EvalAdd merge. The reader computes a disjoint 2-chunk
-# partial down-projection sum and serializes it; the merge EvalAdds the two
-# workers' partials + residual1 and measures the reconstructed block output.
-# Additive; touches no other target in this file.
+# Historical negative prototype for process-separated MLP down-projection
+# sharding. The pinned FIDESlib has no Ciphertext serialization API, so these
+# targets are intentionally excluded from default builds. They remain
+# explicitly addressable to reproduce the compile-time backend limitation.
 add_executable(
     real_dnagpt_fides_scheme_b_simd_shard_mlp_reader_t103_depth13
+    EXCLUDE_FROM_ALL
     src/real_dnagpt_fides_scheme_b_simd_shard_mlp_reader_t103_depth13.cpp)
 set_source_files_properties(
     src/real_dnagpt_fides_scheme_b_simd_shard_mlp_reader_t103_depth13.cpp
@@ -552,6 +552,7 @@ set_target_properties(
 
 add_executable(
     real_dnagpt_fides_scheme_b_simd_shard_mlp_merge_t103_depth13
+    EXCLUDE_FROM_ALL
     src/real_dnagpt_fides_scheme_b_simd_shard_mlp_merge_t103_depth13.cpp)
 set_source_files_properties(
     src/real_dnagpt_fides_scheme_b_simd_shard_mlp_merge_t103_depth13.cpp

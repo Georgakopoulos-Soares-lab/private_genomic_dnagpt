@@ -6,7 +6,7 @@ boundary, then hit its own require_remaining_depth() guard: "insufficient
 depth before Token-SIMD MLP group 0". A diagnostic-only sibling fork
 (depth10_diag, MULT_DEPTH unchanged, one added print) revealed the exact
 level at that point: normalized2->GetLevel() == 9 -- see docs/hybrid/tasks.md
-and docs/hybrid/simd_current_state.txt (2026-07-31). The guard requires
+(2026-07-31). The guard requires
 4 <= MULT_DEPTH - level, so the minimum passing MULT_DEPTH is 9 + 4 = 13.
 This fork changes only MULT_DEPTH to 13; it does not patch the frozen
 FIDESlib library.

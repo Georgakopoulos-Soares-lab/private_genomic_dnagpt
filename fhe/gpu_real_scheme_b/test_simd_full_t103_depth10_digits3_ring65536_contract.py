@@ -4,8 +4,8 @@ Parent is the depth-9/digits-3/ring-65536 fork, which fixed the depth-8
 vector-underflow crash (got past all 91 causal score tiles) but then failed
 differently: OpenFHE's Decode() raised "approximation error is too high"
 while decrypting the last/deepest score tile (q=12 k=12) at the client
-boundary (Client::reduce_score_tile) -- see docs/hybrid/tasks.md and
-docs/hybrid/simd_current_state.txt (2026-07-30). This fork changes only
+boundary (Client::reduce_score_tile) -- see docs/hybrid/tasks.md
+(2026-07-30). This fork changes only
 MULT_DEPTH (9 -> 10) to give that one worst-case ciphertext one more level
 of remaining precision; it does not patch the frozen FIDESlib library.
 """

@@ -1,90 +1,87 @@
-# Brev FHE runbook — Scheme B (hybrid client-assisted CKKS)
+# GPU runbook — client-assisted CKKS
 
-Companion to [../pure/brev_runbook.md](../pure/brev_runbook.md) for the frozen Scheme A
-gates. This runbook reuses the existing `awesome-gpu-name` workspace. It does not
-create, stop, or delete an instance and does not inspect credentials.
+This runbook covers safe execution of the retained FIDESlib/OpenFHE GPU targets. Historical launchers
+remain in the repository to reproduce accepted and negative results; their presence does not put them
+in the current queue. The active queue is defined only by [roadmap.md](roadmap.md).
 
-## Safety and capacity check
+The scripts operate on an existing GPU host. They do not create, stop, or delete infrastructure and do
+not require inspecting credentials.
 
-Same as Scheme A — see
-[../pure/brev_runbook.md#safety-and-capacity-check](../pure/brev_runbook.md).
+## Before a run
+
+1. Confirm the gate is still ordered in [roadmap.md](roadmap.md).
+2. Run the local contracts:
+
+   ```bash
+   PYTHONPATH=. .venv/bin/python -m unittest discover -s fhe/gpu_real_scheme_b -p "test_*.py"
+   ```
+
+3. Confirm the fixture and FIDESlib checkout expected by the versioned launcher are present.
+4. Use a new output name. Launchers refuse to overwrite accepted evidence.
+5. For performance work, require a dedicated host or record enough system telemetry to demonstrate
+   equivalent isolation. An idle GPU poll alone is insufficient because CPU contention dominated prior
+   long runs.
 
 ## Build
 
-Scheme B forks `fhe/gpu_real_sigmoid`'s FIDESlib source
-(`fhe/gpu_real_scheme_b/src/real_dnagpt_fides_scheme_b.cpp`) into its own CMake target,
-built against the same pinned FIDESlib commit as every other GPU gate
-(`786c7600fb2f16b724e0acf73df367b27b8afed6`) and the same
-`dnagpt-fideslib:786c-asymfix2` image:
+Inside the pinned FIDESlib CUDA environment:
 
 ```bash
 FIDESLIB_ARCH=80-real BUILD_JOBS=4 fhe/gpu_real_scheme_b/build_in_fideslib.sh
 ```
 
-`build_in_fideslib.sh` refuses to build against any other FIDESlib commit and produces
-`fhe/gpu_real_scheme_b/build/real_dnagpt_fides_scheme_b`.
+The default build includes runnable and historically reproducible targets. The known-unbuildable
+process-separated MLP transport prototype is intentionally excluded from the default build because the
+pinned backend has no ciphertext serialization API; its source remains only as negative implementation
+evidence.
 
-## Direct single-gate launch
+## Current clean-baseline pair
 
-`run_scheme_b.sh` invokes the built binary directly (used interactively, or as the
-payload inside a container by `launch_brev_scheme_b.sh` below). Gate is one of
-`ln1`, `attention`, `full`; the output filename must contain `_scheme_b_` (enforced) so
-Scheme A and Scheme B evidence can never collide:
-
-```bash
-FIDES_CONTAINER_IMAGE=dnagpt-fideslib:786c-asymfix2 \
-FIDES_RUN_ENVIRONMENT='Brev A100-SXM4-80GB [gpu]' \
-fhe/gpu_real_scheme_b/run_scheme_b.sh 0 ln1 "$FIXTURE_DIR" \
-  /work/results/runs/fhe_fides_real_d768_t2_ln1_scheme_b_a100_20260725.json
-```
-
-It fails closed on: a GATE other than the three above, an output path missing
-`_scheme_b_`, an existing output file (immutable evidence, never overwritten), a
-FIDESlib commit mismatch, or a fixture manifest hash mismatch against the pinned
-`8d20a2841ee29a7a386171f1bd173b7189144359ce8f91ea5eb21cc60c0a78fe`.
-
-## Detached launch with GPU preflight
-
-`launch_brev_scheme_b.sh` wraps the same binary in a detached `docker run` on a chosen
-physical GPU, with a soft-fail-open preflight (confirms idle only when `nvidia-smi`
-gives a clean reading — see the script's own header comment for the shared-host
-reliability issue this works around) and refuses to overwrite an existing log/done/
-evidence file for the same run tag:
+The retained uncached and CPU-vector-cache task-length blocks have matching arithmetic and context
+parameters:
 
 ```bash
-fhe/gpu_real_scheme_b/launch_brev_scheme_b.sh \
-  PHYSICAL_GPU REMOTE_ROOT SOURCE_SUBDIR FIXTURE_SUBDIR IMAGE_TAG GATE RUN_TAG
+fhe/gpu_real_scheme_b/run_scheme_b_simd_full_t103_depth13_digits3_ring65536.sh \
+  GPU FIXTURE_DIR OUTPUT_JSON
+
+fhe/gpu_real_scheme_b/run_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache.sh \
+  GPU FIXTURE_DIR OUTPUT_JSON
 ```
 
-`RUN_TAG` must contain `_scheme_b_`. Poll `${SOURCE_DIR}/${RUN_TAG}.done` for the exit
-status and `${SOURCE_DIR}/${RUN_TAG}.run.log` for output.
+Run one warm-up followed by at least three paired repetitions. Record host load, CPU utilization, GPU
+utilization, target-process RAM/VRAM, and stage timings. Do not compare runs from different contention
+windows as a cache speedup.
 
-## Unattended orchestrator
+The existing `real_dnagpt_fides_scheme_b_profiled` target profiles the older two-token graph. It is
+historical evidence, not the profiler for the current 103-token block. Add current-stage NVTX ranges and
+capture Nsight Systems before selecting launch, stream, transfer, or kernel work.
 
-`wait_and_run_scheme_b.sh` runs on the Brev host directly (needs host `uptime`/
-`nvidia-smi`), polling host load average and per-GPU idle state every 60s until
-capacity is available, then launches the `attention` and `full` gates in sequence via
-`launch_brev_scheme_b.sh`. Safe to re-run: it skips any gate whose evidence JSON
-already exists and never overwrites an existing log/done/output file.
+## Full-model driver
 
-```bash
-fhe/gpu_real_scheme_b/wait_and_run_scheme_b.sh
-```
+`real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head` builds and passes local contracts but has no
+accepted GPU result. It is intentionally not wired into the old generic unattended orchestrator.
 
-`LOAD_THRESHOLD` (default 250), `POLL_SECONDS` (default 60), and `MAX_WAIT_SECONDS`
-(default 72h) are overridable via environment variables. Log:
-`${SOURCE_DIR}/scheme_b_orchestrator.log` on the host. This is how the `attention` and
-`full` block-0 gates in [tasks.md](tasks.md) actually completed — a CPU-bound rotation-
-key-generation stall under extreme shared-host contention killed the first interactive
-attempt, so the remaining gates were left to the orchestrator to launch once load
-dropped.
+- It may be launched after explicit review to close arithmetic correctness.
+- It must not supply the final performance claim until the retained Stage-1/Stage-2 optimizations in
+  [roadmap.md](roadmap.md) have been resolved and integrated.
+- A quiet-window gate reduces launch risk but cannot guarantee a multi-hour shared host remains clean.
+  A dedicated allocation is the required performance environment.
 
-## Exact commands for the retained numbers
+## Historical orchestrators
 
-See [tasks.md](tasks.md) for the exact `run_scheme_b.sh` invocations (ln1/attention/full)
-that produced each currently-retained Scheme B evidence file.
+`wait_and_run_scheme_b*.sh`, `launch_brev_scheme_b*.sh`, and the corresponding versioned run scripts
+encode the exact controls used by earlier experiments. Do not use the generic
+`wait_and_run_scheme_b.sh` as “run the next job”: its original LN/attention/full queue is complete.
 
-`context_keygen_load` is service setup; `encrypted_evaluation` is the forward latency,
-further split into `server_linear_algebra_seconds` and `client_boundary_seconds_total`.
-Do not combine setup and evaluation when extrapolating per-query cost, and do not omit
-either from the evidence.
+When reproducing a historical number, use the exact command in [tasks.md](tasks.md), including its
+matching source and fixture. When creating new evidence, fork the closest retained launcher only after
+the new local contract passes.
+
+## Evidence interpretation
+
+- `context_keygen_load` is service setup, not per-query encrypted evaluation.
+- `server_linear_algebra_seconds` currently includes host preparation, encoding/upload, GPU work, and
+  synchronization unless a finer profile states otherwise.
+- `client_boundary_seconds_total` measures local client cryptographic/plaintext work, not WAN latency.
+- A cryptographic crossing is not a network RPC until transport is implemented.
+- Report target-process memory separately from whole-device memory that includes co-tenants.

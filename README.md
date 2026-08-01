@@ -1,84 +1,65 @@
-# Encrypted DNAGPT — FHE feasibility
+# Encrypted DNAGPT inference
 
-Determine whether **DNAGPT** ([TencentAILabHealthcare/DNAGPT](https://github.com/TencentAILabHealthcare/DNAGPT),
-arXiv 2307.05628) inference can be run under **Fully Homomorphic Encryption** — i.e. a compute
-provider evaluates the transformer on **encrypted embedded numeric genomic-token vectors** without
-ever seeing plaintext — and measure where correctness, performance, or memory would stop a complete
-encrypted deployment. Encrypted token-index embedding lookup is a separate unresolved boundary.
+This repository evaluates whether the released 0.1-billion-parameter
+[DNAGPT](https://github.com/TencentAILabHealthcare/DNAGPT) model can process encrypted embedded DNA
+tokens without exposing plaintext activations to an untrusted compute provider.
 
-A correct-but-slow encrypted path is still a valid research outcome. Feasibility and practicality are
-separate verdicts — measure the boundary honestly, never tune to force a "practical" conclusion.
+Correctness and practicality are separate questions. A slow but correct encrypted path is a valid
+feasibility result; contaminated timing is not a performance benchmark.
 
-## Why a plaintext baseline first
+## Current result
 
-An encrypted run is only meaningful against a **plaintext oracle**: the exact prediction the
-encrypted computation must reproduce within a declared tolerance. So **Phase A** establishes that
-DNAGPT is a good, reproducible model on three downstream tasks, and freezes per-example predictions
-as the acceptance oracle for the encrypted path.
+| Stage | State |
+|---|---|
+| Plaintext model validation | `[V]` Three task families pass and provide frozen numerical oracles |
+| Pure non-interactive CKKS | `[V]` One real-weight block passes; frozen after chained composition exceeded the tested GPU memory envelope |
+| Client-assisted CKKS, one block | `[V]` Complete real-weight block passes at the 103-token GSR length with about `4e-9` relative error |
+| Short composition | `[V]` Two released blocks pass at two tokens using a declared client refresh |
+| Complete encrypted classifier | `[U]` The 12-block plus GSR-head driver is built but has not run at 103 tokens |
+| Performance | `[U]` Existing long runs are shared-host contaminated; clean and networked end-to-end latency are unmeasured |
 
-| Phase | Goal | State |
-|---|---|---|
-| **A. Plaintext baseline (oracle)** | DNAGPT measured locally on 3 tasks | **3/3 PASS** ✅ |
-| **B. FHE feasibility** | encrypted operators → toy block → GPU real-width blocks | **active** |
+The active protocol keeps model projections, attention algebra, residuals, and the MLP encrypted on
+the GPU server. At fixed nonlinear boundaries, the data-owning client decrypts its own intermediate,
+computes the exact nonlinearity, and re-encrypts it. The server does not receive plaintext or the
+secret key under this prototype boundary.
 
-### Phase A status (the oracle)
-
-| # | Task | Verdict | Result | Reference |
-|---|------|---------|--------|-----------|
-| 1 | Genomic Signal & Region Recognition (human AATAAA) | **[V] PASS** | acc **0.9124**, F1 0.916 (n=22,604) | DeepGSR ~0.916 |
-| 3 | Human mRNA Abundance Regression | **[V] PASS** | r² **0.562**, Pearson 0.753 (n=1,000) | DNAGPT paper ~0.62 |
-| 2 | GUE — promoters & splice sites | **[V] PASS** | MCC 0.680 / 0.897 / 0.831 (core/300/splice) | DNABERT-2 ~0.69/0.87/0.85 |
-
-## What DNAGPT ships
-
-Inference only: `test.py` + `dna_gpt/`. Released 0.1b heads `classification.pth` (GSR) and
-`regression.pth` (mRNA). No datasets, no fine-tuning code, no GUE head — supplied here.
-
-## Layout
-
-```
-DNAGPT/          cloned upstream model (unmodified) — the FHE target graph
-checkpoints/     0.1b weights (gitignored)
-data/{gsr,mrna,gue}/  datasets (gitignored; see docs/data_provenance.md)
-eval/            plaintext baseline harnesses (GSR, mRNA, GUE fine-tune)
-results/         immutable evidence: manifest.yaml + runs/ (+ *_preds.csv = the oracle)
-docs/            charter overview, tasks, data provenance, roadmap-to-FHE
-fhe/             CKKS oracle/operators, toy + real-width CUDA graphs, refresh/range/scale gates
-docker/          pinned OpenFHE Python and patched FIDESlib C++/CUDA environments
-```
+The immediate performance decision is to profile and optimize the current task-length block before
+using the existing multi-day driver as a final latency experiment. See the
+[active execution roadmap](docs/hybrid/roadmap.md).
 
 ## Start here
 
-- Charter & rules: [CLAUDE.md](CLAUDE.md)
-- Status & framing: [docs/overview.md](docs/overview.md)
-- Per-task method + commands + verdicts: [docs/tasks.md](docs/tasks.md)
-- Dataset origins (incl. Internet-Archive recovery of the dead Xpresso host): [docs/data_provenance.md](docs/data_provenance.md)
-- Path to encrypted DNAGPT: [docs/roadmap.md](docs/roadmap.md)
-- Phase-B evidence and boundary: [docs/shared/feasibility_overview.md](docs/shared/feasibility_overview.md)
+- [Project charter and rules](CLAUDE.md)
+- [Current overview](docs/overview.md)
+- [Cross-project roadmap](docs/roadmap.md)
+- [Client-assisted CKKS roadmap](docs/hybrid/roadmap.md)
+- [Paper evidence sourcebook](docs/paper/README.md)
+- [Dataset provenance](docs/data_provenance.md)
 
-## Phase B status
+## Repository layout
 
-OpenFHE CKKS BSGS linear, LayerNorm, causal-softmax, GELU, and bootstrap-refresh
-primitives pass independently at 128-bit security. A complete `D=8`, `T=4`,
-two-head block passes on both the native Brev CPU anchor and the C++/CUDA A100 path.
-The GPU run has global rel-inf `1.8423e-4`, worst-token rel-inf `4.8125e-4`,
-zero intermediate decrypts, one final decrypt, and `93.405 s` encrypted evaluation.
+```text
+DNAGPT/              upstream model code
+eval/                plaintext evaluation and fine-tuning harnesses
+fhe/                 encrypted arithmetic, GPU implementations, and contracts
+results/             immutable run evidence and manifests
+docs/                canonical status, methods, roadmaps, histories, and paper notes
+docker/              pinned OpenFHE/FIDESlib environments
+data/, checkpoints/  re-downloadable, gitignored inputs
+```
 
-Released-weight `D=768`, `T=2` block-0 LayerNorm and 12-head
-attention/projection gates pass on A100s at global rel-inf `3.8193e-10` and
-`7.0183e-10`. The original full-block depth-43 schedule then failed closed before
-the final decrypt: its exp-plus-reciprocal attention left token 1 three levels
-short. The algebraically exact T=2 sigmoid replacement is the active full-block
-path, followed by refresh and composition. Separately, a fixed plaintext
-approximation preflight passes all 12 released blocks and the GSR head within
-the `4e-2` gate. See the roadmap for boundaries and evidence.
-
-## Reproduce Phase A
+## Reproduce the plaintext baselines
 
 ```bash
-python3.12 -m venv .venv && source .venv/bin/activate
-pip install torch numpy gdown scikit-learn pandas h5py scipy tqdm
-python eval/eval_gsr.py --limit -1 --tag gsr_aataaa_human_full         # Task 1
-python eval/build_mrna_testset.py && python eval/eval_mrna.py --tag mrna_xpresso_human_1ktest  # Task 3
-python eval/finetune_gue.py --data data/gue/GUE/prom/prom_300_all --tag gue_prom_300_all --max_len 64  # Task 2
+python3.12 -m venv .venv
+source .venv/bin/activate
+pip install -r requirements.txt
+python eval/eval_gsr.py --limit -1 --tag gsr_aataaa_human_full
+python eval/build_mrna_testset.py
+python eval/eval_mrna.py --tag mrna_xpresso_human_1ktest
+python eval/finetune_gue.py --data data/gue/GUE/prom/prom_300_all --tag gue_prom_300_all --max_len 64
 ```
+
+Weights and datasets are intentionally absent. Rehydration and provenance are documented in
+[docs/data_provenance.md](docs/data_provenance.md); exact accepted commands and results live in
+[docs/tasks.md](docs/tasks.md).

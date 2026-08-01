@@ -3,7 +3,7 @@
 Parent is the depth-8/digits-3/ring-65536 fork, which crashed inside the
 linked FIDESlib library (unguarded level underflow in
 RNSPoly::rescale/Ciphertext::rescale) at the final causal score tile -- see
-docs/hybrid/tasks.md and docs/hybrid/simd_current_state.txt (2026-07-30).
+docs/hybrid/tasks.md (2026-07-30).
 This fork changes only MULT_DEPTH (8 -> 9) to give the partial-group mask
 multiply on the last tile the one extra level of headroom it needs; it does
 not patch the frozen FIDESlib library.

@@ -1,7 +1,7 @@
-# Scheme B optimization history: what was tried, what worked, and what has been combined
+# Client-assisted CKKS optimization history and remaining opportunities
 
-This document summarizes the engineering history of the hybrid client-assisted
-encryption architecture ("Scheme B") developed to run a genomics transformer model
+This document summarizes the engineering history of the client-assisted CKKS
+architecture developed to run a genomics transformer model
 under fully homomorphic encryption (FHE) — a form of encryption that allows a compute
 provider to run a computation directly on encrypted data without ever seeing the
 underlying plaintext. In this architecture, the untrusted server performs all linear
@@ -351,17 +351,60 @@ with unpredictable and sometimes very heavy activity from other tenants, so whil
 the correctness of this configuration is solid, no confirmed speed figure can yet
 be attached to it.
 
-To call this a complete, practical answer to the project's feasibility question,
-several things would still need to be added. The two-physical-graphics-processor
-split proven separately for the initial linear projections would need to be
-extended to cover the rest of this same block's work and combined into this exact
-recipe, rather than being demonstrated only as a separate, partial experiment. The
-sequential block-to-block composition mechanism, so far proven only for two
-blocks at the shortest possible token length, would need to be scaled up to chain
-all of the model's transformer blocks together at the downstream task's actual
-token length, and the final task-specific output layer would need to be added
-after the last block. And, separately from correctness, a genuinely clean,
-uncontaminated timing measurement — something this shared computing environment
-has not yet been able to provide for any configuration in this program — would be
-needed before any wall-clock speed claim about the fully combined, task-complete
-system could be made with confidence.
+The 12-block task-length driver and final task head still need to close for arithmetic correctness.
+That run alone would not make the implementation optimization-complete. The audit below found exact-
+model and protocol-layout opportunities that were not represented in the earlier parameter and
+micro-optimization plan. A genuinely clean timing measurement is also required before any wall-clock
+claim about the task-complete system can be made.
+
+## 4. Remaining opportunities and execution decision
+
+The current roadmap covers depth reduction, eight-token packing, a CPU diagonal-vector cache, one
+native linear-transform primitive, and a process-level Q/K/V split. It does not close the broader
+packing and client-boundary design space.
+
+### Highest-priority exact-model gates
+
+1. **Profile the current 103-token block.** The detailed profile in the task history belongs to the
+   older two-token graph. Current server timing combines CPU packing/encoding, transfer, kernels, and
+   synchronization, so it cannot yet select the next systems optimization.
+2. **Use the four ciphertext copies for different dense projections.** Q/K/V and the four MLP chunks
+   can potentially be evaluated in parallel copies rather than repeating the same matrix in every
+   copy. Before masks and repair operations, the derived schedule reduces 156 dense products to about
+   52 and the complete ciphertext–plaintext multiplication count by roughly 60 percent. This is an
+   unmeasured engineering estimate pending a complete packing contract.
+3. **Compute complete LayerNorm at its existing client boundary.** The client already decrypts data
+   for the exact nonlinear statistic. Returning a fully normalized fresh ciphertext could remove
+   encrypted reductions and affine work, lower required depth, and fuse inter-block refresh with the
+   next block's first normalization. The model and server privacy boundary remain unchanged, but the
+   client/server work allocation changes and must be reported.
+4. **Replace per-head attention reductions and test specialized matrix layouts.** The retained
+   schedule performs separate reductions for every head/alignment. Segmented head reductions and
+   compact plaintext–ciphertext/ciphertext–ciphertext matrix layouts need exact local contracts and a
+   representative GPU gate. Testing one FIDESlib `LinearTransform` call did not evaluate this broader
+   algorithm family.
+5. **Finish encoded-weight reuse.** The retained cache stores host vectors, not encoded plaintexts.
+   The failed GPU-object cache identifies a backend bug; it does not prove safe per-level encoding,
+   batched upload, or a corrected backend path cannot help.
+6. **Evaluate wider and stage-specific layouts.** B=8 beat B=4 only under the fixed four-copy layout.
+   B=16/two-copy, B=32/one-copy, real/imag packing, boundary-specific layouts, and a smaller final-head
+   context remain untested.
+
+### Separate protocol and model branches
+
+The client could compute the complete attention context at the already-declared softmax boundary,
+removing most encrypted weight-tile work. That preserves privacy from the server but moves substantial
+linear work to the client and must be presented as a protocol variant. Low-rank or structured weights,
+pruning, quantization, distillation, and token dropping change the released model and require separate
+task-accuracy claims.
+
+### Execution decision
+
+Use a dedicated host first for a paired one-block baseline and current CPU/CUDA profile. Prove the
+packing and boundary changes locally, microbenchmark them one at a time, combine only retained changes,
+and then rebuild the 12-block driver. Run the existing driver immediately only to close full-model
+arithmetic correctness; do not present that baseline as the optimized latency result. After arithmetic
+closure, a real client/server transport experiment is still required because the current in-process
+boundary count is not a network round-trip measurement.
+
+The gate order and acceptance conditions are canonical in [roadmap.md](roadmap.md).

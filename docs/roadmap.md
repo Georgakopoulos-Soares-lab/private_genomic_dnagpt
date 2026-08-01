@@ -1,107 +1,94 @@
 # Execution plan
 
-## One rule
+## Acceptance rule
 
-Every step must add a verified claim. Skip any run that only repeats established
-arithmetic on a slower or irrelevant path. An optimization is retained only when it
-passes the unchanged oracle and improves measured wall time, peak memory, ciphertext
-count, rotation count, or multiplicative depth.
+Every experiment must add a verified claim. Retain an optimization only when it passes the unchanged
+plaintext oracle and improves at least one measured quantity: wall time under comparable conditions,
+peak memory, encrypted operation count, interaction count, or required cryptographic depth.
 
-Two architectures are tracked (`docs/shared/architecture_options.md`):
+All encrypted correctness gates use 128-bit-class security, finite-output checks, and global plus
+worst-token relative-infinity error no greater than `4e-2`. The active client-assisted protocol also
+records every declared client boundary and separates server-encrypted from client-plaintext time.
 
-- **Scheme A (frozen baseline):** every encrypted correctness run uses
-  `HEStd_128_classic`, one uninterrupted ciphertext lineage, no intermediate decryption
-  feeding evaluation, finite output, and global plus worst-token `rel_inf <= 4e-2`. No
-  further Scheme A runs are planned; its existing evidence stands as the paper's
-  non-interactive ablation.
-- **Scheme B (active):** every encrypted correctness run uses `HEStd_128_classic`,
-  keeps linear algebra in one uninterrupted encrypted GPU lineage, and permits decrypt
-  only at pre-declared nonlinearity boundaries performed solely by the data-owning
-  client (secret-key holder) on its own data. Boundaries are fixed before the run, never
-  chosen adaptively from decrypted content. Same `4e-2` oracle gate as Scheme A, plus
-  recorded round-trip count and a wall-time split between GPU-encrypted and client-side
-  plaintext compute.
-
-Every retained result gets a new immutable run JSON and manifest entry, tagged with its
-scheme.
-
-Scheme-specific active plans and historical evidence live in their own files:
-[pure/roadmap.md](pure/roadmap.md) (Scheme A, frozen) and
-[hybrid/roadmap.md](hybrid/roadmap.md) (Scheme B, active).
+Accepted results receive a new immutable run file and manifest entry. Structural reductions are not
+latency claims; contaminated observations are not benchmarks.
 
 ## Verified foundation
 
-- `[V]` The three plaintext tasks pass and provide frozen task oracles.
-- `[V]` Every required CKKS primitive and bootstrap refresh passes independently.
-- `[V]` One complete `D=8`, `T=4`, two-head DNAGPT-shaped block passes with global
-  rel-inf `1.49e-3`, zero intermediate decrypt attempts, and one final decrypt.
-- `[V]` The complete C++/CUDA block passes on one A100 with global rel-inf
-  `1.8423e-4`, worst-token rel-inf `4.8125e-4`, and `93.405 s [gpu]` evaluation.
-- `[V]` Released block-0 weights pass the encrypted `D=768`, `T=2` LayerNorm gate at
-  global rel-inf `3.8193e-10`.
-- `[V]` The released block-0 `D=768`, `T=2`, 12-head encrypted attention/projection
-  gate passes at global and worst-token rel-inf `7.0183e-10` in `1,347.062 s [gpu]`.
-- `[V]` The independent plaintext/export contract matches all 12 released blocks and
-  the classifier head; `[V]` block-0 domains fail beginning at block 1.
-- `[V/A]` A fixed public T=2 range-control schedule passes all 12 block outputs and
-  the classifier with worst-token rel-inf `8.1174e-3` and zero domain violations.
-- `[V]` The required FIDESlib asymmetric-Chebyshev correction is measured before and
-  after patching (`0.292889` fail to `1.5282e-5` pass).
-- `[V]` Local optimization probes preserve correctness:
-  - BSGS reduces `D=16` rotations from 15 to 6.
-  - hoisted baby rotations preserve the same encrypted result.
-  - numerator-first attention saves two levels.
-  - GELU degree 5 uses four levels and has `4.26e-3` sample-grid rel-inf.
+- `[V]` Three plaintext task families pass and supply frozen numerical oracles.
+- `[V]` Pure non-interactive CKKS closes one real-weight block and then hits a root-caused GPU memory
+  wall during chained-composition setup. That path is frozen as the non-interactive baseline.
+- `[V]` Client-assisted CKKS closes a complete real-weight block at 103 tokens with eight-token SIMD
+  packing, depth 13, approximately `4e-9` relative error, and approximately `9.8 GiB` process peak GPU
+  memory.
+- `[V]` Two released blocks compose at two tokens through a declared client refresh.
+- `[V]` The 12-block plus GSR-head task-length driver builds and passes local contracts.
+- `[U]` Complete task-length encrypted inference, clean latency, and a real networked protocol remain
+  unmeasured.
 
-The complete block is the CPU arithmetic anchor. The optimization probes are screening
-evidence; each selected change still has to pass the complete-block and real-weight
-oracles.
+Historical pure-CKKS decisions are in [pure/roadmap.md](pure/roadmap.md). The active detailed plan is
+[hybrid/roadmap.md](hybrid/roadmap.md).
 
-## Scale and optimize
+## Ordered execution
 
-Increase sequence length only after the real-width block passes. `T=2` is not an
-application milestone. Validate the packed layout at `T=8/16`, then use capacity gates
-`T=32, 64, 103`; `T=103` is the current GSR task-representative target. Skip other
-sizes unless a correctness, memory, or throughput boundary needs resolution. Test one
-change at a time:
+### 1. Establish a clean current-block baseline
 
-1. token/head packing and batched nonlinear evaluation;
-2. parallel BSGS plus hoisted/double-hoisted rotations;
-3. pre-encoded weight reuse and public-mask fusion;
-4. numerator-first attention;
-5. the lowest polynomial degrees that pass the full oracle;
-6. kernel fusion, streams, and full GPU residency;
-7. multi-GPU sharding only when one A100 cannot hold the live set.
+Run paired cached and uncached task-length blocks on a dedicated host, with warm-up, at least three
+repetitions, process-specific CPU/GPU memory, GPU utilization, host load, and exact stage timing.
+Capture one current T=103 Nsight Systems/NVTX trace. The older two-token profile does not identify the
+bottleneck of the current quadratic-attention graph.
 
-Two timing repeats are required for a directional speedup; three or more are required
-for a reported stable speedup. Always report wall time, operation split, bootstrap
-count, host RAM, per-GPU VRAM, and ciphertext layout.
+### 2. Close exact-model optimization gates
 
-## Compose only after one block scales
+Use local slot/NumPy contracts before GPU work, then test one change at a time:
 
-Test two blocks first to validate refresh placement and accumulated CKKS error. If it
-passes, advance directly to the twelve-block 0.1b backbone unless a four-block run is
-needed to locate an error or memory boundary. Then add final LayerNorm and the GSR
-readout head. The end gate is the encrypted embedded-vector-to-task-output graph at
-`T=103`, not a T=2 block-only demonstration.
+1. distinct dense transforms across the four existing packed copies;
+2. complete LayerNorm at the existing client boundary and fusion with inter-block refresh;
+3. segmented per-head attention reductions and specialized PC-MM/CC-MM packing;
+4. wider B=16/B=32 layouts and stage-specific contexts;
+5. safe pre-encoded plaintext reuse or batched encoding/upload;
+6. launch, stream, graph, or kernel changes only when the current profile supports them.
 
-Input scope remains explicit:
+The detailed hypotheses and go/no-go conditions are in [hybrid/roadmap.md](hybrid/roadmap.md).
 
-- `[V]` The transformer path accepts encrypted embedded numeric vectors.
-- `[U]` Encrypted token-index embedding lookup is separate.
-- `[U]` Production key custody, transport, and client-only final decryption need a
-  deployment harness after arithmetic closure.
+### 3. Rebuild composition from retained pieces
+
+Integrate retained optimizations into one task-length block. Reconfirm the oracle, level schedule,
+memory, and operation counts. Then update the 12-block plus released GSR-head driver. Do not assume
+individually passing micro-gates compose correctly.
+
+### 4. Close arithmetic end to end
+
+Run all twelve blocks and the task head at 103 tokens on a dedicated host. Compare final logits and
+label with the frozen plaintext oracle. Use three or more repetitions for any stable latency claim.
+
+The current unoptimized driver may be run before Stage 2 only to close arithmetic correctness. Label
+that result as a baseline feasibility run and do not use it as the final performance result.
+
+### 5. Measure the protocol, not only the arithmetic
+
+Build a real client/server harness after arithmetic closure. Batch ciphertexts into dependency phases
+and measure bytes, serialization, encryption/decryption, network latency, bandwidth sensitivity, and
+end-to-end wall time. The current in-process “round trips” count cryptographic crossings, not network
+RPCs.
+
+## Separate research branches
+
+The following may reduce latency but change the research question and must not be mixed into the
+exact released-model claim:
+
+- moving projections or attention-context multiplication to the client beyond the declared
+  nonlinearity boundary;
+- low-rank or structured weights, pruning, distillation, quantization, or token dropping;
+- a backend replacement or custom multi-GPU transport layer.
+
+Evaluate these as named protocol or model variants with their own threat-model and task-accuracy
+checks.
 
 ## Explicit skips
 
-- no full twelve-layer Python/OpenFHE CPU run;
-- no duplicate “CPU container” full pass after one complete block has closed;
-- no custom CUDA cryptography while current FIDESlib supplies the operation;
-- `[done, 2026-07-25]` no CPU/GPU hybrid milestone unless a measured GPU correctness
-  failure forces it — three independent chained-composition failures traced to GPU
-  memory exhaustion (not accuracy) forced the Scheme B pivot; see
-  `docs/shared/architecture_options.md`. This unblocks explicit client-side
-  decrypt boundaries under Scheme B's own contract above, not a silent change to
-  Scheme A;
-- no multi-GPU work until single-GPU memory or throughput is measured;
-- no task-scale twelve-block run before a real-width block and a two-block refresh gate pass.
+- no new pure non-interactive CKKS run without a mechanism that addresses its measured memory wall;
+- no full Python/OpenFHE CPU backbone run after the GPU arithmetic path has closed;
+- no performance claim from shared-host long runs;
+- no multiplication of a contaminated one-block time into a claimed full-model latency;
+- no production-security or private-token-lookup claim without implementing and evaluating it.

@@ -106,6 +106,7 @@ Do not state or imply that the project has demonstrated:
 - encrypted tokenization or embedding lookup;
 - pure, non-interactive execution of the primary protocol;
 - a clean latency benchmark, production throughput, or stable speedup;
+- an optimization-complete implementation;
 - a general impossibility result for pure CKKS;
 - security against a malicious server, side channels, traffic analysis, or compromised clients;
 - production key management or network deployment;
@@ -153,7 +154,11 @@ However, only one transformer block has completed at that length.
 ### What is the next result needed for the main claim?
 
 Execute all twelve blocks and the released GSR head at 103 tokens, then compare the encrypted logits
-or label with the frozen plaintext prediction. A clean benchmark is a separate follow-up requirement.
+or label with the frozen plaintext prediction. That closes arithmetic correctness only. For a
+performance claim, first profile the current task-length block, resolve the remaining exact-model
+packing, LayerNorm-boundary, attention-reduction, and encoded-weight gates, integrate retained changes,
+and run the complete classifier on a dedicated host. Networked end-to-end latency is a further separate
+experiment.
 
 ## Paper hygiene checklist
 
@@ -167,6 +172,7 @@ Before moving a statement into manuscript prose:
 - distinguish target-process memory from device-wide memory that includes co-tenants;
 - avoid converting a structural operation reduction into a latency claim;
 - avoid multiplying a contaminated one-block time into a full-model result;
+- distinguish a baseline full-model correctness run from an optimized performance run;
 - preserve the embedding-lookup limitation;
 - preserve the GUE and Xpresso dataset caveats; and
 - recheck every quantitative value against its canonical source immediately before submission.

@@ -153,6 +153,31 @@ Trustworthy performance evidence is narrower:
 - comparisons between sibling call sites in one run; and
 - the single-sample, substage-only two-GPU concurrency observation with its qualifier.
 
+## Optimization audit and execution decision
+
+The retained implementation is not yet optimization-complete. The current block performs 156 dense
+products and 177,734 ciphertext–plaintext multiplications, but the four packed copies always carry the
+same dense transform. A derived, unmeasured schedule could use distinct public diagonals per copy to
+compute Q/K/V and MLP chunks concurrently, reducing dense products to roughly 52 before mask and
+copy-repair overhead.
+
+Three other exact-model opportunities remain unresolved:
+
+- compute complete LayerNorm at its existing client boundary, return a fresh normalized ciphertext,
+  and fuse inter-block refresh with the following normalization;
+- replace separate per-head attention reductions with segmented reductions or compact matrix layouts;
+  and
+- reuse encoded plaintext weights safely rather than caching only their host vectors.
+
+Wider B=16/B=32 layouts and stage-specific contexts also require operation-count screening. These are
+research hypotheses, not measured improvements.
+
+The execution decision separates correctness from performance. The existing 12-block driver may run
+now to establish arithmetic composition. Before it supplies an optimized latency result, the project
+must obtain a dedicated current-block profile, test the remaining gates individually, integrate the
+retained changes, and rerun the complete classifier. A separate networked experiment is required for
+end-to-end protocol latency because current client crossings occur inside one process.
+
 ## What has not been proved
 
 - **Complete encrypted DNAGPT:** all twelve blocks and the released GSR head have not been executed
@@ -176,6 +201,10 @@ real-weight DNAGPT block at the full GSR prompt length. Client assistance remove
 and calibration burden that stopped pure CKKS composition, while token packing makes the sequence
 length representable on one A100-class GPU.
 
-The remaining experiment is not conceptual: the twelve-block task-length driver exists. But until it
-runs through the released head and matches the plaintext task oracle, the correct conclusion remains
+The twelve-block task-length driver makes the remaining correctness experiment concrete. Until it runs
+through the released head and matches the plaintext task oracle, the correct conclusion remains
 **task-length single-block feasibility**, not complete private DNAGPT inference.
+
+Performance has a second boundary: the current driver is a baseline, not an optimization-complete
+implementation. Clean profiling and the unresolved exact-model gates must precede any final optimized
+latency claim.

@@ -91,12 +91,14 @@ FHE evidence is split by architecture (see `CLAUDE.md` and
 [shared/architecture_options.md](shared/architecture_options.md) for the full
 comparison and decision rationale):
 
-- **Pure non-interactive CKKS (Scheme A, frozen baseline):** operator matrix, the toy
+- **Pure non-interactive CKKS (legacy internal Scheme A, frozen baseline):** operator matrix, the toy
   block, CUDA gates, the sigmoid-schedule fix, and the chained-composition failures
   that forced the pivot — see [pure/tasks.md](pure/tasks.md).
-- **Hybrid client-assisted CKKS (Scheme B, active):** the toy prototype and the
-  real-weight `D=768`/`T=2` LN1/attention/full-block gates — see
-  [hybrid/tasks.md](hybrid/tasks.md).
+- **Client-assisted CKKS (legacy internal Scheme B, active):** exact client nonlinearities, general
+  causal attention, eight-token SIMD packing, a complete real-weight `D=768`/`T=103` block, short
+  two-block composition, and the current optimization history — see [hybrid/tasks.md](hybrid/tasks.md)
+  and [hybrid/roadmap.md](hybrid/roadmap.md).
 
-Both share the same Phase-A oracle and `4e-2` accuracy gate; see
-[roadmap.md](roadmap.md) for the acceptance contract each scheme extends.
+Both share the same Phase-A oracle and `4e-2` accuracy gate. The complete 12-block plus GSR-head
+task-length driver remains unexecuted, clean latency is unmeasured, and the active execution order is
+in [roadmap.md](roadmap.md).

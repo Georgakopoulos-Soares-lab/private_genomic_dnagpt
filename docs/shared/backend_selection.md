@@ -1,10 +1,10 @@
 # Backend selection
 
-Scheme A's requirement was stricter than ordinary private inference: embedded input
+The pure non-interactive path's requirement was stricter than ordinary private inference: embedded input
 encrypted, block output encrypted, and no intermediate decryption anywhere in the
 arithmetic pass. DNAGPT's block contains LayerNorm, causal softmax attention, GELU,
-linear maps, and residual additions (`DNAGPT/dna_gpt/model/gpt.py`). Scheme B (the
-active path since 2026-07-25, see
+linear maps, and residual additions (`DNAGPT/dna_gpt/model/gpt.py`). Client-assisted CKKS (the
+active path since 2026-07-25, legacy internal namespace `Scheme B`; see
 [architecture_options.md](architecture_options.md)) relaxes only the
 zero-intermediate-decrypt clause, and only for the data-owning client at pre-declared
 nonlinearity boundaries; the backend selection below is unchanged for both schemes.
@@ -13,7 +13,7 @@ nonlinearity boundaries; the backend selection below is unchanged for both schem
 
 | Evaluated path | Verdict | Reason |
 |---|---|---|
-| Concrete ML hybrid LLM | Rejected as a backend | Its documented LLM protocol runs linear layers on the FHE server and nonlinear layers on the client, same *shape* now adopted as Scheme B — but its TFHE-rs backend only reports 1.2-2x GPU speedup and 2.2-18MB/token ciphertext expansion, far weaker than FIDESlib CKKS's proven GPU numbers. Scheme B keeps FIDESlib/OpenFHE CKKS end to end and adds the same client-decrypt-boundary shape without changing backend. |
+| Concrete ML hybrid LLM | Rejected as a backend | Its documented LLM protocol has the same broad client/server split as the active path. Its TFHE-rs representation and reported performance were less suitable than the already validated CKKS GPU stack. |
 | TenSEAL CKKS | Not selected | Its public API does not expose the bootstrap and nonlinear-function path needed for repeated transformer blocks. |
 | OpenFHE CKKS | Selected correctness backend | It exposes encrypted rotations, Chebyshev function evaluation, division, and approximate CKKS bootstrapping in one context. The complete local block passes. |
 | FIDESlib CKKS | Selected performance backend | Current FIDESlib supplies CUDA CKKS operations, hoisted rotation, bootstrap, OpenFHE interop, and optional multi-GPU execution. |
@@ -28,11 +28,11 @@ states that the client executes nonlinear layers, including attention and activa
 while the server executes linear layers. It reports about 300 seconds per GPT-2 token on
 CPU and about 11 seconds on GPU for that hybrid path. `[V]`
 
-That protocol can protect data from the server, but it did not satisfy Scheme A's
+That protocol can protect data from the server, but it did not satisfy the pure path's
 explicit zero-intermediate-decryption condition. The rejection applies to the Concrete
 ML/TFHE-rs *backend* — weak measured GPU speedup, Boolean/integer-only arithmetic, large
 ciphertext expansion — not to the client-decrypt-boundary *protocol shape*, which
-Scheme B now adopts on top of FIDESlib/OpenFHE CKKS instead. Concrete ML can implement
+the active path adopts on top of FIDESlib/OpenFHE CKKS instead. Concrete ML can implement
 nonlinear functions as programmable-bootstrapped table lookups in other circuits.
 
 ## TenSEAL
@@ -72,16 +72,15 @@ Its official feature list includes full CKKS server operations, `RotateHoisted`,
 Its [published evaluation](https://arxiv.org/abs/2507.04775) reports RTX 4090 primitive
 times and 73.5–146 ms bootstraps for its tested slot/parameter sets. `[V, external]`
 
-`[V, 2026-07-24]` A read-only upstream check reports
-`786c7600fb2f16b724e0acf73df367b27b8afed6` as FIDESlib `HEAD`, exactly the
-commit pinned by the CUDA image. There is therefore no newer upstream backend commit
-to substitute before measuring packing and scheduling work:
+`[V, 2026-08-01]` A read-only upstream check found the repository's pinned checkout at
+FIDESlib `HEAD`. There was no newer upstream backend revision to substitute before measuring packing
+and scheduling work. The exact reproducibility pin remains in the build scripts:
 
 ```bash
 git ls-remote https://github.com/CAPS-UMU/FIDESlib.git HEAD 'refs/tags/*'
 ```
 
-That evidence selects the implementation to test; it is not a DNAGPT latency result.
-The plan is C++/CUDA with a GPU-resident pass. Python remains the plaintext oracle and
-evidence validator. A CPU/GPU hybrid is only a fallback if the current GPU implementation
-fails this project's accuracy gate.
+That evidence selects the implementation to test; it is not a DNAGPT latency result. Python remains
+the plaintext oracle and evidence validator. The current performance plan profiles the full T=103
+CPU/CUDA path before choosing encoded-weight reuse, kernel/launch work, or a larger backend port; see
+[../hybrid/roadmap.md](../hybrid/roadmap.md).

@@ -26,18 +26,26 @@ per-example predictions as the FHE acceptance oracle:
 A task "passes" when DNAGPT's local metric is at/near the published reference; a negative boundary is
 valid — never tune to force a pass.
 
-### Phase B (current): FHE feasibility
+### Phase B (current): encrypted-inference feasibility
 
-Encrypted operators on the 0.1b backbone → encrypted end-to-end on a task, matching the Phase-A
-oracle within a declared tolerance. See `docs/roadmap.md`.
+The encrypted target starts at embedded numeric token vectors and ends at the released task head.
+Every accepted result must match the Phase-A oracle within the declared tolerance. Encrypted
+token-index lookup remains a separate unresolved boundary. See `docs/roadmap.md`.
 
-**Default architecture: hybrid client-assisted CKKS** (internal tag `Scheme B`, code in
+**Default architecture: client-assisted CKKS** (legacy internal tag `Scheme B`, code in
 `fhe/gpu_real_scheme_b/`). Server keeps all linear algebra (FIDESlib GPU, unchanged) in one
 encrypted lineage; the client — the data owner, who already holds the secret key — decrypts only
 ciphertexts derived from its own query at pre-declared nonlinearity boundaries (LayerNorm,
 attention nonlinearity, GELU), evaluates exactly in plaintext, and re-encrypts. The untrusted
 compute provider never observes plaintext, a partial decrypt, or the secret key. This is the only
 architecture with active/planned work.
+
+`[V]` The active implementation closes one complete real-weight block at the 103-token GSR prompt
+length with eight-token SIMD packing and depth 13. `[V]` Two released blocks compose at two tokens
+through a declared client refresh. `[U]` The built 12-block plus GSR-head driver has not run at 103
+tokens, and existing long timings are contaminated by shared-host load. Performance work therefore
+starts with a dedicated current-block profile and the exact-model optimization gates in
+`docs/hybrid/roadmap.md`, not with an unprofiled multi-day run.
 
 Two alternatives were evaluated and are **not** the default; full justification in
 `docs/shared/architecture_options.md`:
@@ -92,10 +100,10 @@ lookup; a production client/server key-custody and transport service.
 | Per-task method + commands + verdicts | `docs/tasks.md` |
 | Evaluation methodology & design (why these metrics, harness design, oracle) | `docs/eval_approach.md` |
 | Dataset origins, recovery, licenses | `docs/data_provenance.md` |
-| Next steps toward FHE | `docs/roadmap.md` |
+| Cross-project execution order | `docs/roadmap.md` |
 | Phase-B rationale shared by both schemes (backend choice, architecture comparison) | `docs/shared/` |
 | Phase-B Scheme A (pure, frozen) evidence | `docs/pure/` |
-| Phase-B Scheme B (hybrid, active) evidence | `docs/hybrid/` |
+| Active client-assisted CKKS roadmap and evidence | `docs/hybrid/roadmap.md`, `docs/hybrid/tasks.md` |
 | Run provenance | `results/{pure,hybrid,shared}/manifest.yaml`, `results/runs/` |
 | Evidence acceptance rules | `results/README.md` |
 
@@ -113,20 +121,22 @@ docs/              overview, tasks, eval_approach, data_provenance, roadmap + pu
 requirements.txt   pinned Phase-A dependencies
 ```
 
-## Scheduling a Scheme B job (Brev)
+## GPU execution
 
-To run the remaining Scheme B gates unattended on the shared Brev host once capacity frees up:
+Historical launchers under `fhe/gpu_real_scheme_b/` remain for result reproduction; the generic
+`wait_and_run_scheme_b.sh` workflow targets gates that are already complete and is not the current
+queue. Before any new remote run:
 
-```bash
-fhe/gpu_real_scheme_b/wait_and_run_scheme_b.sh
-```
+1. identify the exact gate in `docs/hybrid/roadmap.md`;
+2. run the local contract suite;
+3. use the version-matched launcher documented in `docs/hybrid/brev_runbook.md` and
+   `docs/hybrid/tasks.md`;
+4. require a dedicated or otherwise measured-clean host for performance claims; and
+5. create new evidence rather than overwriting an old run.
 
-Polls host load average (`LOAD_THRESHOLD`, default 250) and per-GPU idle state
-(`POLL_SECONDS`, default 60s) until capacity is available, then launches the next missing
-gate (`ln1` → `attention` → `full`) via `launch_brev_scheme_b.sh`. Safe to re-run — skips any
-gate whose evidence JSON already exists and never overwrites an existing log/done/output
-file. Survives SSH/session disconnects (runs detached on the host). Log:
-`.../scheme_b_orchestrator.log` on the host. Full detail: `docs/hybrid/brev_runbook.md`.
+The existing 12-block driver may be run now for arithmetic correctness closure. It must not be
+presented as an optimized latency result until the current T=103 profile and retained optimization
+gates have been integrated.
 
 ## Base validation
 

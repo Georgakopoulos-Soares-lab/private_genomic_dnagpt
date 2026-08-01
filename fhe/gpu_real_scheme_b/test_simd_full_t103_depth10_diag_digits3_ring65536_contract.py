@@ -3,8 +3,7 @@
 Parent is the depth-10/digits-3/ring-65536 fork, which got past all 91 score
 tiles, attention projection, residual, and the LN2 client boundary, then hit
 its own require_remaining_depth() guard: "insufficient depth before
-Token-SIMD MLP group 0" -- see docs/hybrid/tasks.md and
-docs/hybrid/simd_current_state.txt (2026-07-30). The exact consumed level at
+Token-SIMD MLP group 0" -- see docs/hybrid/tasks.md (2026-07-30). The exact consumed level at
 that point was never logged. This fork keeps MULT_DEPTH=10 UNCHANGED and adds
 exactly one diagnostic print of normalized2->GetLevel() immediately before
 the guard, so the next real fork can jump directly to the correct
