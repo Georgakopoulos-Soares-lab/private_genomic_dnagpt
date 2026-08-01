@@ -7,6 +7,7 @@
 | [tasks.md](tasks.md) | Per-task exact commands, measured results, verdicts (Phase A) + pointers into `pure/`/`hybrid/` (Phase B) |
 | [data_provenance.md](data_provenance.md) | Every dataset's source, retrieval, recovery, license |
 | [roadmap.md](roadmap.md) | Shared FHE acceptance contract and rules + pointers into `pure/`/`hybrid/` for scheme-specific plans |
+| [paper/](paper/) | Narrative paper sourcebook: research timeline, methods, results and limits, and defensible external claims |
 
 FHE (Phase B) content is split by architecture — see `CLAUDE.md` for why hybrid
 client-assisted CKKS (Scheme B) is the default and pure non-interactive CKKS (Scheme A)
