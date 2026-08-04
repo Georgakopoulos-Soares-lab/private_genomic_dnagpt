@@ -54,6 +54,7 @@ cmake --build "${BUILD_DIR}" --target real_dnagpt_fides_scheme_b_two_block_refre
 cmake --build "${BUILD_DIR}" --target real_dnagpt_fides_scheme_b_two_block_refresh_depth12 --parallel "${JOBS}"
 cmake --build "${BUILD_DIR}" --target real_dnagpt_fides_scheme_b_all_blocks_head_t2 --parallel "${JOBS}"
 cmake --build "${BUILD_DIR}" --target real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head --parallel "${JOBS}"
+cmake --build "${BUILD_DIR}" --target real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head_cpudiagcache --parallel "${JOBS}"
 # The process-separated MLP reader/merge targets are retained as negative
 # implementation evidence but intentionally excluded here: the pinned FIDESlib
 # exposes no Ciphertext serialization API, so those targets are known not to build.
@@ -87,3 +88,4 @@ echo "[build] ${BUILD_DIR}/real_dnagpt_fides_scheme_b_two_block_refresh"
 echo "[build] ${BUILD_DIR}/real_dnagpt_fides_scheme_b_two_block_refresh_depth12"
 echo "[build] ${BUILD_DIR}/real_dnagpt_fides_scheme_b_all_blocks_head_t2"
 echo "[build] ${BUILD_DIR}/real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head"
+echo "[build] ${BUILD_DIR}/real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head_cpudiagcache"

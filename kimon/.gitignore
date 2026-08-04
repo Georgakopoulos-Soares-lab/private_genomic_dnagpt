@@ -1,0 +1,6 @@
+# Run outputs and the built container image are large / machine-specific.
+# Scripts + guides ARE tracked; logs and the .sif/tar are not.
+logs/
+env/*.sif
+env/*.tar
+env/*.tar.gz

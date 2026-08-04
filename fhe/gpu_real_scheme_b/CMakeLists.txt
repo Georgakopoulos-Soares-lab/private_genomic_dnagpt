@@ -524,6 +524,32 @@ set_target_properties(
     CUDA_SEPARABLE_COMPILATION ON
     POSITION_INDEPENDENT_CODE ON)
 
+# Config-3 "all-optimizations" END-TO-END: the same complete 12-block backbone
+# + GSR head as the target above, but composing the CPU-side diagonal-vector
+# cache per-block source (..._cpudiagcache.cpp, included) instead of the plain
+# depth-13 block. Composition logic is byte-for-byte the config-1 e2e driver's;
+# only the #included per-block source differs. Additive; touches no other target.
+add_executable(
+    real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head_cpudiagcache
+    src/real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head_cpudiagcache.cpp)
+set_source_files_properties(
+    src/real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head_cpudiagcache.cpp
+    PROPERTIES LANGUAGE CUDA)
+target_link_libraries(
+    real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head_cpudiagcache PRIVATE
+    fideslib::fideslib
+    OpenMP::OpenMP_CXX)
+target_compile_options(
+    real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head_cpudiagcache PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>
+    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wall,-Wextra,-Wpedantic>)
+set_target_properties(
+    real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head_cpudiagcache
+    PROPERTIES
+    CUDA_RESOLVE_DEVICE_SYMBOLS ON
+    CUDA_SEPARABLE_COMPILATION ON
+    POSITION_INDEPENDENT_CODE ON)
+
 # Historical negative prototype for process-separated MLP down-projection
 # sharding. The pinned FIDESlib has no Ciphertext serialization API, so these
 # targets are intentionally excluded from default builds. They remain
