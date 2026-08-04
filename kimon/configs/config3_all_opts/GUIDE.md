@@ -35,4 +35,17 @@ alongside timings and `global_rel_inf`.
 - `block_sharded.sbatch` (sharding + diagcache) uses the combined reader
   `..._simd_shard_reader_cpudiagcache_t103_depth13` — provided if that binary
   built; otherwise use Config 2 (sharding) and Config 3 (diagcache) separately.
-- e2e (diagcache 12-block): **being built** — see `../../README.md` §e2e status.
+## e2e (all 12 blocks + GSR head, with diagcache) — READY
+
+```bash
+mkdir -p kimon/logs/config3_all_opts
+sbatch kimon/configs/config3_all_opts/e2e.sbatch     # edit -A; walltime 48h
+```
+- Driver `real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head_cpudiagcache`
+  (the config-1 e2e driver composing the diagcache block ×12 + head) via runner
+  `run_scheme_b_all_blocks_head_t103_cpudiagcache.sh`.
+- Fixture: same `multiblock` fixture as config-1 e2e.
+- **PASS** = `REAL_DNAGPT_FIDES_SCHEME_B_ALL_BLOCKS_HEAD_T103_CPUDIAGCACHE_PASS`.
+- Est. **15–45 h**, single GPU. This is the fastest single-GPU full forward pass.
+  Compare its `encrypted_evaluation` against config-1 e2e via
+  `kimon/analyze/summarize.py` to read off the diagcache speedup at e2e scale.
