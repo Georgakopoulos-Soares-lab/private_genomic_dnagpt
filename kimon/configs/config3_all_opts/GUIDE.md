@@ -1,5 +1,9 @@
 # Config 3 — ALL optimizations combined
 
+> New here? `docs/hybrid/t123_walkthrough.md` walks the T123 variant of this job
+> end to end (input file → GPU math → client boundaries → final decrypt), explains
+> every crypto term, and says what lives on disk / in host RAM / on the GPU.
+
 **What it measures:** one full block, T=103, with **every optimization we've
 verified accuracy-wise** stacked into a single-GPU run: B=8 Token-SIMD +
 depth-13/digits-3/ring-65536 + **CPU-side diagonal-vector cache** (avoids

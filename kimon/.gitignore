@@ -4,3 +4,7 @@ logs/
 env/*.sif
 env/*.tar
 env/*.tar.gz
+# Native FIDESlib path: upstream checkout + local install prefix (regenerable
+# via env/clone_fideslib.sh + env/build_fideslib_native.sh).
+env/fideslib-src/
+env/fideslib-install/

@@ -65,6 +65,11 @@ dist/
 .venv*/
 venv/
 env/
+# `env/` above targets Python virtualenvs, but it also swallowed kimon/env/,
+# which holds the tracked TACC setup scripts. Un-ignore that one directory; its
+# large artifacts (.sif/.tar, FIDESlib checkout + install) are excluded in
+# kimon/.gitignore.
+!kimon/env/
 .pytest_cache/
 .mypy_cache/
 .ruff_cache/

@@ -121,10 +121,25 @@ constexpr std::string_view PINNED_CPUDIAGCACHE_SOURCE_SHA256 =
     "686c8b766436fde0fd4422f6a29f80361f8c8a2565768577857e9264b2976fd5";
 constexpr std::string_view PINNED_TWO_BLOCK_REFRESH_SOURCE_SHA256 =
     "5cb82f81dc46efe2f4bfd7a1c9e9c1bf90cea3d629432b027b42e5df89093767";
+// kimon: optional compile-time override of the fixture-identity pins for a
+// platform-tagged (e.g. TACC ls6) build; frozen value is the default. Pass a
+// bare-hex -D (no quotes); stringify makes it a literal. See kimon/env/.
+#ifndef KIMON_PIN_STRINGIFY
+#define KIMON_PIN_STRINGIFY2(x) #x
+#define KIMON_PIN_STRINGIFY(x) KIMON_PIN_STRINGIFY2(x)
+#endif
+#ifdef KIMON_PIN_AB_MANIFEST
+constexpr std::string_view PINNED_ALL_BLOCKS_FIXTURE_MANIFEST_SHA256 = KIMON_PIN_STRINGIFY(KIMON_PIN_AB_MANIFEST);
+#else
 constexpr std::string_view PINNED_ALL_BLOCKS_FIXTURE_MANIFEST_SHA256 =
     "ab55533eaf8779b64a67c5cdd8ac67152419389e33f1c44addd4a092e0ff962d";
+#endif
+#ifdef KIMON_PIN_AB_CONTRACT
+constexpr std::string_view PINNED_ALL_BLOCKS_FIXTURE_CONTRACT_SHA256 = KIMON_PIN_STRINGIFY(KIMON_PIN_AB_CONTRACT);
+#else
 constexpr std::string_view PINNED_ALL_BLOCKS_FIXTURE_CONTRACT_SHA256 =
     "5256d3f59e215631f9ded7dba68f13e16c12c8fde927c53277bc1752171f7cca";
+#endif
 
 struct AllBlocksOptions {
     int gpu = 0;

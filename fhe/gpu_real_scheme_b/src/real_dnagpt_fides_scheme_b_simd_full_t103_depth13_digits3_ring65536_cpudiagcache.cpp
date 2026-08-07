@@ -134,16 +134,43 @@ static_assert(BSGS_N1 * BSGS_N2 == PACK_WIDTH);
 
 constexpr std::string_view PINNED_FIDES_COMMIT =
     "786c7600fb2f16b724e0acf73df367b27b8afed6";
+// kimon: the parent anchor is the depth13 source, which the platform build
+// edits additively; make its pin compile-time-overridable (bare-hex -D,
+// stringified) so a platform build accepts the edited depth13 sha.
+#ifndef KIMON_PIN_STRINGIFY
+#define KIMON_PIN_STRINGIFY2(x) #x
+#define KIMON_PIN_STRINGIFY(x) KIMON_PIN_STRINGIFY2(x)
+#endif
+#ifdef KIMON_PIN_CPUDIAG_PARENT
+constexpr std::string_view PINNED_PARENT_SOURCE_SHA256 =
+    KIMON_PIN_STRINGIFY(KIMON_PIN_CPUDIAG_PARENT);
+#else
 constexpr std::string_view PINNED_PARENT_SOURCE_SHA256 =
     "6e8cd08efad1567d2f9001f69d10e302e45f4e634f3bd37e2245382d215fbe5e";
+#endif
 constexpr std::string_view PINNED_FROZEN_SOURCE_SHA256 =
     "70580ff0b4f12565921e0af8ce04e7b4c0d4253b51c0a8380ef0727ce85b2a0f";
 constexpr std::string_view PINNED_SCHEDULE_SHA256 =
     "c6b221f365ba6326f615c5554458d7bd092990d23c4ba0d5106ca7577cb7c3aa";
+// kimon: optional compile-time override of the fixture-identity pins for a
+// platform-tagged (e.g. TACC ls6) build; frozen value is the default. Pass a
+// bare-hex -D (no quotes); stringify makes it a literal. See kimon/env/.
+#ifndef KIMON_PIN_STRINGIFY
+#define KIMON_PIN_STRINGIFY2(x) #x
+#define KIMON_PIN_STRINGIFY(x) KIMON_PIN_STRINGIFY2(x)
+#endif
+#ifdef KIMON_PIN_MANIFEST
+constexpr std::string_view PINNED_FIXTURE_MANIFEST = KIMON_PIN_STRINGIFY(KIMON_PIN_MANIFEST);
+#else
 constexpr std::string_view PINNED_FIXTURE_MANIFEST =
     "d2c90ba15c62c648495b51070eee585a3570dc174eb31e14782aaf016b31f8f6";
+#endif
+#ifdef KIMON_PIN_CONTRACT
+constexpr std::string_view PINNED_FIXTURE_CONTRACT_SHA256 = KIMON_PIN_STRINGIFY(KIMON_PIN_CONTRACT);
+#else
 constexpr std::string_view PINNED_FIXTURE_CONTRACT_SHA256 =
     "061d53bd25bbcaf75d4c12067ec77f032c3ba0e35300a0a6168c2ce15f3672db";
+#endif
 
 using Clock = std::chrono::steady_clock;
 using Ct = Ciphertext<DCRTPoly>;

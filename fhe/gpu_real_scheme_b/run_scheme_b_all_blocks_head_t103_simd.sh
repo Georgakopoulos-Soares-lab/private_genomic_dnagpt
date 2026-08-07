@@ -28,7 +28,10 @@ readonly BINARY="${BUILD_DIR}/real_dnagpt_fides_scheme_b_simd_full_t103_12blocks
 readonly DRIVER_SRC="${SCRIPT_DIR}/src/real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head.cpp"
 readonly DEPTH13_SRC="${SCRIPT_DIR}/src/real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536.cpp"
 readonly TWO_BLOCK_SRC="${SCRIPT_DIR}/src/real_dnagpt_fides_scheme_b_two_block_refresh.cpp"
-readonly FIXTURE_CONTRACT="${SCRIPT_DIR}/fixture_all_blocks_head_t103.sha256"
+# Opt-in platform-contract override (default unset -> frozen behaviour); the ls6
+# hypervisor node needs a platform-tagged contract for the float64 @-matmul
+# oracle arrays. See kimon/env/common.sh and kimon/env/fixtures_ls6/.
+readonly FIXTURE_CONTRACT="${KIMON_FIXTURE_CONTRACT:-${SCRIPT_DIR}/fixture_all_blocks_head_t103.sha256}"
 
 if [[ "$(basename "${OUTPUT}")" != *"_scheme_b_"* ]] || \
    [[ "$(basename "${OUTPUT}")" != *"_all_blocks_head_t103_"* ]]; then

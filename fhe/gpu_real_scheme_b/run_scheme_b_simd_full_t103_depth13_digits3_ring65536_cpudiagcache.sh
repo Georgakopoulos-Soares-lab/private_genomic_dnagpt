@@ -47,22 +47,34 @@ if [[ "${actual_commit}" != "${EXPECTED_COMMIT}" ]]; then
   exit 2
 fi
 
+# Opt-in platform-contract override (default unset -> frozen behaviour). See the
+# matching block in run_scheme_b_simd_full_t103_depth13_digits3_ring65536.sh and
+# kimon/env/common.sh for why the ls6 hypervisor node needs a platform contract.
+CONTRACT_FILE="${KIMON_FIXTURE_CONTRACT:-${SCRIPT_DIR}/fixture_t103.sha256}"
+EXPECT_MANIFEST="${KIMON_EXPECTED_MANIFEST:-${EXPECTED_MANIFEST}}"
+EXPECT_CONTRACT="${KIMON_EXPECTED_FIXTURE_CONTRACT:-${EXPECTED_FIXTURE_CONTRACT}}"
 (
   cd "${FIXTURE_DIR}"
-  sha256sum --check --status "${SCRIPT_DIR}/fixture_t103.sha256"
+  sha256sum --check --status "${CONTRACT_FILE}"
 )
 manifest_sha="$(sha256sum "${FIXTURE_DIR}/manifest.json" | cut -d' ' -f1)"
-if [[ "${manifest_sha}" != "${EXPECTED_MANIFEST}" ]]; then
-  echo "[FATAL] fixture manifest ${manifest_sha}; expected ${EXPECTED_MANIFEST}" >&2
+if [[ "${manifest_sha}" != "${EXPECT_MANIFEST}" ]]; then
+  echo "[FATAL] fixture manifest ${manifest_sha}; expected ${EXPECT_MANIFEST}" >&2
   exit 2
 fi
 source_sha="$(sha256sum "${SCRIPT_DIR}/src/real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache.cpp" | cut -d' ' -f1)"
-if [[ "${source_sha}" != "${EXPECTED_SOURCE}" ]]; then
+# KIMON_TRUST_MAIN_SOURCE=1 (platform build): main source edited additively for
+# compile-time fixture-pin override; see kimon/env/. Parent/frozen/schedule
+# anchors below stay enforced.
+if [[ "${KIMON_TRUST_MAIN_SOURCE:-0}" != "1" && "${source_sha}" != "${EXPECTED_SOURCE}" ]]; then
   echo "[FATAL] depth-13/digits-3/ring-65536 cpudiagcache SIMD source ${source_sha}; expected ${EXPECTED_SOURCE}" >&2
   exit 2
 fi
 parent_sha="$(sha256sum "${SCRIPT_DIR}/src/real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536.cpp" | cut -d' ' -f1)"
-if [[ "${parent_sha}" != "${EXPECTED_PARENT}" ]]; then
+# This script's "parent" anchor is the depth13 source, which the platform build
+# edits additively (compile-time fixture-pin override). KIMON_TRUST_MAIN_SOURCE=1
+# accepts that git-reviewed edit; the frozen/schedule anchors below stay enforced.
+if [[ "${KIMON_TRUST_MAIN_SOURCE:-0}" != "1" && "${parent_sha}" != "${EXPECTED_PARENT}" ]]; then
   echo "[FATAL] frozen parent ${parent_sha}; expected ${EXPECTED_PARENT}" >&2
   exit 2
 fi
@@ -76,9 +88,9 @@ if [[ "${schedule_sha}" != "${EXPECTED_SCHEDULE}" ]]; then
   echo "[FATAL] SIMD schedule ${schedule_sha}; expected ${EXPECTED_SCHEDULE}" >&2
   exit 2
 fi
-contract_sha="$(sha256sum "${SCRIPT_DIR}/fixture_t103.sha256" | cut -d' ' -f1)"
-if [[ "${contract_sha}" != "${EXPECTED_FIXTURE_CONTRACT}" ]]; then
-  echo "[FATAL] fixture contract ${contract_sha}; expected ${EXPECTED_FIXTURE_CONTRACT}" >&2
+contract_sha="$(sha256sum "${CONTRACT_FILE}" | cut -d' ' -f1)"
+if [[ "${contract_sha}" != "${EXPECT_CONTRACT}" ]]; then
+  echo "[FATAL] fixture contract ${contract_sha}; expected ${EXPECT_CONTRACT}" >&2
   exit 2
 fi
 exec "${BINARY}" \

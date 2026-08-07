@@ -497,6 +497,126 @@ set_target_properties(
     CUDA_SEPARABLE_COMPILATION ON
     POSITION_INDEPENDENT_CODE ON)
 
+# T123: the all-opts block with Tier 1 (encode-once encoded-Plaintext templates
+# + per-use clone), Tier 2/3 (multi-core OMP parallel batched encode). Additive
+# fork of the cpudiagcache source; same fixture, oracle, and pins.
+add_executable(
+    real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_t123
+    src/real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_t123.cpp)
+set_source_files_properties(
+    src/real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_t123.cpp
+    PROPERTIES LANGUAGE CUDA)
+target_link_libraries(
+    real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_t123 PRIVATE
+    fideslib::fideslib
+    OpenMP::OpenMP_CXX)
+target_compile_options(
+    real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_t123 PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>
+    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wall,-Wextra,-Wpedantic,-fopenmp>)
+set_target_properties(
+    real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_t123
+    PROPERTIES
+    CUDA_RESOLVE_DEVICE_SYMBOLS ON
+    CUDA_SEPARABLE_COMPILATION ON
+    POSITION_INDEPENDENT_CODE ON)
+
+# T123 v2: OMP-parallel client boundary crossings (the 91 score-tile decrypts
+# + 727 weight-tile encrypts, previously fully serial and GPU-idle during
+# them). Same crypto-op schedule/oracle as t123; additive fork, t123 stays
+# untouched as an immutable historical binary.
+# ABANDONED (kimon/logs/optimization_campaign/PLAN.md): the micro-gate found
+# an intermittent race in concurrent Decrypt/Encrypt on FIDESlib's shared
+# CryptoContext (two different crash signatures across runs of unchanged
+# test code). Kept as a documented negative result; do not run as a full
+# driver or present as a validated optimization. v3 below forks from the
+# clean t123 source instead.
+add_executable(
+    real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_t123_v2
+    src/real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_t123_v2.cpp)
+set_source_files_properties(
+    src/real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_t123_v2.cpp
+    PROPERTIES LANGUAGE CUDA)
+target_link_libraries(
+    real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_t123_v2 PRIVATE
+    fideslib::fideslib
+    OpenMP::OpenMP_CXX)
+target_compile_options(
+    real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_t123_v2 PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>
+    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wall,-Wextra,-Wpedantic,-fopenmp>)
+set_target_properties(
+    real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_t123_v2
+    PROPERTIES
+    CUDA_RESOLVE_DEVICE_SYMBOLS ON
+    CUDA_SEPARABLE_COMPILATION ON
+    POSITION_INDEPENDENT_CODE ON)
+
+# T123 v3: free the CPU-side (OpenFHE) EvalMult/rotation key maps right after
+# LoadContext -- source-verified dead weight afterward (LoadContext is the
+# only reader in FIDESlib's non-vendored code), validated by the micro-gate's
+# TEST_I on real GPU hardware. Additive fork of the clean t123 source (NOT
+# t123_v2, which is abandoned); needs OpenFHE's raw headers directly (see the
+# source comment), which fideslib::fideslib does not propagate transitively
+# -- same already-solved issue as real_dnagpt_fides_scheme_b_lintransform
+# above.
+add_executable(
+    real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_t123_v3
+    src/real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_t123_v3.cpp)
+set_source_files_properties(
+    src/real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_t123_v3.cpp
+    PROPERTIES LANGUAGE CUDA)
+target_link_libraries(
+    real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_t123_v3 PRIVATE
+    fideslib::fideslib
+    OpenMP::OpenMP_CXX)
+target_include_directories(
+    real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_t123_v3 PRIVATE
+    "${OpenFHE_INCLUDE}"
+    "${OpenFHE_INCLUDE}/core"
+    "${OpenFHE_INCLUDE}/pke"
+    "${OpenFHE_INCLUDE}/binfhe")
+target_compile_options(
+    real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_t123_v3 PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>
+    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wall,-Wextra,-Wpedantic,-fopenmp>)
+set_target_properties(
+    real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_t123_v3
+    PROPERTIES
+    CUDA_RESOLVE_DEVICE_SYMBOLS ON
+    CUDA_SEPARABLE_COMPILATION ON
+    POSITION_INDEPENDENT_CODE ON)
+
+# THROWAWAY v4 feasibility diagnostic -- NOT an evidence-bearing binary, not
+# added to build_binaries.sh, to be deleted (source + this CMake block) once
+# the per-weight level data is captured. Prints each weight's actual encode
+# level to stderr; otherwise identical to t123_v3.
+add_executable(
+    real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_t123_v4_diag
+    src/real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_t123_v4_diag.cpp)
+set_source_files_properties(
+    src/real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_t123_v4_diag.cpp
+    PROPERTIES LANGUAGE CUDA)
+target_link_libraries(
+    real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_t123_v4_diag PRIVATE
+    fideslib::fideslib
+    OpenMP::OpenMP_CXX)
+target_include_directories(
+    real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_t123_v4_diag PRIVATE
+    "${OpenFHE_INCLUDE}"
+    "${OpenFHE_INCLUDE}/core"
+    "${OpenFHE_INCLUDE}/pke"
+    "${OpenFHE_INCLUDE}/binfhe")
+target_compile_options(
+    real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_t123_v4_diag PRIVATE
+    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-fopenmp>)
+set_target_properties(
+    real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_t123_v4_diag
+    PROPERTIES
+    CUDA_RESOLVE_DEVICE_SYMBOLS ON
+    CUDA_SEPARABLE_COMPILATION ON
+    POSITION_INDEPENDENT_CODE ON)
+
 # Complete 12-block backbone + GSR classifier head, Scheme B Token-SIMD B=8,
 # T=103 (full prompt). Composes the depth-13/digits-3/ring-65536 per-block
 # source (unchanged, included) 12x with an adapted Token-SIMD inter-block

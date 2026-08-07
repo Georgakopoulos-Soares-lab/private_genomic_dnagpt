@@ -22,7 +22,8 @@
 #   sbatch kimon/configs/config2_sharding/block.sbatch
 set -euo pipefail
 cd "${SLURM_SUBMIT_DIR:-$(pwd)}"
-module load tacc-apptainer 2>/dev/null || module load apptainer 2>/dev/null || true
+# Lmod's `module` function aborts under `set -u`; guard it (see kimon/env/tacc_env.sh).
+{ set +u; module load tacc-apptainer 2>/dev/null || module load apptainer 2>/dev/null || true; set -u; }
 source kimon/env/common.sh
 
 CONFIG=config2_sharding
