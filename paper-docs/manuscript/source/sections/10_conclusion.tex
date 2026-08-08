@@ -1,0 +1,62 @@
+% ---------------------------------------------------------------------------
+% 10 Conclusion and closing statements
+% ---------------------------------------------------------------------------
+
+\section{Conclusion}
+
+This study gives a split answer to the question of encrypted DNAGPT inference. At the demonstrated
+scope, client-assisted CKKS reproduces the independently validated plaintext computation with
+$4.64\times10^{-9}$ relative error against a tolerance of $4\times10^{-2}$ fixed before the run.
+Correctness is therefore not the barrier. Memory did prevent chained evaluation in the evaluated
+non-interactive configuration. Explicit re-encryption moves that accelerator-memory barrier by
+resetting the depth budget at declared boundaries, and the resulting client-assisted process peaks
+at $9.6$~GiB of GPU memory. Bounded plaintext caching addresses a separate host-memory problem by
+releasing encoded templates at stage boundaries. The feasibility verdict is affirmative at this
+scope.
+
+Cost remains the unanswered deployment constraint. The optimization campaign removes repeated host
+encoding while preserving the checked operation schedule, packing, multiplicative depth, and
+reference. The server still evaluates the released block's dense maps under CKKS, and the data
+owner still performs the declared exact nonlinearities. These invariants make a future paired
+timing comparison interpretable, but the committed evidence does not yet support an elapsed-time
+claim for the retained implementation. Feasibility and practicality consequently have different
+verdicts: the encrypted path is correct and fits the evaluated memory envelope, while its service
+cost remains unresolved.
+
+\subsection*{Future work}
+
+The immediate measurement priority is a repeated, paired dedicated-node comparison of the retained
+implementation and its documented baseline. The next arithmetic milestone is to execute the built
+full classifier with its released head at task length and compare the encrypted prediction with the
+frozen reference. Systems work should then cache mask plaintexts, extending the encode-once strategy
+already validated for weight diagonals. Distinct transforms across the packed activation copies are
+the larger circuit opportunity; before mask and copy-repair overhead, the ledger projects a $60\%$
+reduction in dense ciphertext--plaintext work. A thread-safe cryptographic context would permit
+concurrent independent client boundaries. Protocol closure also requires a noise-flooding budget
+for re-encryption. A deployment study must finally add serialized network transport and private
+token-index lookup before measuring the complete service.
+
+\section*{Biographical note}
+% TODO(authors)
+
+\section*{Ethics statement}
+
+This study involved no human participants, specimens, or private clinical records. It used public
+reference datasets with recorded provenance. The work makes no clinical-performance claim and
+does not present the prototype as a deployable privacy guarantee beyond its stated threat model.
+
+\section*{Data availability statement}
+
+All evaluation datasets are public. Their original sources, versions, preprocessing, and any
+recovery route used are recorded in the repository's data-provenance document. Sequence data,
+model weights, and cryptographic keys are not redistributed.
+
+\section*{Code availability statement}
+
+The evaluation harnesses, encrypted-evaluation implementation, environment definitions, and the
+evidence record for the paper are maintained at
+\url{https://github.com/Georgakopoulos-Soares-lab/private_genomic_dnagpt}. No repository-level
+reuse license has yet been assigned.
+
+\section*{Acknowledgments}
+% TODO(authors) Compute allocation.

@@ -1,0 +1,80 @@
+% ---------------------------------------------------------------------------
+% 2 Background
+% Source: docs/shared/backend_selection.md, docs/overview.md,
+%         docs/hybrid/t123_walkthrough.md §3 (glossary) and §3.1
+% ---------------------------------------------------------------------------
+
+\section{Background}
+
+\subsection{DNAGPT and the genomic task families}
+DNAGPT is an autoregressive transformer adapted to sequence and numerical tasks over
+DNA~\cite{dnagpt2023}. We evaluate its released $0.1$-billion-parameter configuration. The backbone has
+$12$ transformer blocks, hidden width $768$, and $12$ causal-attention heads of width $64$. Its
+feed-forward sublayer expands to width $3{,}072$. DNA is represented through $6$-mer tokenization
+and combined with task-format tokens before entering the transformer.
+
+Each block follows the structure that determines the encrypted circuit: LayerNorm; query, key, and
+value projections; causal self-attention; an output projection and residual; a second LayerNorm;
+then an expanded MLP with GELU and another residual. The dense maps use fixed model weights, whereas
+LayerNorm, attention, and GELU introduce data-dependent products or nonlinear functions.
+
+The release includes fine-tuned heads for genomic-signal recognition and mRNA abundance regression.
+It does not include a head for the genome-understanding benchmark, so Section~\ref{sec:baseline}
+evaluates that backbone with a locally fine-tuned linear head. Each of these families predates the
+model: signal recognition by task-specific convolutional architectures~\cite{deepgsr}, abundance
+regression likewise~\cite{xpresso}, and the understanding benchmark by the encoder-based model that
+introduced it~\cite{dnabert2}. They first establish model fidelity; the encrypted study then uses
+the signal-recognition path as its task-length anchor.
+
+\subsection{CKKS}
+CKKS supports approximate arithmetic on packed vectors of real or complex
+values~\cite{ckks2017}. Encoding places many values into the slots of one plaintext, which is then
+encrypted under the data owner's key. Addition and multiplication act slotwise across the packed
+vector, while rotations move values between slots. This single-instruction, multiple-data model is
+a natural match for transformer activations: a rotation-and-diagonal schedule can express a public
+matrix transform as ciphertext--plaintext multiplication and accumulation.
+
+Not every transformer product has a public operand. Query--key scoring multiplies two encrypted
+projections of the input, and attention context multiplies encrypted attention weights by encrypted
+values. Those operations require ciphertext--ciphertext multiplication and relinearization. The
+distinction is about data ownership rather than implementation convenience: public weights and
+masks remain plaintext, while every query-derived operand remains encrypted at the server.
+
+CKKS controls approximate fixed-point scale through rescaling. A multiplication consumes a level
+from a finite modulus chain, and the computation fails once that multiplicative budget is exhausted.
+Bootstrapping can refresh a ciphertext without decryption, while fresh client encryption can reset
+the budget in an interactive protocol. Both choices carry system costs, so multiplicative depth is
+an architectural resource rather than only a cryptographic parameter.
+
+\subsection{Why the nonlinearities are the architecture}
+CKKS directly supplies polynomial arithmetic, but a transformer requires inverse square root in
+LayerNorm, exponentiation and normalization in softmax, and GELU. A non-interactive circuit must
+replace these functions with polynomial approximations over declared input ranges. Higher-degree
+approximations consume additional multiplicative depth; across repeated blocks, the evaluator must
+provide a deeper context, a bootstrapping schedule, or both. Larger modulus chains and refresh
+operations also increase the context and evaluation-key material that must remain resident.
+
+The alternative is to place exact functions at declared client boundaries. The key holder decrypts
+only values derived from its query, evaluates the nonlinearity, and returns a fresh ciphertext. This
+removes approximation-range calibration and resets the encrypted depth budget, but it requires an
+online client and exposes intermediate activations to that client. The choice between polynomial
+approximation and client evaluation therefore determines memory, interaction, depth, and the threat
+model. Section~\ref{sec:protocol} evaluates both designs and reports where each stops.
+
+\subsection{Evaluated software backends}
+We separate correctness semantics from the performance path. OpenFHE provides CKKS context and
+security-parameter construction, encoding, rotations, polynomial evaluation, and approximate
+bootstrapping \cite{openfhe}. It supplies the reference behavior used to validate local encrypted
+operators and the non-interactive design. The evaluated GPU backend interoperates with those
+representations and provides CUDA implementations of the server-side CKKS operations; all reported
+accelerator measurements use that path. Python, NumPy, and PyTorch construct and validate the frozen
+plaintext reference, but they do not participate in encrypted performance measurements.
+
+We also evaluated a Boolean/integer-oriented backend whose transformer protocol places
+nonlinearities at the client. Its available GPU acceleration and ciphertext expansion were less
+suitable for this matrix-heavy graph than the already validated CKKS
+path~\cite{concreteml,tfhers}. A
+separate CKKS wrapper was not selected because its public interface lacked the refresh and general
+nonlinear-function support required by the non-interactive baseline. These decisions select among
+the software paths tested in this project. They do not establish that CKKS is the only scheme able
+to express encrypted transformer inference.

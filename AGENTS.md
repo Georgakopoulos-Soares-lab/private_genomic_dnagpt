@@ -10,6 +10,9 @@ DNAGPT encrypted-inference feasibility project. The full charter and safety rule
 3. [docs/roadmap.md](docs/roadmap.md) — cross-project execution order.
 4. [docs/hybrid/roadmap.md](docs/hybrid/roadmap.md) — active client-assisted CKKS optimization plan.
 
+Writing the paper? Go to [paper-docs/AGENTS.md](paper-docs/AGENTS.md) instead — it overrides this
+file for anything under `paper-docs/`, and it is where the terminology and claim rules live.
+
 Do not reconstruct current status from filenames or old run tags. The roadmaps own current decisions;
 `docs/{pure,hybrid}/tasks.md` and `results/` preserve the detailed experiment history.
 

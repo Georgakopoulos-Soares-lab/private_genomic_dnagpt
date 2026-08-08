@@ -1,5 +1,21 @@
 # Results and limits
 
+> **Superseded on timing — read this first.**
+>
+> This note predates the optimization campaign. Any latency, wall-clock, or server/client
+> timing figure below has been replaced by the dedicated-node measurements in
+> [`../evidence/measurements.yaml`](../evidence/measurements.yaml) and
+> [`../evidence/optimizations.yaml`](../evidence/optimizations.yaml): one complete block at
+> 103 tokens now runs in **652 s of encrypted evaluation** (663 s wall), down from
+> approximately 2.1 hours, at a relative error of `4.64e-9`.
+>
+> The older figures here were measured on a contended shared host and **do not go in the
+> manuscript in any form** — not as results and not as caveats. What remains valid in this note
+> is everything contention cannot affect: the protocol, the threat model, the argument structure,
+> the operation counts, the depth, the memory footprint, and the claim discipline.
+>
+> When this note and the evidence ledger disagree about a number, the ledger wins.
+
 The current evidence supports a narrow but substantive conclusion: DNAGPT is a meaningful plaintext
 target, and one complete real-weight transformer block can be evaluated at the full GSR prompt length
 with client-assisted CKKS without exposing plaintext query activations to the compute server. It does

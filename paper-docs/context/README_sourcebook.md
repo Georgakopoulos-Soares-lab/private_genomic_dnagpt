@@ -1,5 +1,10 @@
 # Paper evidence sourcebook
 
+> **Historical.** This is the sourcebook as it stood at the 2026-08-01 audit cutoff, kept for its
+> reading order and its canonical-ownership table. The live entry point is
+> [`../README.md`](../README.md), the writing contract is [`../AGENTS.md`](../AGENTS.md), and
+> every number the manuscript may print is in [`../evidence/`](../evidence/).
+
 This directory gathers the material needed to draft a paper about privacy-preserving DNAGPT
 inference with client-assisted CKKS. It is not the manuscript and it does not establish scientific
 status on its own. The current audit cutoff is **2026-08-01**.
@@ -11,14 +16,14 @@ other repository bookkeeping that does not belong in a scientific narrative.
 
 ## Read in this order
 
-1. [Research timeline](01_research_timeline.md) — why DNAGPT was validated first, why CKKS was
+1. [Research timeline](02_research_timeline.md) — why DNAGPT was validated first, why CKKS was
    selected, what the pure encrypted path established, why it stopped, and how the client-assisted
    path reached a complete task-length block.
-2. [Methods and protocol](02_methods_and_protocol.md) — threat model, encrypted boundary, model
+2. [Methods and protocol](03_methods_and_protocol.md) — threat model, encrypted boundary, model
    decomposition, CKKS mapping, client nonlinearities, packing, composition, and acceptance rules.
-3. [Results and limits](03_results_and_limits.md) — plaintext model results, encrypted measurements,
+3. [Results and limits](04_results_and_limits.md) — plaintext model results, encrypted measurements,
    useful negative results, timing contamination, and the remaining boundary to a complete model.
-4. [Claims for outside readers](04_claims_for_outside_readers.md) — defensible headline language,
+4. [Claims for outside readers](05_claims_and_qualifiers.md) — defensible headline language,
    required qualifiers, claims to avoid, reviewer questions, and paper hygiene.
 
 ## Canonical ownership
@@ -28,16 +33,16 @@ the canonical repository document rather than treating this directory as a compe
 
 | Question | Canonical source |
 |---|---|
-| What is the project trying to establish? | [Project overview](../overview.md) |
-| How was DNAGPT evaluated? | [Evaluation approach](../eval_approach.md) |
-| What are the plaintext task results? | [Task methods and results](../tasks.md) |
-| Where did the datasets come from? | [Data provenance](../data_provenance.md) |
-| Why CKKS and these software backends? | [Backend selection](../shared/backend_selection.md) |
-| Why did the architecture become client-assisted? | [Architecture comparison](../shared/architecture_options.md) |
-| What did pure non-interactive CKKS establish? | [Pure CKKS measurements](../pure/measurements.md) |
-| What is the detailed client-assisted evidence? | [Client-assisted task history](../hybrid/tasks.md) |
-| Which optimizations worked or failed? | [Optimization synthesis](../hybrid/optimizations_and_combinations_report.md) |
-| What must run next, and in what order? | [Client-assisted execution roadmap](../hybrid/roadmap.md) |
+| What is the project trying to establish? | [Project overview](../../docs/overview.md) |
+| How was DNAGPT evaluated? | [Evaluation approach](../../docs/eval_approach.md) |
+| What are the plaintext task results? | [Task methods and results](../../docs/tasks.md) |
+| Where did the datasets come from? | [Data provenance](../../docs/data_provenance.md) |
+| Why CKKS and these software backends? | [Backend selection](../../docs/shared/backend_selection.md) |
+| Why did the architecture become client-assisted? | [Architecture comparison](../../docs/shared/architecture_options.md) |
+| What did pure non-interactive CKKS establish? | [Pure CKKS measurements](../../docs/pure/measurements.md) |
+| What is the detailed client-assisted evidence? | [Client-assisted task history](../../docs/hybrid/tasks.md) |
+| Which optimizations worked or failed? | [Optimization synthesis](../../docs/hybrid/optimizations_and_combinations_report.md) |
+| What must run next, and in what order? | [Client-assisted execution roadmap](../../docs/hybrid/roadmap.md) |
 
 Quantitative manuscript prose should be checked against the canonical source immediately before it
 is used. The development documents contain more detail than belongs here, including failed launch

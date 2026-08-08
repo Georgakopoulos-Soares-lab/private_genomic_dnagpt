@@ -1,0 +1,144 @@
+% ---------------------------------------------------------------------------
+% 7 Results
+% Every number here comes from evidence/measurements.yaml, telemetry.yaml, or scaling.yaml.
+% Timing results are withheld until clean dedicated-node artifacts are committed.
+% ---------------------------------------------------------------------------
+
+\section{Results}
+\label{sec:results}
+
+The client-assisted circuit defined in Section~\ref{sec:protocol} is evaluated along three axes:
+numerical agreement, the executed operation schedule, and memory. Composition is tested separately
+at reduced sequence length. The repository does not contain a clean dedicated-node timing artifact
+for the retained task-length implementation, so this section makes no latency or throughput claim.
+
+\subsection{Correctness}
+
+Correctness rests on the two-stage chain described in Section~\ref{sec:baseline}. Before encrypted
+evaluation, the independent NumPy reference is asserted against the upstream PyTorch computation at
+a tolerance of $2\times10^{-5}$, separately for all $12$ transformer blocks and the classifier
+head; export aborts on a divergence. The encrypted circuit is then compared with that validated
+reference. This ordering prevents an unchecked reimplementation from serving as the sole judge of
+its encrypted counterpart.
+
+The decrypted output has relative infinity-norm error $4.64\times10^{-9}$ against an acceptance
+tolerance of $4\times10^{-2}$ fixed before the run, leaving seven orders of magnitude of headroom.
+The worst token-relative error is $4.7\times10^{-9}$, and the largest absolute deviation is
+$7.44\times10^{-8}$. These values establish numerical agreement for the encrypted block with the
+released weights and exact client nonlinearities.
+
+\subsection{Executed work}
+
+\begin{table}[t]\centering\small
+\caption{Checked operation schedule for the evaluated transformer block.}
+\label{tab:cost}
+\begin{tabularx}{\textwidth}{Y r l}
+\toprule
+Operation & Count & Executor \\
+\midrule
+Dense products & 156 & compute provider \\
+Ciphertext--plaintext multiplications & 177{,}734 & compute provider \\
+Ciphertext--ciphertext multiplications & 1{,}506 & compute provider \\
+Rotations & 8{,}173 & compute provider \\
+Slot reductions & 8{,}776 & compute provider \\
+Physical client boundary crossings & 857 & data owner \\
+Logical nonlinear values & 129{,}162 & data owner \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+The implementation asserts every count in Table~\ref{tab:cost}, the boundary sequence, and the
+remaining multiplicative depth before the MLP. Any deviation aborts the run. This turns the
+operation schedule into evidence that the optimized implementation executes the same circuit, not
+an assurance inferred from a passing output.
+
+Packing separates physical interaction from nonlinear model work. The $857$ physical client
+boundary crossings carry $129{,}162$ logical values. Softmax accounts for $128{,}544$ of those
+values, or $99.5\%$; LayerNorm and GELU together account for the remainder. Boundary optimization
+is therefore principally an attention problem, even though the protocol contains three
+nonlinearity classes.
+
+The dense schedule also records the benefit of token packing. Eight-token packing reduces the
+serial-equivalent dense-product count from $1{,}236$ to $156$, a $7.92\times$ reduction in
+operations. Rotations, masking, client work, and host preparation remain in the packed circuit, so
+the factor describes operation count rather than latency.
+
+\subsection{Memory}
+
+The evaluating process peaks at $9.6$~GiB of GPU memory, within the $40$~GB device used for the
+experiment. This is the evaluating process footprint rather than device-wide occupancy.
+
+Host memory follows the lifetime of encoded plaintext templates. Query/key/value projection reaches
+$25{,}530$~MiB of target-process resident memory. A cache flush precedes attention, whose recorded
+resident memory is $12{,}434$~MiB. The MLP holds the largest live weight set and reaches the block
+peak of $48{,}610$~MiB. These stage transitions match the explicit flush points in
+Section~\ref{sec:optimization}; encoded weights do not accumulate across the entire block.
+
+The two memory results have different mechanisms. The non-interactive composition configuration
+exceeded its tested $80$~GB GPU envelope while loading the deep context and evaluation keys.
+Client re-encryption shortens the encrypted segments and resets their depth budget, moving that
+accelerator-memory barrier. Stage-bounded caching prevents the resulting host-side plaintext
+templates from becoming an unbounded second barrier.
+
+\subsection{Composition and evaluation boundary}
+
+\begin{table}[t]\centering\small
+\caption{Encrypted evaluation completed at each reported scope.}
+\label{tab:scope}
+\begin{tabularx}{\textwidth}{Y l l}
+\toprule
+Scope & Status & Relative error \\
+\midrule
+One block, 2 tokens & measured & --- \\
+Two consecutive blocks, 2 tokens, client refresh & measured & $8.48\times10^{-11}$ \\
+One block, 103 tokens (task length) & measured & $4.64\times10^{-9}$ \\
+Twelve blocks and task head, 103 tokens & not run & --- \\
+Encrypted token-index lookup & out of scope & --- \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+Two consecutive released blocks compose at reduced sequence length through a full-hidden-state
+client refresh, reaching $8.48\times10^{-11}$ relative error after the second block. GPU memory
+peaks in the first block and does not increase in the second. This experiment checks the mechanism
+used for deeper composition: a fresh encryption starts the next block at level~$0$ without
+carrying forward the preceding block's multiplicative depth or GPU-resident temporaries.
+
+\subsection{Sequence-length structure}
+
+Sequence length follows from each task format. Genomic-signal recognition uses $600$ base pairs,
+which become $100$ sequence tokens under $6$-mer tokenization; three task-format tokens produce the
+$103$-token encrypted anchor. Eight-token packing maps that prompt to $13$ ciphertext groups. The
+shorter promoter and splice-site prompts use fewer groups under the same layout, yielding smaller
+causal schedules.
+
+The abundance-regression task lies outside the encrypted scope. Its $10{,}500$ base pairs produce
+$1{,}755$ tokens and $220$ ciphertext groups under the same tokenization rule. The causal attention
+schedule grows quadratically in the number of groups, placing this task in a different circuit-size
+regime from the classification prompts.
+
+% fig_cost_split.pdf, fig_timeline.pdf, and fig_scaling.pdf are temporarily excluded pending clean
+% timing evidence and evidence-ledger correction; see paper-docs/TODO.md.
+
+\subsection{Feasibility}
+\label{sec:verdict-feasibility}
+
+Encrypted evaluation of a released DNAGPT transformer block is feasible under the stated protocol.
+Its output clears the pre-declared tolerance by seven orders of magnitude, and its $9.6$~GiB process
+footprint fits within the evaluated GPU. Re-encryption returns to level~$0$ at declared boundaries,
+so multiplicative depth bounds each encrypted segment. The composition experiment confirms that a
+second block can begin without retaining the first block's GPU-memory footprint.
+
+Complete-model feasibility remains unresolved. The full driver and released task head have not
+been executed at the task-length prompt, so the present verdict covers the block arithmetic and
+composition mechanism recorded in Table~\ref{tab:scope}.
+
+\subsection{Practicality, judged separately}
+\label{sec:verdict-practicality}
+
+The available evidence does not license a latency or throughput verdict for the retained
+implementation. Operation counts show that encrypted linear algebra and client interaction remain
+substantial, but operation counts cannot be converted into service time without a clean
+measurement. Practicality is therefore unresolved rather than inferred from correctness or memory
+fit. A dedicated-node campaign must measure repeated block executions before the complete driver,
+network transport, or an application-specific service target can be assessed.

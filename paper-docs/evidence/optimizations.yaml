@@ -1,0 +1,293 @@
+# The optimization campaign
+#
+# Ordered history of what was tried, what was kept, and what was abandoned, for one complete
+# DNAGPT transformer block at 103 tokens.
+#
+# The load-bearing property of this campaign: the crypto-operation schedule is identical at
+# every step. Same 156 dense products, same 177,734 ciphertext-plaintext multiplications, same
+# 1,506 ciphertext-ciphertext multiplications, same 8,173 rotations, same 857 client crossings,
+# same depth, same packing, same frozen plaintext reference. Every change alters only how host
+# CPU work and host memory are organized. The speedup is therefore attributable to systems
+# engineering, not to a cheaper or weaker circuit.
+#
+# Use descriptive names. Internal tags (T123, v0/v1/v2/v3, config1/2/3) do not appear in prose.
+
+meta:
+  updated: 2026-08-08
+  invariants_held: >
+    Operation schedule, packing layout, multiplicative depth, client-boundary sequencing, and
+    the frozen plaintext reference are unchanged across every retained step. Each run asserts
+    the full operation counts and fails closed on any deviation.
+  hardware: "One NVIDIA A100 GPU (40 GB) with 32 CPU cores, allocated as a dedicated node."
+
+# ---------------------------------------------------------------------------
+# Retained: the chain that produced the reported result
+# ---------------------------------------------------------------------------
+
+retained:
+
+  - id: opt.baseline
+    name: "Baseline: re-encode every plaintext at every multiplication"
+    order: 0
+    what: >
+      Each of the 156 dense products rebuilds and re-encodes all 1,024 packed diagonal
+      plaintexts of its weight matrix, giving 159,744 encoding operations per block.
+    why_it_was_slow: >
+      Approximately 90 percent of those encodings are byte-for-byte identical: each of the 12
+      weight matrices is reused across all 13 token groups. Two repeats on an uncontended host
+      showed the process pegged at 3,900 to 4,700 percent CPU. The bottleneck was the host
+      encoding path, not the GPU.
+    block_time_s: 7560
+    block_time_tag: "[V]"
+    block_time_note: >
+      Approximately 2.1 hours per block. Attested by the measuring engineer from the
+      pre-optimization runs. See open_provenance below.
+
+  - id: opt.thread_affinity
+    name: "Thread affinity and NUMA-local allocation"
+    order: 1
+    what: >
+      Bind OpenMP threads close to cores, pin thread placement to physical cores, and allocate
+      host memory local to the running CPUs, so encoding threads do not migrate and
+      host-to-device staging reads from near memory.
+    delta_server_pct: -16.3
+    delta_client_pct: -36.4
+    delta_wall_pct: -20.1
+    tag: "[V]"
+    measurement: >
+      Paired comparison against the immediately preceding configuration, same node type, same
+      circuit, same reference. Operation schedule unchanged.
+    note: >
+      The client boundary benefits most because it is pure host CPU work with no GPU
+      involvement, so it is the part most exposed to thread migration.
+
+  - id: opt.encode_once_clone_per_use
+    name: "Encode once, clone per use"
+    order: 2
+    what: >
+      Encode each distinct packed diagonal exactly once into a pristine, device-unloaded
+      plaintext template. Every multiplication then receives a lightweight clone that shares
+      the encoded host data by reference but carries fresh device state.
+    effect: "Removes approximately 90 percent of the 159,744 per-block encodings."
+    tag: "[V]"
+    why_clone_and_not_reuse: >
+      Reusing the plaintext object itself was tried first and crashed on every attempt. The
+      backend returns early from its plaintext-load path when an object is already marked
+      loaded, so a template loaded at one multiplicative level was silently reused at a
+      different level with stale residue-number-system limbs. The clone resolves this
+      structurally rather than by patching: fresh device state forces a correct load at the
+      level actually required, and the object lifetime per operation is identical to the
+      baseline's. See abandoned.gpu_plaintext_object_reuse.
+    validation: >
+      Validated in isolation by a dedicated GPU micro-test before being applied to the full
+      block: clone-versus-fresh-encode equality, one template reused across different
+      multiplicative levels, thousands of clone multiplications with stable GPU memory, and
+      parallel-versus-serial encoding equality.
+
+  - id: opt.parallel_batched_encode
+    name: "Parallel batched encoding"
+    order: 3
+    what: >
+      Encode the 1,024 templates of a weight matrix concurrently across the 32 available cores
+      with dynamic scheduling, instead of serially.
+    tag: "[V]"
+    note: >
+      Encoding is embarrassingly parallel and was the dominant serial cost once redundant
+      encodings were removed. Parallel and serial encodings were verified to produce identical
+      output before use.
+
+  - id: opt.bounded_host_memory
+    name: "Encode at the level of use, and flush between stages"
+    order: 4
+    what: >
+      Key each template cache by weight matrix and required multiplicative level, and encode at
+      that level directly, so templates carry fewer limbs and are roughly half the size. Flush
+      the cache after the projection stage and after the attention projection, since no weight
+      matrix recurs across those stage boundaries.
+    effect_gib: [25.5, 12.4, 48.6]
+    effect_tag: "[V]"
+    effect_note: >
+      Measured host resident set size across the three stages: projection with three weight
+      matrices resident, attention with none resident, MLP with eight resident. The peak is
+      bounded by the largest single stage rather than by all twelve matrices at once.
+    enabling_not_merely_faster: >
+      Without this, the encode cache is fatal rather than beneficial. The unbounded version was
+      killed by the operating system at 61.9 GiB resident, with an allocation failure at the
+      instant the MLP stage began building templates on top of everything still cached from
+      earlier stages. Time and space trade against each other here, and the trade has to be
+      made explicitly.
+    exactness: >
+      Encoding at the level of use is exact, not an approximation. A level-zero plaintext would
+      be dropped to the same level by the library before the multiplication anyway.
+
+# ---------------------------------------------------------------------------
+# Validated, but NOT part of the measured 652 s run.
+#
+# Verified by reading the source: the host key-map release exists only in the later driver
+# variant. The driver that produced the reported result does not call it. Keep it out of the
+# campaign chain in the manuscript, or re-identify which run is being reported.
+# ---------------------------------------------------------------------------
+
+validated_not_in_measured_run:
+
+  - id: opt.release_host_key_copies
+    name: "Release host-side key copies after context load"
+    in_measured_run: false
+    what: >
+      After the relinearization key and 80 rotation keys are uploaded to the GPU, immediately
+      release the library's host-side copies, which remain resident but unused for the rest of
+      the run.
+    tag: "[V]"
+    validation: >
+      A GPU micro-test confirmed that ciphertext-ciphertext multiplication,
+      ciphertext-plaintext multiplication, rotation, and a fresh encrypt-decrypt round trip all
+      remain correct after the release, with deviations at the 1e-9 to 1e-10 level.
+
+# ---------------------------------------------------------------------------
+# Net result
+# ---------------------------------------------------------------------------
+
+# The whole-model figure. This is the number that makes the deployment argument, because a
+# reader cares about one inference, not one block.
+net_full_pass:
+  id: opt.net_full_pass
+  from_hours: 26
+  from_tag: "[V]"
+  to_range_human: "17 minutes to 2.2 hours, depending on the task's prompt length"
+  to_tag: "[A]"
+  statement: >
+    A complete twelve-block pass over the encrypted-scope tasks moves from roughly 26 hours
+    before the campaign to a projected 17 minutes for the shortest task and 2.2 hours for the
+    longest. The endpoints of that range are projections from the measured block; the 26-hour
+    starting point is attested from the pre-optimization configuration.
+  caveat: >
+    Both ends are per-block measurements scaled by the block count. The twelve-block evaluation
+    is built and ready but has not been run, so this is a projection and must be labelled one.
+
+net:
+  id: opt.net
+  from_s: 7560
+  to_encrypted_evaluation_s: 652.545
+  to_wall_s: 663
+  factor: 11.6
+  tag: "[V]"
+  error_after: 4.64e-9
+  tolerance: 4e-2
+  statement: >
+    One complete DNAGPT transformer block at the full 103-token prompt length went from
+    approximately 2.1 hours to 652 seconds of encrypted evaluation, roughly a factor of 11.6,
+    with an unchanged operation schedule and a relative error of 4.64e-9 against a 4e-2
+    acceptance tolerance.
+  caveat: >
+    The factor compares the pre-optimization configuration with the reported run. Report it as
+    an implementation speedup on a fixed circuit, never as a cryptographic result.
+
+# ---------------------------------------------------------------------------
+# Abandoned, with mechanism. These constrain future work and explain the retained design.
+# ---------------------------------------------------------------------------
+
+abandoned:
+
+  - id: neg.gpu_plaintext_object_reuse
+    name: "Reusing GPU-resident plaintext objects"
+    outcome: "Crashed on 6 of 6 attempts across 6 devices, at an identical code path."
+    tag: "[V]"
+    mechanism: >
+      The backend's plaintext-load path returns early when an object is already flagged as
+      loaded, so a template loaded at one multiplicative level was reused at another with stale
+      device limbs, faulting inside device memory growth during the multiplication.
+    controls: "Byte-identical same-day control runs passed."
+    resolution: >
+      Abandoned rather than patched. The clone-per-use design in opt.encode_once_clone_per_use
+      captures the same benefit without depending on backend lifetime semantics.
+
+  - id: neg.parallel_client_boundaries
+    name: "Parallelizing client boundary crossings"
+    outcome: "Intermittent race; two distinct crash signatures across runs of unchanged code."
+    tag: "[V]"
+    mechanism: >
+      Concurrent decryption and encryption against a shared crypto context is not safe in the
+      evaluated backend.
+    resolution: >
+      Abandoned as a documented negative result. Client boundaries remain sequential. This
+      leaves the largest identified remaining headroom on the client side, since the boundary
+      work is independent per tile and would parallelize cleanly given a thread-safe context.
+
+  - id: neg.native_batched_linear_transform
+    name: "Library-native batched linear transform"
+    outcome: "Correct, but 1.6 to 1.9 times slower than the hand-written call sites."
+    tag: "[V]"
+    measurement: "Same run, sibling call sites, so host conditions were identical."
+    resolution: >
+      Not propagated. A correct but slower primitive is a negative result, not an optimization.
+
+  - id: neg.two_process_mlp_split
+    name: "Splitting the MLP across two GPU processes"
+    outcome: "Exact merge arithmetic, but not buildable."
+    tag: "[V]"
+    mechanism: >
+      The evaluated backend serializes the crypto context and keys but not ciphertexts, so a
+      process-per-GPU decomposition cannot return its partial results for recombination.
+    resolution: >
+      Blocked at the library boundary. The same wall blocks any process-sharded evaluation of
+      the full model. Adding ciphertext transport is systems research, not a parameter change.
+
+# ---------------------------------------------------------------------------
+# Identified but not yet done. Name these in future work, not in results.
+# ---------------------------------------------------------------------------
+
+open:
+
+  - id: open.mask_plaintext_encoding
+    name: "Cache the mask plaintexts"
+    tag: "[U]"
+    what: >
+      The head, score-isolation, lane, copy-activity, and repetition mask plaintexts are still
+      encoded fresh at every use: approximately 17,400 host encodings per block, concentrated
+      in exactly the stage where GPU utilization is lowest.
+    why_it_matters: >
+      This is the same class of redundancy that opt.encode_once_clone_per_use removed for
+      weight diagonals, in the stage that the resource trace identifies as the idle one. It is
+      the clearest remaining target.
+
+  - id: open.distinct_transforms_per_copy
+    name: "Apply distinct transforms across the four packed copies"
+    tag: "[A]"
+    what: >
+      The layout carries four activation copies but applies the same public matrix to all four.
+      Encoding different diagonals per copy would let one encrypted transform produce query,
+      key, and value in three copies, and the four MLP expansion chunks in four copies.
+    projected_effect: >
+      Before mask and copy-repair overhead, dense products would fall from 156 to approximately
+      52, and dense ciphertext-plaintext multiplications from 159,744 to approximately 53,248,
+      reducing the block's total ciphertext-plaintext count by roughly 60 percent.
+    status: "Analysed, not implemented. Requires exact reconstruction proof before building."
+
+  - id: open.full_layernorm_at_client
+    name: "Move complete LayerNorm to the existing client boundary"
+    tag: "[A]"
+    what: >
+      The client already participates in LayerNorm to evaluate the exact inverse square root.
+      Having it evaluate the complete normalization including affine terms would remove
+      encrypted operations and may lower the required multiplicative depth.
+    status: "Analysed, not implemented. Changes the client/server work split, so it is a protocol choice."
+
+# ---------------------------------------------------------------------------
+open_provenance:
+  - id: prov.client_side_run
+    concerns: "client.peak_ram, client.share_latest"
+    status: "Awaiting the push"
+    detail: >
+      Further client-side optimization and the 14 GB peak-client-memory figure are attested by
+      the implementing engineer but the supporting run is not yet in the repository. Use
+      client.share_documented (18.2 percent) in the manuscript until it lands.
+
+  - id: prov.baseline_wall_time
+    concerns: opt.baseline.block_time_s
+    status: "Confirm before submission"
+    detail: >
+      The approximately 2.1 hour pre-optimization block time is attested by the measuring
+      engineer and is the denominator of the headline factor of 11.6. The committed walkthrough
+      documents the baseline's CPU saturation but does not record its wall time as a number.
+      Obtain the recorded value, or restate the headline against a baseline that is documented
+      with a number.

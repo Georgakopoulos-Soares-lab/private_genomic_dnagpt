@@ -92,6 +92,21 @@ lookup; a production client/server key-custody and transport service.
    regenerates it from the pinned `.venv`.
 6. Read before editing; keep diffs reviewable; do not commit/push/deploy unless asked.
 
+## The paper
+
+`paper-docs/` holds the manuscript and everything feeding it. The manuscript answers the
+**Objective** above directly — whether DNAGPT inference can run under FHE, and where correctness,
+performance, or memory would stop a complete encrypted deployment — and it reports **feasibility
+and practicality as separate verdicts**, exactly as this charter requires. The measured unit is one
+complete transformer block at the task's own 103-token prompt length; whole-model figures are
+labelled projections at fixed circuit.
+
+Rules for writing it are in `paper-docs/AGENTS.md`. Every number it may print lives in
+`paper-docs/evidence/*.yaml` with a source and a `[V]`/`[U]`/`[A]` tag; `paper-docs/scripts/`
+enforces that mechanically, along with a ban on internal shorthand (`Scheme A`/`Scheme B`, run
+tags, host names) reaching a reader. Timing measured under host contention does not enter the
+manuscript in any form.
+
 ## Sources of truth
 
 | Concern | File |
@@ -106,6 +121,8 @@ lookup; a production client/server key-custody and transport service.
 | Active client-assisted CKKS roadmap and evidence | `docs/hybrid/roadmap.md`, `docs/hybrid/tasks.md` |
 | Run provenance | `results/{pure,hybrid,shared}/manifest.yaml`, `results/runs/` |
 | Evidence acceptance rules | `results/README.md` |
+| **The paper** — manuscript, figures, claims, writing rules | `paper-docs/README.md`, `paper-docs/AGENTS.md` |
+| Numbers the paper may print | `paper-docs/evidence/*.yaml` |
 
 ## Repository layout
 
@@ -118,6 +135,7 @@ fhe/               OpenFHE oracle plus FIDESlib CUDA toy/real-width gates
 docker/            pinned OpenFHE Python and patched FIDESlib CUDA environments
 results/           runs/ (immutable evidence) + README.md + pure/, hybrid/, shared/ manifests
 docs/              overview, tasks, eval_approach, data_provenance, roadmap + pure/, hybrid/, shared/
+paper-docs/        the paper: context/, evidence/, manuscript/, scripts/, reviews/, submission/
 requirements.txt   pinned Phase-A dependencies
 ```
 
