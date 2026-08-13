@@ -110,3 +110,7 @@ paper-docs/scripts/__pycache__/
 
 # Prior published papers: reference only, large, not ours to redistribute here
 paper-docs/context/prior_papers/*.pdf
+
+# kimon run/telemetry logs are tracked evidence, not scratch output
+!kimon/logs/
+!kimon/logs/**
