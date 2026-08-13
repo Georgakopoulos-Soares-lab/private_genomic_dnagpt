@@ -11,13 +11,16 @@
 # host names, scheduler job numbers. Those are development bookkeeping, not scientific content.
 
 meta:
-  updated: 2026-08-08
+  updated: 2026-08-13
   encrypted_scope: >
-    One complete DNAGPT transformer block evaluated on encrypted activations at the full
-    103-token genomic-signal prompt length. Not the twelve-block classifier, not the task head,
-    and not encrypted token-index lookup.
+    The complete DNAGPT classifier -- all 12 released transformer blocks and the released task
+    head -- evaluated on encrypted activations at the full 103-token genomic-signal prompt
+    length. Measured once, on a dedicated node, 2026-08-12. Encrypted token-index lookup is
+    still outside the scope, and the two parties are roles in one process rather than across a
+    network.
   hardware: >
-    One NVIDIA A100 GPU (40 GB) with 32 CPU cores, allocated as a dedicated node.
+    One NVIDIA A100 (40 GB) on a whole-node allocation, using 32 CPU threads. The node's
+    total core count is not recorded in any committed artifact; 32 is the thread request.
   acceptance: >
     A run passes when the decrypted output matches the frozen plaintext reference within a
     relative infinity-norm tolerance of 4e-2.
@@ -173,8 +176,8 @@ correctness:
 
 memory:
   - id: mem.host_peak
-    value: 48.6
-    unit: GiB
+    value: 48610
+    unit: MiB
     tag: "[V]"
     scope: "Peak host resident set size, reached during the MLP stage"
     source: "docs/hybrid/t123_walkthrough.md §7, §8"
@@ -186,26 +189,26 @@ memory:
     source: "docs/hybrid/t123_walkthrough.md §8"
     notes: "9,839 MiB. Process footprint, not device-wide occupancy."
   - id: mem.stage_qkv
-    value: 25.5
-    unit: GiB
+    value: 25530
+    unit: MiB
     tag: "[V]"
     scope: "Host RSS during query/key/value projection; three weight matrices resident"
     source: "docs/hybrid/t123_walkthrough.md §7"
   - id: mem.stage_attention
-    value: 12.4
-    unit: GiB
+    value: 12434
+    unit: MiB
     tag: "[V]"
     scope: "Host RSS during attention; no weight matrices resident after the stage flush"
     source: "docs/hybrid/t123_walkthrough.md §7"
   - id: mem.stage_mlp
-    value: 48.6
-    unit: GiB
+    value: 48610
+    unit: MiB
     tag: "[V]"
     scope: "Host RSS during the MLP stage; eight weight matrices resident"
     source: "docs/hybrid/t123_walkthrough.md §7"
   - id: mem.unbounded_failure
-    value: 61.9
-    unit: GiB
+    value: 61863
+    unit: MiB
     tag: "[V]"
     scope: >
       Host RSS at which the unbounded-cache attempt was killed by the operating system.
@@ -618,9 +621,360 @@ composition:
     scope: "GPU memory peaked in the first block and did not increase in the second"
     source: "docs/hybrid/tasks.md"
   - id: compose.twelve_block_at_task_length
-    value: null
-    tag: "[U]"
+    value: true
+    tag: "[V]"
     scope: >
-      The twelve-block driver with the released task head is built and passes local
-      contracts, but has not been run at 103 tokens.
-    source: "CLAUDE.md, docs/hybrid/roadmap.md"
+      All twelve released blocks and the released task head evaluated at the 103-token task
+      prompt in one encrypted lineage. Completed 2026-08-12; see the complete_model section
+      below for the measured values.
+    source: "results/runs/fhe_fides_real_d768_t103_12blocks_head_cpudiagcache_t123_v3_scheme_b_a100_20260812.json"
+
+# ---------------------------------------------------------------------------
+# 8. Complete model: twelve blocks and the released task head at task length
+#
+# One clean dedicated-node sample, 2026-08-12, on one A100 GPU node using 32 CPU threads.
+# The node was empty at allocation and no co-tenant appeared during the run; see
+# telemetry.yaml for the contention check that supports the dedicated-node claim.
+#
+# NOT REPRODUCED. This is a single execution. Every timing row below carries n = 1 and
+# no summary statistic. Report it as one measured sample, never as a mean or a rate.
+# ---------------------------------------------------------------------------
+
+complete_model:
+  # --- outcome ---
+  - id: full.passed
+    value: true
+    tag: "[V]"
+    scope: >
+      Encrypted prediction accepted against the frozen plaintext reference at the
+      pre-declared tolerance of 4e-2, unchanged from the block experiments.
+    source: "run JSON: passed"
+  - id: full.label_matches
+    value: true
+    tag: "[V]"
+    scope: "Decrypted class label matches the frozen Phase-A oracle label"
+    source: "run JSON: head.label_matches"
+  - id: full.margin_rel_error
+    value: 8.56e-09
+    unit: "relative"
+    tag: "[V]"
+    scope: >
+      Decrypted classification margin against the plaintext oracle margin. Nine orders of
+      magnitude inside the 4e-2 acceptance tolerance. Exact recorded value 8.55814015132133e-09;
+      quote at three significant figures.
+    source: "run JSON: head.margin_rel_error"
+  - id: full.margin_abs_error
+    value: 1.05e-07
+    tag: "[V]"
+    scope: >
+      Absolute deviation of the decrypted margin from the oracle margin. Exact recorded value
+      1.049791276130918e-07; quote at three significant figures.
+    source: "run JSON: head.margin_abs_error"
+
+  # --- timing, n = 1 ---
+  - id: full.wall
+    value: 6683
+    unit: s
+    tag: "[V]"
+    scope: "Process start to process end. Single sample; 1.86 h"
+    source: "run JSON + slurm.out: wall_clock_s"
+  - id: full.wall_hours
+    value: 1.86
+    unit: h
+    tag: "[A]"
+    scope: "6683 s expressed in hours"
+    source: "derived from full.wall"
+  - id: full.encrypted_evaluation
+    value: 6594.748
+    unit: s
+    tag: "[V]"
+    scope: "Encrypted evaluation only; 98.68% of wall clock"
+    source: "run JSON: timings_seconds.encrypted_evaluation"
+  - id: full.server_linear_algebra
+    value: 5638.561
+    unit: s
+    tag: "[V]"
+    scope: "Server-side encrypted linear algebra on GPU; 85.5% of encrypted evaluation"
+    source: "run JSON: timings_seconds.server_linear_algebra_seconds"
+  - id: full.client_boundaries
+    value: 956.187
+    unit: s
+    tag: "[V]"
+    scope: "Client decrypt / exact evaluate / re-encrypt, CPU only; 14.5% of encrypted evaluation"
+    source: "run JSON: timings_seconds.client_boundary_seconds_total"
+  - id: full.blocks_evaluation
+    value: 6565.993
+    unit: s
+    tag: "[V]"
+    scope: "The twelve transformer blocks, excluding the head and the inter-block refreshes"
+    source: "run JSON: timings_seconds.blocks_encrypted_evaluation"
+  - id: full.head_evaluation
+    value: 9.046
+    unit: s
+    tag: "[V]"
+    scope: "Encrypted task head: final LayerNorm, head linear, SiLU, head LayerNorm, margin"
+    source: "run JSON: timings_seconds.head_encrypted_evaluation"
+  - id: full.refreshes
+    value: 19.710
+    unit: s
+    tag: "[V]"
+    scope: "The twelve client refreshes between blocks and into the head"
+    source: "run JSON: timings_seconds.refreshes"
+  - id: full.context_keygen_load
+    value: 3.945
+    unit: s
+    tag: "[V]"
+    scope: "Crypto context construction, key generation, and GPU key upload"
+    source: "run JSON: timings_seconds.context_keygen_load"
+  - id: full.fixture_load
+    value: 23.494
+    unit: s
+    tag: "[V]"
+    scope: "Reading released weights, embeddings, and the verified reference from disk"
+    source: "run JSON: timings_seconds.load_verified_fixture"
+  - id: full.encrypt_input
+    value: 1.265
+    unit: s
+    tag: "[V]"
+    scope: "Encrypting the embedded input token vectors"
+    source: "run JSON: timings_seconds.encrypt_embedded_inputs"
+  - id: full.final_decrypt
+    value: 0.044
+    unit: s
+    tag: "[V]"
+    scope: "Single final decryption of the classification margin"
+    source: "run JSON: timings_seconds.final_decrypt"
+  - id: full.uninstrumented_remainder
+    value: 59.504
+    unit: s
+    tag: "[A]"
+    scope: >
+      Wall clock minus the sum of the instrumented phases, 0.89% of wall. The instrumented
+      phases are an incomplete decomposition, not a partition; this row keeps the table
+      honest rather than letting the phases appear to sum to the wall clock.
+    source: "derived: 6683 - 6623.496"
+  - id: full.mean_per_block
+    value: 547.166
+    unit: s
+    tag: "[A]"
+    scope: >
+      Blocks evaluation divided by twelve. An average over the twelve blocks of a single run,
+      not twelve independent runs.
+    source: "derived from full.blocks_evaluation"
+  - id: full.block_eval_min
+    value: 533.869
+    unit: s
+    tag: "[V]"
+    scope: "Fastest of the twelve per-block evaluation times (block 0)"
+    source: "run JSON: blocks[].evaluation_seconds"
+  - id: full.block_eval_max
+    value: 558.943
+    unit: s
+    tag: "[V]"
+    scope: "Slowest of the twelve per-block evaluation times (block 6)"
+    source: "run JSON: blocks[].evaluation_seconds"
+  - id: full.block_eval_spread_pct
+    value: 4.7
+    unit: "%"
+    tag: "[A]"
+    scope: >
+      Range of the twelve per-block times as a percentage of the fastest. Within-run spread
+      across architecturally identical blocks on one node; not run-to-run variance.
+    source: "derived from full.block_eval_min and full.block_eval_max"
+
+  # --- per-block hidden-state error, the comparable quantity to the single-block figure ---
+  # The block experiments report a hidden-state relative infinity norm. The complete-model
+  # headline (full.margin_rel_error) is a scalar margin error and is NOT the same quantity.
+  # These rows carry the comparable series so the two are never placed in one column.
+  - id: full.hidden_error_first_block
+    value: 4.09e-09
+    unit: "relative infinity norm"
+    tag: "[V]"
+    scope: "Hidden state after block 0 versus the plaintext reference"
+    source: "run JSON: blocks[0].refresh_metrics.global_rel_inf"
+  - id: full.hidden_error_last_block
+    value: 2.07e-08
+    unit: "relative infinity norm"
+    tag: "[V]"
+    scope: >
+      Hidden state after block 11, the largest value in the twelve-block series. Six orders of
+      magnitude inside the 4e-2 acceptance tolerance.
+    source: "run JSON: blocks[11].refresh_metrics.global_rel_inf"
+  - id: full.max_abs_error_last_block
+    value: 7.97e-06
+    unit: "absolute"
+    tag: "[V]"
+    scope: >
+      Largest absolute hidden-state deviation after block 11, against 6.56e-08 after block 0:
+      absolute error grows by roughly two orders of magnitude across the twelve blocks.
+    source: "run JSON: blocks[11].refresh_metrics.max_abs_error"
+
+  # --- shares, derived ---
+  - id: full.server_share_of_eval
+    value: 85.5
+    unit: "%"
+    tag: "[A]"
+    scope: "Server share of encrypted evaluation"
+    source: "derived from full.server_linear_algebra and full.encrypted_evaluation"
+  - id: full.client_share_of_eval
+    value: 14.5
+    unit: "%"
+    tag: "[A]"
+    scope: >
+      Client share of encrypted evaluation. Server and client sum exactly to encrypted
+      evaluation, so this decomposition has no unaccounted remainder.
+    source: "derived from full.client_boundaries and full.encrypted_evaluation"
+  - id: full.server_share_of_wall
+    value: 84.4
+    unit: "%"
+    tag: "[A]"
+    scope: "Server linear algebra as a share of wall clock"
+    source: "derived from full.server_linear_algebra and full.wall"
+  - id: full.client_share_of_wall
+    value: 14.3
+    unit: "%"
+    tag: "[A]"
+    scope: "Client boundaries as a share of wall clock"
+    source: "derived from full.client_boundaries and full.wall"
+  - id: full.eval_share_of_wall
+    value: 98.68
+    unit: "%"
+    tag: "[A]"
+    scope: "Encrypted evaluation as a share of wall clock"
+    source: "derived from full.encrypted_evaluation and full.wall"
+
+  # --- protocol traffic ---
+  - id: full.crossings_physical
+    value: 10299
+    tag: "[V]"
+    scope: "Physical client boundary crossings across the complete model"
+    source: "run JSON: protocol.round_trips"
+  - id: full.crossings_nonlinearity
+    value: 10286
+    tag: "[V]"
+    scope: "Crossings evaluating LayerNorm, softmax, or GELU"
+    source: "run JSON: protocol.nonlinearity_round_trips"
+  - id: full.refresh_crossings
+    value: 11
+    tag: "[V]"
+    scope: "Full-hidden-state refreshes between consecutive blocks"
+    source: "run JSON: composition.inter_block_full_hidden_refreshes"
+  - id: full.logical_boundary_instances
+    value: 1551081
+    tag: "[V]"
+    scope: "Individual nonlinear values carried by those crossings, through packing"
+    source: "run JSON: protocol.logical_boundary_instances"
+  - id: full.client_per_crossing
+    value: 0.0928
+    unit: s
+    tag: "[A]"
+    scope: "956.187 s divided by 10,299 physical crossings"
+    source: "derived from full.client_boundaries and full.crossings_physical"
+
+  # --- circuit ---
+  - id: full.bootstraps
+    value: 0
+    tag: "[V]"
+    scope: >
+      No homomorphic bootstrap anywhere in the complete model. Client re-encryption resets
+      the depth budget at declared boundaries instead.
+    source: "run JSON: config.bootstraps"
+  - id: full.depth
+    value: 13
+    tag: "[V]"
+    scope: "Multiplicative depth, unchanged from the single-block circuit"
+    source: "run JSON: config.multiplicative_depth"
+  - id: full.block_matrix_products
+    value: 1872
+    tag: "[V]"
+    scope: "Packed dense products across the twelve blocks"
+    source: "run JSON: config.block_matrix_products"
+  - id: full.ct_ct_mults
+    value: 18076
+    tag: "[V]"
+    scope: "Ciphertext-ciphertext multiplications across the complete model"
+    source: "run JSON: config.operation_counts"
+  - id: full.ct_pt_mults
+    value: 2133839
+    tag: "[V]"
+    scope: "Ciphertext-plaintext multiplications across the complete model"
+    source: "run JSON: config.operation_counts"
+
+  # --- memory ---
+  - id: full.gpu_peak_mib
+    value: 9839
+    unit: MiB
+    tag: "[V]"
+    scope: >
+      Peak GPU memory of the evaluating process, flat across the run, within the 40 GB
+      device. Process footprint, not device-wide occupancy.
+    source: "telemetry CSV: gpu0_mem_used_mib"
+  - id: full.host_peak_mib
+    value: 50930
+    unit: MiB
+    tag: "[V]"
+    scope: "Peak host resident memory of the evaluating process (high-water mark)"
+    source: "telemetry CSV: target_vmhwm_mib"
+
+  # --- security posture asserted by the run ---
+  - id: full.intermediate_decrypt_attempts
+    value: 0
+    tag: "[V]"
+    scope: >
+      The evaluating party attempted no decryption outside the declared client boundaries.
+      Asserted by the driver, not inferred.
+    source: "run JSON: intermediate_decrypt_attempts"
+  - id: full.evaluator_has_private_key
+    value: false
+    tag: "[V]"
+    scope: "The compute provider never holds the secret key"
+    source: "run JSON: evaluator_has_private_key"
+
+# ---------------------------------------------------------------------------
+# 9. External figures quoted from related work
+#
+# These are OTHER PEOPLE'S measurements, quoted so the manuscript can position its own cost
+# honestly. They are [V] in the sense that the cited paper reports them; this project did not
+# reproduce them and must never present them as its own measurement or as a controlled
+# comparison. Hardware, library, model and workload differ in ways the manuscript states.
+# ---------------------------------------------------------------------------
+
+related_work:
+  - id: rw.thor_end_to_end
+    value: 602
+    unit: s
+    tag: "[V]"
+    scope: >
+      THOR's reported end-to-end non-interactive encrypted inference for a 12-layer, 768-wide
+      encoder at 128 tokens on a single NVIDIA A100. Reported by the cited authors; not
+      reproduced here.
+    source: "THOR paper, Section 7.3.1 and Table 6 (cite: thor)"
+  - id: rw.thor_layers
+    value: 12
+    tag: "[V]"
+    scope: "THOR's evaluated encoder depth, matching this study's block count"
+    source: "THOR paper, Section 7.1 (cite: thor)"
+  - id: rw.thor_width
+    value: 768
+    tag: "[V]"
+    scope: "THOR's evaluated hidden width, matching this study's"
+    source: "THOR paper, Section 7.1 (cite: thor)"
+  - id: rw.thor_tokens
+    value: 128
+    unit: tokens
+    tag: "[V]"
+    scope: "THOR's evaluated sequence length; longer than this study's 103-token prompt"
+    source: "THOR paper, Section 7.1 (cite: thor)"
+  - id: rw.thor_depth
+    value: 13
+    tag: "[V]"
+    scope: "THOR's multiplicative depth before bootstrapping, equal to this study's depth"
+    source: "THOR paper, Section 7.1 (cite: thor)"
+  - id: rw.moai_reduction_vs_thor
+    value: 52.8
+    unit: "%"
+    tag: "[V]"
+    scope: >
+      MOAI's reported reduction in evaluation time relative to THOR. Reported by the cited
+      authors; not reproduced here.
+    source: "MOAI, IACR ePrint 2025/991 (cite: moai2025)"

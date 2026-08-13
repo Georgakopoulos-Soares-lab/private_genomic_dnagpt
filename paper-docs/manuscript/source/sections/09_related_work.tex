@@ -4,6 +4,7 @@
 % ---------------------------------------------------------------------------
 
 \section{Related work}
+\label{sec:related}
 
 \subsection{Private transformer inference}
 
@@ -12,9 +13,9 @@ operation being evaluated. Gazelle established an influential hybrid design in w
 homomorphic encryption handles linear layers and garbled circuits handle
 nonlinearities~\cite{gazelle2018}. Transformer systems inherited this decomposition but had
 to contend with attention, normalization, and activation functions at substantially greater
-scale. Iron, Nimbus, and BumbleBee combine homomorphic encryption with secret sharing,
+scale. BOLT, Iron, Nimbus, and BumbleBee combine homomorphic encryption with secret sharing,
 oblivious transfer, and specialized two-party protocols for transformer
-inference~\cite{iron2022,nimbus2024,bumblebee2025}. Their protocols optimize a joint secure
+inference~\cite{bolt2024,iron2022,nimbus2024,bumblebee2025}. Their protocols optimize a joint secure
 computation between parties; the present work instead keeps the server's linear path in CKKS
 and assigns exact nonlinear evaluation to the data owner at explicit boundaries. This choice
 changes both the security contract and the allocation of work between the parties.
@@ -30,12 +31,26 @@ encrypted block through an independently checked plaintext reference, and expose
 arithmetic, boundary schedule, and memory behavior. This evaluation applies the established
 protocol pattern to a released genomic transformer with a reproducible verification chain.
 
-THOR demonstrates full non-interactive transformer evaluation under homomorphic encryption using
-a circuit and packing strategy designed for that objective, including diagonal-major organization
-and compact packing~\cite{thor}. Its result establishes that the memory wall observed here belongs
-to the evaluated backend, parameters, packing, and circuit. Client assistance addresses a distinct
-engineering question: whether released computation can be preserved when the data owner is
-available to evaluate exact nonlinearities at declared boundaries.
+The non-interactive line of work is the relevant point of comparison for cost, and it is faster
+than the design evaluated here. THOR evaluates a $12$-layer, $768$-wide encoder at $128$ tokens on a
+single A100, at ring degree $2^{16}$, depth $13$, and $128$-bit security, in $602$~s end to end,
+with no client interaction at any point~\cite{thor}. Those are the parameters and the accelerator
+used in this study, at a comparable model shape and a longer prompt, against the $6683$~s measured
+here. NEXUS reaches non-interactivity over RNS-CKKS with SIMD ciphertext compression and a secure
+argmax~\cite{nexus2025}; its headline per-inference figure is amortized over a batch, and its
+single-prediction latency is substantially higher, so the two readings should not be conflated.
+MOAI reports a further $52.8\%$ reduction in evaluation time against THOR by holding one packing
+convention across all layers and removing rotations from softmax and
+normalization~\cite{moai2025}.
+
+We therefore do not present client assistance as the fast route to encrypted transformer inference.
+On cost it is behind the non-interactive state of the art at comparable parameters. What it buys is
+a different property: the released nonlinearities are evaluated exactly rather than approximated by
+polynomials, no bootstrap is required, and the decrypted prediction can be checked against a frozen
+plaintext oracle for the released weights. THOR's result also indicates that the memory wall
+observed here belongs to the evaluated backend, parameters, packing, and circuit rather than to
+non-interactive CKKS as such, though that inference crosses library implementations and should be
+read as an indication rather than a measurement.
 
 \subsection{Homomorphic encryption for genomics}
 
@@ -70,8 +85,8 @@ Matrix layout determines which rotations, plaintext encodings, and reductions an
 linear layer requires. THOR's diagonal-major representation and compact packing specialize
 that layout for transformer inference~\cite{thor}; HE-BLAS develops a broader library of
 homomorphic linear-algebra kernels and shape-aware algorithms~\cite{heblas2025}. These works
-motivate the remaining targets in Section~\ref{sec:optimization}: reducing repeated packing
-work, copying fewer distinct diagonal plaintexts, and replacing segmented slot reductions
+motivate the remaining targets in Section~\ref{sec:optimization}, as does MOAI's rotation-free
+formulation of softmax and normalization~\cite{moai2025}: reducing repeated packing work, copying fewer distinct diagonal plaintexts, and replacing segmented slot reductions
 with kernels matched to the actual tensor shapes. Packing, key material, level consumption, and
 the operation schedule are coupled. Integrating a candidate primitive therefore includes
 revalidation against the frozen plaintext reference and checked schedule before performance is

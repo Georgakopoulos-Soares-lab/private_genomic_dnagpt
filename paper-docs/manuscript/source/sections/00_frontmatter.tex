@@ -29,10 +29,6 @@ Model: A Client-Assisted CKKS Evaluation of DNAGPT}\vspace{-0.2cm}}
 \maketitle
 \thispagestyle{fancy}
 
-% The graphical abstract is temporarily excluded pending evidence-safe regeneration; see
-% paper-docs/TODO.md. The generated asset contains timing and client-memory claims whose
-% supporting logs are not present in the repository.
-
 % --- Abstract ---------------------------------------------------------------
 \section*{Abstract}
 
@@ -48,17 +44,26 @@ polynomial nonlinearities permit a released-weight block to complete, but contex
 keys exceed the tested $80$~GB memory envelope when configured for composition. In the
 client-assisted design, the provider evaluates linear operations on ciphertexts while the
 key-holding data owner evaluates exact LayerNorm, causal softmax, and GELU at fixed boundaries.
-The resulting released-weight block at the task-defined prompt matches its validated plaintext
-reference with $4.64\times10^{-9}$ relative error against a $4\times10^{-2}$ tolerance fixed in
-advance, while the evaluating process peaks at $9.6$~GiB of GPU memory.
+Under that design all $12$ released blocks and the released task head execute at the task-defined
+prompt in one encrypted lineage, and the decrypted prediction reproduces the frozen plaintext label
+with $8.56\times10^{-9}$ relative margin error against a $4\times10^{-2}$ tolerance fixed in
+advance. Encryption begins at the embedded token vectors, so token-index lookup stays outside the
+encrypted boundary. That inference was measured once, at $1.86$~hours on one A100 GPU node,
+performing no homomorphic bootstrap and holding GPU memory at $9839$~MiB across all twelve
+blocks.
 
-\textbf{Conclusions.} Correctness is not the barrier. The protocol moves the accelerator-memory
-barrier by replacing deep non-interactive segments with fresh encryption at declared boundaries;
-bounded caching separately prevents encoded plaintexts from accumulating in host memory. The
-systems campaign removes repeated host encoding while preserving an asserted operation schedule,
-packing, depth, and reference. Client-assisted DNAGPT evaluation is feasible at the demonstrated
-scope. Its practicality remains unresolved until the retained implementation is timed on a clean,
-dedicated node.
+\textbf{Conclusions.} Correctness is not the barrier, and neither is memory in this design.
+Replacing deep non-interactive segments with fresh encryption at declared boundaries bounds
+multiplicative depth by the longest segment between boundaries rather than by network depth, so
+twelve blocks cost what one block costs in accelerator memory; bounded caching separately prevents
+encoded plaintexts from accumulating in host memory. Complete encrypted inference over the released
+blocks and task head, beginning at embedded token vectors, is therefore feasible. It is not
+practical for interactive use at the measured $1.86$~hours for one sequence, though the evaluation
+is not accelerator-bound at that cost, and the two verdicts are reported separately rather than
+merged. Client assistance is not the fast route: published non-interactive systems report lower
+cost at comparable model shape and identical cryptographic parameters. What it buys instead is
+exact released nonlinearities, no homomorphic bootstrap, and a decrypted prediction that can be
+checked against a frozen plaintext reference.
 
 \textbf{Availability.} Code, evaluation harnesses, and the evidence record are maintained at
 \url{https://github.com/Georgakopoulos-Soares-lab/private_genomic_dnagpt}.
@@ -73,15 +78,33 @@ dedicated node.
   \item The model is validated first on three genomic task families; the independent numerical
         reference is itself asserted against every upstream block before it is used to verify
         encrypted execution.
-  \item Correctness is not a barrier: a complete transformer block at the task's own prompt length
-        matches the validated plaintext reference to $4.64\times10^{-9}$ relative error, seven
-        orders of magnitude inside the tolerance fixed before the run.
-  \item Memory is a barrier that design moves. Approximating the nonlinearities under encryption
-        exceeded the tested $80$~GB accelerator envelope at composition; client assistance yields
-        a $9.6$~GiB evaluating-process GPU peak for the retained block.
-  \item Bounded caching addresses a distinct host-memory problem. Runtime assertions confirm that
-        the complete operation schedule, packing, depth, and reference remain unchanged while
-        repeated plaintext encoding is removed.
-  \item The data owner requires no GPU. Practicality remains a separate, unresolved verdict until
-        the retained implementation has a clean dedicated-node timing measurement.
+  \item Correctness is not a barrier: the complete model, all twelve blocks and the task head at
+        the task's own prompt length, reproduces the frozen plaintext label to $8.56\times10^{-9}$
+        relative margin error, nine orders of magnitude inside the tolerance fixed before the run.
+  \item Memory is a barrier that design removes in the configuration evaluated here.
+        Approximating the nonlinearities under encryption exceeded the tested $80$~GB accelerator
+        envelope at composition; client assistance holds GPU memory at $9839$~MiB with no growth
+        across the twelve blocks, and needs no homomorphic bootstrap anywhere in the model. That
+        envelope is a property of the evaluated backend, packing, and parameters, not of
+        non-interactive CKKS in general.
+  \item Bounded caching addresses a distinct host-memory problem, and is what makes removing
+        redundant plaintext encoding viable at all rather than fatal. Runtime assertions confirm
+        that the complete operation schedule, packing, depth, and reference remain unchanged while
+        that redundancy is removed.
+  \item The data owner requires no GPU and carries $14.5\%$ of the encrypted work on CPU alone.
+  \item Practicality is a separate verdict and it is negative for interactive use: one encrypted
+        classification was measured at $1.86$~hours on one A100 GPU node, in a single execution.
+        GPU utilization never exceeds $51\%$, so that cost is not set by accelerator throughput.
+  \item Client assistance is not the cheaper route. Published non-interactive systems report lower
+        cost for a comparable encoder at the same ring degree, depth, security level, and
+        accelerator. The properties this design offers in exchange are exact released
+        nonlinearities, no homomorphic bootstrap, and an output checkable against a frozen
+        plaintext reference.
 \end{itemize}
+
+% --- Graphical abstract -----------------------------------------------------
+\begin{figure*}[t]\centering
+  \includegraphics[width=\textwidth]{fig_graphical_abstract.pdf}
+  \caption{The data owner holds the genome and the secret key and evaluates the three nonlinearity classes exactly on CPU; the compute provider holds the model and evaluates every linear operation on ciphertexts, receiving no plaintext activation and no secret key.}
+  \label{fig:abstract}
+\end{figure*}

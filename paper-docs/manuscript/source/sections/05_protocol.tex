@@ -59,14 +59,18 @@ the multiplicative path, which requires a deeper modulus budget and a bootstrapp
 associated context and evaluation-key material must be resident before evaluation, so composition
 failed as a memory problem rather than as a numerical-correctness problem. This finding is specific
 to the evaluated library, parameters, packing, and hardware; it does not establish a general lower
-bound for non-interactive CKKS. It does identify the measured pressure that the client-assisted
+bound for non-interactive CKKS. Published non-interactive systems evaluate encoders of comparable
+depth and width on a single accelerator at these parameters, as Section~\ref{sec:related} records,
+so this subsection reports where our non-interactive configuration stopped and not where the
+approach stops. It does identify the measured pressure that the client-assisted
 design removes: exact client evaluation shortens each encrypted segment and replaces encrypted
 bootstrapping with fresh encryption at already declared boundaries.
 
-% fig_architecture.pdf is temporarily excluded because its provider-view label exceeds the stated
-% threat model. Regeneration requirements are recorded in paper-docs/TODO.md.
-
-
+\begin{figure}[tb]\centering
+  \includegraphics[width=\textwidth]{fig_architecture.pdf}
+  \caption{Evaluation order for one transformer block, and which party performs each step. The compute provider holds the model and evaluates every linear operation on ciphertexts; the data owner holds the secret key and evaluates the three nonlinearity classes exactly. Only ciphertexts cross the boundary, and each crossing carries values derived from the data owner's own query.}
+  \label{fig:architecture}
+\end{figure}
 
 \subsection{Protocol algorithms}
 \label{sec:algorithms}
@@ -190,7 +194,7 @@ accounts for $128{,}544$, or $99.5\%$, of them; LayerNorm and GELU are minor com
 boundary traffic. Consequently, reducing boundary cost means addressing the attention
 nonlinearity. The implementation asserts the complete operation schedule, boundary counts, and
 remaining depth on every run and aborts when any differs. Section~\ref{sec:optimization} can thus
-treat an unchanged circuit as a checked invariant of the optimization campaign.
+treat an unchanged circuit as a checked invariant rather than as an assurance.
 
 \subsection{Packing}
 Each ciphertext has $32{,}768$ usable slots, indexed by activation copy, padded feature, and token

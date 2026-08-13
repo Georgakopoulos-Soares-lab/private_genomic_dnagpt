@@ -18,7 +18,8 @@ meta:
     Operation schedule, packing layout, multiplicative depth, client-boundary sequencing, and
     the frozen plaintext reference are unchanged across every retained step. Each run asserts
     the full operation counts and fails closed on any deviation.
-  hardware: "One NVIDIA A100 GPU (40 GB) with 32 CPU cores, allocated as a dedicated node."
+  hardware: "One NVIDIA A100 (40 GB) on a whole-node allocation, using 32 CPU threads. The node's
+    total core count is not recorded in any committed artifact; 32 is the thread request."
 
 # ---------------------------------------------------------------------------
 # Retained: the chain that produced the reported result
@@ -104,7 +105,7 @@ retained:
       that level directly, so templates carry fewer limbs and are roughly half the size. Flush
       the cache after the projection stage and after the attention projection, since no weight
       matrix recurs across those stage boundaries.
-    effect_gib: [25.5, 12.4, 48.6]
+    effect_mib: [25530, 12434, 48610]
     effect_tag: "[V]"
     effect_note: >
       Measured host resident set size across the three stages: projection with three weight
@@ -112,7 +113,7 @@ retained:
       bounded by the largest single stage rather than by all twelve matrices at once.
     enabling_not_merely_faster: >
       Without this, the encode cache is fatal rather than beneficial. The unbounded version was
-      killed by the operating system at 61.9 GiB resident, with an allocation failure at the
+      killed by the operating system at 61,863 MiB resident, with an allocation failure at the
       instant the MLP stage began building templates on top of everything still cached from
       earlier stages. Time and space trade against each other here, and the trade has to be
       made explicitly.
@@ -147,22 +148,27 @@ validated_not_in_measured_run:
 # Net result
 # ---------------------------------------------------------------------------
 
-# The whole-model figure. This is the number that makes the deployment argument, because a
-# reader cares about one inference, not one block.
-net_full_pass:
-  id: opt.net_full_pass
+# SUPERSEDED 2026-08-13. The whole-model figure is no longer a projection: the complete
+# twelve-block model with the released task head was executed at 103 tokens on a dedicated node
+# on 2026-08-12 and measured at 6,683 s (1.86 h). See measurements.yaml `complete_model`.
+#
+# The rows below are retained as the project's memory of what was projected before that run, and
+# must not be quoted. The 26-hour starting point remains attested rather than committed, so the
+# campaign still carries no reportable speedup factor -- see open_provenance.
+net_full_pass_superseded:
+  id: opt.net_full_pass_superseded
+  superseded_by: "measurements.yaml: full.wall"
   from_hours: 26
-  from_tag: "[V]"
+  from_tag: "[U]"
   to_range_human: "17 minutes to 2.2 hours, depending on the task's prompt length"
-  to_tag: "[A]"
+  to_tag: "[U]"
   statement: >
-    A complete twelve-block pass over the encrypted-scope tasks moves from roughly 26 hours
-    before the campaign to a projected 17 minutes for the shortest task and 2.2 hours for the
-    longest. The endpoints of that range are projections from the measured block; the 26-hour
-    starting point is attested from the pre-optimization configuration.
+    Pre-measurement projection, retained for provenance only. It scaled a per-block time by the
+    block count for each task. The measured complete model at the 103-token task length is
+    6,683 s; do not quote the projected range.
   caveat: >
-    Both ends are per-block measurements scaled by the block count. The twelve-block evaluation
-    is built and ready but has not been run, so this is a projection and must be labelled one.
+    Superseded. Both ends were per-block measurements scaled by block count, and the per-block
+    measurement they rested on came from a shared partition.
 
 net:
   id: opt.net

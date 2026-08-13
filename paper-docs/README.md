@@ -102,39 +102,50 @@ and is reported as one.
 
 ## Status
 
-Last updated 2026-08-08. **The paper is a complete, compiling draft, ready to be read end to end.**
+Last updated 2026-08-13. **The paper is a complete, compiling draft reporting a measured complete
+encrypted inference.** All four lint checks are clean and every figure is generated from the ledger
+and placed in the text.
 
-**Done:**
+### What the paper now reports
 
-- All ten sections drafted. No drafting placeholders remain in the body.
-- The evidence ledger holds 119 tagged rows — 93 `[V]`, 22 `[A]`, 4 `[U]`. Every number in the
-  LaTeX resolves to one of them.
-- Nine figures generated from the ledger and placed in the text.
-- Four protocol algorithms in §5, transcribed from the implementation and cross-checked against
-  `context/08_implementation_ground_truth.md`, which carries the `file:line` citations.
-- All 22 `refs.bib` entries verified against the live record (`reviews/2026-08-08-paper-sources.md`).
-  Every entry is now cited.
-- `scripts/build.sh` runs figures, PDF, and lint. All four lint checks clean; the PDF compiles with
-  no undefined citation or cross-reference.
+The complete model — all twelve released blocks and the released task head — was executed at the
+103-token task prompt on 2026-08-12 on an uncontended A100 node. It reproduces the frozen plaintext
+label with `8.56e-09` relative margin error against the unchanged `4e-2` tolerance, in `6683 s`
+(1.86 h), with no homomorphic bootstrap and GPU memory flat at 9839 MiB across all twelve blocks.
+That run is banked in `evidence/measurements.yaml` under `complete_model`, with its contention
+check in `evidence/telemetry.yaml` under `complete_model_contention`.
 
-**Open, in rough priority order:**
+This changed the paper's headline. Feasibility is now affirmative for a complete model rather than
+for one block plus a composition argument, and practicality has a real negative verdict at a
+measured cost instead of being withheld.
 
-1. **Three of the five review agents have never run.** Only `paper-sources` has a report in
-   `reviews/`. `paper-evidence`, `paper-structure`, and `paper-style` are outstanding, in that
-   order — structure before style, since polishing prose that may be restructured is wasted work.
-2. **The twelve-block evaluation has not been run** (`compose.twelve_block_at_task_length`, `[U]`).
-   Table 4 and the scaling figure are shaped to absorb it as one row and one point without
-   disturbing the argument. §7 states the gap plainly today.
-3. **Two smaller `[U]` items:** `client.share_latest` in `evidence/measurements.yaml` and
-   `open.mask_plaintext_encoding` in `evidence/optimizations.yaml`.
-4. **Confirm the pre-optimization baseline block time and the client-side figures** — see
-   `open_provenance` in `evidence/optimizations.yaml`.
-5. **Author metadata:** corresponding-author address in `sections/00_frontmatter.tex`, and the
-   acknowledgements and compute-allocation statements in `sections/10_conclusion.tex`. These are
-   the only `TODO` markers left in the manuscript.
+### Known limits of the current evidence — read before strengthening any claim
 
-**Recently corrected — worth knowing if you read an earlier draft.** The genomic-signal baseline
-reference was attributed to DeepGSR at 0.916. It is in fact DNAGPT's own reported figure for this
-model class, and it comes from a held-out quarter of the set rather than the full 22,604 examples
-this work evaluates. The ledger, Table 1, and the §4 prose now say so. DeepGSR's own reported
-accuracy for the task is 0.8694.
+These are not open work items; they are the boundaries the current draft is written to respect.
+Weakening them requires new measurements, not new wording.
+
+- **The complete-model run is a single execution.** Every timing in the paper is `n = 1`. The text
+  says so in §7, §8, and the conclusion. Do not convert it into a mean, a rate, or a latency
+  target, and do not drop the qualifier to make a sentence read better.
+- **Per-block timings are not reported at all.** The per-block numbers still in
+  `evidence/measurements.yaml` under `block_timing` trace to a shared-partition run. They stay in
+  the ledger because the ledger is the project's memory, but they must not reach the manuscript.
+- **The optimization campaign carries no speedup figure.** The `11.6x` factor in
+  `evidence/optimizations.yaml` needs a dedicated-node measurement of the pre-optimization
+  baseline, which does not exist. §6 therefore reports what changed and what was held invariant,
+  not how much faster it got. There is no waterfall figure for the same reason; its generator is
+  retained in `scripts/figures.py` but unregistered.
+- **`client.peak_ram` is attested, not committed.** It is absent from the manuscript and from the
+  graphical abstract.
+- **Sequence-length scaling is circuit size, not time.** `evidence/scaling.yaml` carries ciphertext
+  groups and causal score tiles per task. The former per-task time projections were built on the
+  shared-partition block time and have been removed.
+- **Two `[U]` rows remain:** `client.share_latest` and `open.mask_plaintext_encoding`.
+
+### Left to do
+
+1. Corresponding-author address in `sections/00_frontmatter.tex`.
+2. Biographical note and acknowledgements in `sections/10_conclusion.tex`. These are the only
+   `TODO` markers in the manuscript.
+3. Repository reuse license, referenced by the code-availability statement.
+4. A read-through of the built PDF for float placement and caption fit.

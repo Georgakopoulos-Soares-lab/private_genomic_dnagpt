@@ -7,11 +7,22 @@
 \section{Limitations}
 \label{sec:limitations}
 
-The measured unit is one complete released-weight transformer block at the task's full
-$103$-token prompt length, with encrypted server-side linear algebra and client-evaluated
-nonlinearities. It does not include the remaining transformer blocks, the released task head, or
-token-index lookup. The $12$-block driver with the task head is built but has not run at this prompt
-length. The study reports no encrypted task accuracy or encrypted final prediction.
+The complete model has been evaluated once. All $12$ released blocks and the task head run at the
+task's full $103$-token prompt on an uncontended node, and the reported timings come from that
+single execution. One sample supports a statement about the cost of that inference; it does not
+support a mean, a variance, or a service-rate claim, and the run has not been repeated. Nor does
+the study report encrypted task accuracy: the encrypted prediction is checked against the frozen
+plaintext reference for one input, not evaluated over a test set.
+
+Interaction is a standing requirement rather than an implementation detail, and it is the
+limitation that the cost comparison in Section~\ref{sec:related} makes concrete. The protocol needs
+an available key holder at every one of the $10{,}299$ declared boundaries of a complete inference;
+a data owner that goes offline mid-evaluation has no way to finish it, and no party other than the
+data owner can complete a boundary. Non-interactive designs carry no such dependency and, at
+comparable model shape and identical cryptographic parameters, report lower cost. This study does
+not establish that client assistance is preferable on latency, throughput, or availability. It
+establishes what a complete released genomic transformer costs and how exactly it can be reproduced
+when the nonlinearities are evaluated exactly.
 
 Client and server are roles inside one program on one node. Boundary calls perform the
 cryptographic operations directly, without ciphertext serialization, network transport, or a key
@@ -40,9 +51,10 @@ into a cryptographic model-protection mechanism.
 CKKS decryption is approximate. The client never returns a decoded value to the server, only a
 freshly encrypted result, but the server selects the ciphertext supplied to each declared
 boundary. The semi-honest threat model rules out adversarially chosen deviations from that
-schedule. The current re-encryption path applies no noise flooding. The measured
-$4.64\times10^{-9}$ error leaves seven orders of magnitude inside the $4\times10^{-2}$ acceptance
-tolerance, but numerical headroom alone does not establish a secure flooding parameter. Selecting
+schedule. The current re-encryption path applies no noise flooding. The measured single-block error
+of $4.64\times10^{-9}$ leaves seven orders of magnitude inside the $4\times10^{-2}$ acceptance
+tolerance, and the twelfth-block hidden state leaves six, but numerical headroom alone does not
+establish a secure flooding parameter. Selecting
 and validating that budget remains future work.
 
 The adversary exclusions are defined in Section~\ref{sec:threat-model}. The results do not extend
