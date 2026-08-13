@@ -1,5 +1,21 @@
 # Manuscript evidence and defensibility
 
+> **Superseded on timing — read this first.**
+>
+> This note predates the optimization campaign. Any latency, wall-clock, or server/client
+> timing figure below has been replaced by the dedicated-node measurements in
+> [`../evidence/measurements.yaml`](../evidence/measurements.yaml) and
+> [`../evidence/optimizations.yaml`](../evidence/optimizations.yaml): one complete block at
+> 103 tokens now runs in **652 s of encrypted evaluation** (663 s wall), down from
+> approximately 2.1 hours, at a relative error of `4.64e-9`.
+>
+> The older figures here were measured on a contended shared host and **do not go in the
+> manuscript in any form** — not as results and not as caveats. What remains valid in this note
+> is everything contention cannot affect: the protocol, the threat model, the argument structure,
+> the operation counts, the depth, the memory footprint, and the claim discipline.
+>
+> When this note and the evidence ledger disagree about a number, the ledger wins.
+
 Working document for the paper. It holds three things:
 
 1. the **scope decisions** that are now locked for the manuscript;
@@ -625,6 +641,6 @@ Every number in this document should be re-checked against its canonical source 
 | Client/server split, six-run statistics | the six `fhe_fides_real_d768_t103_block0_simd_full_*` run JSONs (`timings_seconds.client_boundary_seconds_total`, `.server_linear_algebra_seconds`) |
 | Two-block composition | `fhe_fides_real_d768_t2_blocks0_1_scheme_b_two_block_refresh_a100_20260729_v2.json` |
 | Retained and rejected optimizations | `docs/hybrid/optimizations_and_combinations_report.md` |
-| Timing contamination | `docs/paper/03_results_and_limits.md` "Timing contamination" |
-| Claim wording discipline | `docs/paper/04_claims_for_outside_readers.md` |
+| Timing contamination | `04_results_and_limits.md` "Timing contamination" |
+| Claim wording discipline | `05_claims_and_qualifiers.md` |
 | Tokenization and prompt lengths | `DNAGPT/test.py` (6-mer tokenizer), `docs/tasks.md`, `docs/data_provenance.md` |

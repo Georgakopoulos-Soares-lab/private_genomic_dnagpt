@@ -1,0 +1,113 @@
+% ---------------------------------------------------------------------------
+% House preamble.
+%
+% Base: the single-column layout used for the group's previous submission, kept
+% deliberately identical so the two papers read as a series.
+% Additions over that base: cmap + glyphtounicode (correct PDF text extraction and
+% copy-paste), full hyperref PDF metadata, and numbered invariant/proposition
+% environments for the threat model.
+% ---------------------------------------------------------------------------
+
+% Latin Modern before fontenc: the default CM fonts have no T1 bold small-caps, which
+% the \scshape\bfseries section headings below request. Without this the engine
+% substitutes silently and the headings lose their weight.
+\usepackage{lmodern}
+\usepackage[T1]{fontenc}
+% Latin Modern ships bold small-caps as series "b", not the "bx" that \bfseries
+% requests, so map one onto the other rather than let the engine substitute.
+\DeclareFontShape{T1}{lmr}{bx}{sc}{<->ssub*lmr/b/sc}{}
+\usepackage[utf8]{inputenc}
+\usepackage{cmap}
+\ifdefined\pdfgentounicode \input{glyphtounicode} \pdfgentounicode=1 \fi
+
+\usepackage[a4paper, top=2.0cm, bottom=2.4cm, left=1.5cm, right=1.5cm, columnsep=0.65cm]{geometry}
+
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{amsthm}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{microtype}
+\usepackage{url}
+\usepackage{titlesec}
+\usepackage{caption}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{natbib}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{hyperref}
+
+% algpseudocode defines \Call using \ifthenelse{\equal{#2}{}} to detect an empty
+% argument list. \equal expands its arguments, so any \Call whose arguments contain
+% a macro -- a nested \Call, as in Algorithms 1 and 2 -- makes the test blow up with
+% "Argument of \equal has an extra }". \@ifmtarg performs the same emptiness test
+% without expanding, so the redefinition below is behaviourally identical for the
+% empty case and simply correct for the non-empty one.
+\usepackage{ifmtarg}
+\makeatletter
+\renewcommand{\Call}[2]{\textproc{#1}\@ifmtarg{#2}{}{(#2)}}
+\makeatother
+
+% Line numbers for the reviewer-facing build. The submission builder strips both
+% this and \linenumbers for the public preprint.
+\usepackage[switch]{lineno}
+
+\bibliographystyle{abbrvnat}
+
+% --- Sectioning -------------------------------------------------------------
+\titleformat{\section}{\normalfont\large\bfseries\scshape}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalfont\normalsize\bfseries}{\thesubsection}{1em}{}
+
+% --- Lists, captions, spacing ----------------------------------------------
+\setlist[itemize]{leftmargin=*, topsep=2pt, itemsep=1pt}
+\setlist[enumerate]{leftmargin=*, topsep=2pt, itemsep=1pt}
+\captionsetup{font=small, labelfont=bf}
+\raggedbottom
+\setlength{\emergencystretch}{2em}
+\setlength{\parindent}{0pt}
+\setlength{\parskip}{4pt plus 1pt minus 1pt}
+\hbadness=10000 \vbadness=10000 \hfuzz=4pt \vfuzz=4pt
+
+% --- Tables -----------------------------------------------------------------
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{R}{>{\raggedleft\arraybackslash}X}
+
+% --- Page furniture ---------------------------------------------------------
+\pagestyle{fancy}\fancyhf{}\fancyfoot[R]{\small\thepage}
+\renewcommand{\headrulewidth}{0pt}\renewcommand{\footrulewidth}{0.4pt}
+
+% --- Theorem-like environments for the threat model -------------------------
+\newtheorem{invariant}{Invariant}
+\newtheorem{proposition}{Proposition}
+
+% --- Links ------------------------------------------------------------------
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!60!black,
+  citecolor=blue!60!black,
+  urlcolor=blue!60!black,
+  pdftitle={Client-assisted homomorphic inference for a genomic foundation model},
+  pdfauthor={},
+  pdfsubject={Privacy-preserving inference; CKKS homomorphic encryption; genomic language models},
+  pdfkeywords={homomorphic encryption; CKKS; genomic privacy; transformer inference; GPU}
+}
+\pdfstringdefDisableCommands{\def\texttt#1{#1}}
+
+% --- Evidence tags ----------------------------------------------------------
+% Used only in internal drafts to mark measurement status while writing. The
+% submission builder removes them; they must not survive into the final PDF.
+\newcommand{\Vtag}{\textcolor{green!45!black}{\footnotesize[V]}}
+\newcommand{\Utag}{\textcolor{red!60!black}{\footnotesize[U]}}
+\newcommand{\Atag}{\textcolor{orange!70!black}{\footnotesize[A]}}
+
+% --- Figure placeholder -----------------------------------------------------
+% Author sections against these, then swap for \includegraphics once the figure
+% script has produced the PDF.
+\newcommand{\figplaceholder}[2]{%
+  \begin{center}\fbox{\begin{minipage}{0.92\textwidth}\centering\vspace{1.2cm}
+  \textbf{[figure: #1]}\\[4pt]\small #2\vspace{1.2cm}\end{minipage}}\end{center}}

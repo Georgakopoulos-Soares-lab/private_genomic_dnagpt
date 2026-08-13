@@ -1,0 +1,38 @@
+% ---------------------------------------------------------------------------
+% Client-assisted homomorphic inference for a genomic foundation model
+%
+% Build:  latexmk -pdf main.tex
+% Figures: paper-docs/scripts/figures.py  (writes ../figures/*.pdf)
+% Lint:    paper-docs/scripts/check_numbers.py
+%
+% Every number in this document must exist in paper-docs/evidence/*.yaml.
+% Read paper-docs/AGENTS.md and paper-docs/context/00_terminology.md before editing.
+% ---------------------------------------------------------------------------
+
+\documentclass[10pt]{article}
+
+\input{preamble}
+
+\graphicspath{{../figures/}{figures/}}
+
+\begin{document}
+
+% Comment out for the public preprint build.
+\linenumbers
+
+\input{sections/00_frontmatter}
+
+\input{sections/01_introduction}
+\input{sections/02_background}
+\input{sections/03_scenario_threat_model}
+\input{sections/04_plaintext_baseline}
+\input{sections/05_protocol}
+\input{sections/06_optimization}
+\input{sections/07_results}
+\input{sections/08_limitations}
+\input{sections/09_related_work}
+\input{sections/10_conclusion}
+
+\bibliography{refs}
+
+\end{document}

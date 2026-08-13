@@ -33,7 +33,7 @@ using the existing multi-day driver as a final latency experiment. See the
 - [Current overview](docs/overview.md)
 - [Cross-project roadmap](docs/roadmap.md)
 - [Client-assisted CKKS roadmap](docs/hybrid/roadmap.md)
-- [Paper evidence sourcebook](docs/paper/README.md)
+- [Paper: manuscript, evidence, and writing rules](paper-docs/README.md)
 - [Dataset provenance](docs/data_provenance.md)
 
 ## Repository layout

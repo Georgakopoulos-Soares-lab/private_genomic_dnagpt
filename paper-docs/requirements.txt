@@ -1,0 +1,9 @@
+# Paper toolchain. Deliberately separate from the repository's root requirements.txt,
+# which is pinned to reproduce the plaintext baseline and must not gain dependencies.
+#
+#   python3 -m venv paper-docs/.venv-paper
+#   paper-docs/.venv-paper/bin/pip install -r paper-docs/requirements.txt
+
+matplotlib>=3.8
+numpy>=1.26
+PyYAML>=6.0

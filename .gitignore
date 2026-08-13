@@ -87,3 +87,26 @@ results/raw/
 
 # --- Miscellaneous ---
 checkpoints/
+
+# === Paper build artifacts ===
+paper-docs/.venv-paper/
+paper-docs/manuscript/source/*.aux
+paper-docs/manuscript/source/*.bbl
+paper-docs/manuscript/source/*.blg
+paper-docs/manuscript/source/*.fdb_latexmk
+paper-docs/manuscript/source/*.fls
+paper-docs/manuscript/source/*.lof
+paper-docs/manuscript/source/*.log
+paper-docs/manuscript/source/*.lot
+paper-docs/manuscript/source/*.out
+paper-docs/manuscript/source/*.run.xml
+paper-docs/manuscript/source/*.synctex.gz
+paper-docs/manuscript/source/*.toc
+paper-docs/manuscript/source/*.xdv
+# The compiled manuscript is a build artifact: run scripts/build.sh to make it.
+paper-docs/manuscript/source/main.pdf
+paper-docs/scripts/__pycache__/
+# Generated figures ARE tracked: paper-docs/manuscript/figures/*.pdf
+
+# Prior published papers: reference only, large, not ours to redistribute here
+paper-docs/context/prior_papers/*.pdf

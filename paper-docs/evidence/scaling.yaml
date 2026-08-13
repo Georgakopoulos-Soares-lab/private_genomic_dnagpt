@@ -1,0 +1,123 @@
+# Sequence-length scaling across the encrypted-scope tasks
+#
+# One task is measured. The others are projections from the measured anchor, using the same
+# circuit and the same packing. Projections are tagged [A] and must be drawn and captioned so a
+# reader can tell them apart from the measurement at a glance.
+#
+# Token counts are arithmetic, not choices: DNAGPT tokenizes overlapping 6-mers, so a window of
+# B base pairs becomes B/6 tokens, plus the task-format special tokens. Eight tokens are packed
+# per ciphertext, so a prompt of T tokens needs ceil(T/8) ciphertext groups.
+
+meta:
+  updated: 2026-08-08
+  packing: "Eight tokens per ciphertext group."
+  anchor: gsr
+  anchor_note: >
+    Genomic signal recognition at 103 tokens is the measured anchor: it is the longest
+    encrypted-scope prompt, so it is the hardest case in the family and the honest one to
+    anchor on.
+  projection_basis: >
+    Projections scale the measured block time by the number of ciphertext groups and by the
+    causal attention tile count, which grows quadratically in the number of groups. They assume
+    the same circuit, the same packing, the same depth, and the same hardware.
+
+tasks:
+
+  - id: gue_prom_core
+    name: "Core promoter detection"
+    family: "Genome understanding evaluation"
+    basepairs: 70
+    kmer_tokens: 12
+    special_tokens: 1
+    tokens: 13
+    token_groups: 2
+    block_seconds: 85
+    block_tag: "[A]"
+    full_pass_seconds: 1020
+    full_pass_human: "~17 min"
+    full_pass_tag: "[A]"
+    peak_host_gib: [40, 45]
+    peak_host_tag: "[A]"
+    plaintext_metric: "MCC 0.680"
+
+  - id: gue_prom_300
+    name: "300 bp promoter detection"
+    family: "Genome understanding evaluation"
+    basepairs: 300
+    kmer_tokens: 50
+    special_tokens: 1
+    tokens: 51
+    token_groups: 7
+    block_seconds: 320
+    block_tag: "[A]"
+    full_pass_seconds: 3600
+    full_pass_human: "~1.0 h"
+    full_pass_tag: "[A]"
+    peak_host_gib: [45, 45]
+    peak_host_tag: "[A]"
+    plaintext_metric: "MCC 0.897"
+
+  - id: gue_splice
+    name: "Splice-site classification"
+    family: "Genome understanding evaluation"
+    basepairs: 400
+    kmer_tokens: 67
+    special_tokens: 1
+    tokens: 68
+    token_groups: 9
+    block_seconds: 420
+    block_tag: "[A]"
+    full_pass_seconds: 5040
+    full_pass_human: "~1.4 h"
+    full_pass_tag: "[A]"
+    peak_host_gib: [46, 46]
+    peak_host_tag: "[A]"
+    plaintext_metric: "MCC 0.831"
+
+  - id: gsr
+    name: "Genomic signal recognition"
+    family: "Polyadenylation-signal motif"
+    basepairs: 600
+    kmer_tokens: 100
+    special_tokens: 3
+    tokens: 103
+    token_groups: 13
+    block_seconds: 652.545
+    block_tag: "[V]"
+    full_pass_seconds: 7920
+    full_pass_human: "~2.2 h"
+    full_pass_tag: "[A]"
+    full_pass_note: >
+      Twelve times the measured block time. It is an extrapolation, not a measurement: the
+      twelve-block driver has not been run at this length, and inter-block refreshes are not
+      included in the measured block.
+    peak_host_gib: [47.5, 47.5]
+    peak_host_tag: "[V]"
+    plaintext_metric: "accuracy 0.9124, F1 0.916"
+
+out_of_encrypted_scope:
+
+  - id: mrna
+    name: "mRNA abundance regression"
+    basepairs: 10500
+    kmer_tokens: 1750
+    special_tokens: 5
+    tokens: 1755
+    token_groups: 220
+    tag: "[U]"
+    why_excluded: >
+      At 1,755 tokens the prompt needs 220 ciphertext groups, and the causal attention tile
+      count grows quadratically in the number of groups, to roughly 48,000 score tiles. That is
+      a different scale of problem from the classification tasks, not a longer version of the
+      same one. The task remains in the paper as plaintext model-fidelity evidence only.
+
+# ---------------------------------------------------------------------------
+# Rules for using this file
+# ---------------------------------------------------------------------------
+
+rules:
+  - "The 103-token block time and its peak host memory are measured. Everything else here is projected."
+  - "Never present a projected full-pass time as an end-to-end latency result."
+  - "Any figure built from this file must visually separate the measured anchor from the projections."
+  - "State the token derivation whenever a token count appears: base pairs divided by six, plus specials."
+  - "The mRNA row exists to explain an exclusion. Do not use it to imply a longer-sequence capability."

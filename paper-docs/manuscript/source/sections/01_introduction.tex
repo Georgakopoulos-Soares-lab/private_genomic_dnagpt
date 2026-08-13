@@ -1,0 +1,88 @@
+% ---------------------------------------------------------------------------
+% 1 Introduction
+% Source: context/01_scenario_and_motivation.md, context/02_research_timeline.md
+%
+% This paper asks a feasibility question and answers it. The shape of the section is therefore:
+% tension -> the question -> why the question is hard -> how we answer it -> the two verdicts.
+% ---------------------------------------------------------------------------
+
+\section{Introduction}
+
+Human genomic sequence carries an unusually persistent confidentiality risk. It can identify its
+contributor and, through familial relationships, reveal information about people who never supplied
+a sample; re-identification has been demonstrated even when conventional identifiers were
+removed~\cite{gymrek2013,erlich2018}. A disclosed genome also cannot be replaced in the manner of a
+password or access token. European data-protection law accordingly treats genetic data as a special
+category~\cite{gdpr}. The same sequence is the input on which genomic foundation models derive
+their value: DNAGPT serves classification, regression, and generation tasks through a common
+transformer backbone~\cite{dnagpt2023}. When that model is served rather than distributed, a data
+owner without accelerator hardware must otherwise disclose the sequence to the provider or forgo
+the inference. Homomorphic encryption offers a route for the provider to compute without receiving
+the genomic values in plaintext.
+
+DNAGPT's public release makes the experiment auditable and also makes this particular artifact
+available for local execution. We use it as a reproducible surrogate for a genomic model offered
+only as a service by policy or contract. Under that premise, client-assisted evaluation gives a
+CPU-equipped data owner access to the served model without disclosing the genome.
+
+Against this deployment premise, we ask: can inference with a released genomic foundation model be
+executed under homomorphic encryption, and where would correctness, performance, or memory prevent
+a complete encrypted deployment? The question contains two verdicts that should not be collapsed.
+Feasibility asks whether the released computation can be executed faithfully within the available
+cryptographic and memory budget. Practicality asks whether its resource cost supports a target use.
+A correct but slow encrypted path is therefore evidence: it resolves the first question while
+locating the work needed to change the second.
+
+The technical difficulty is concentrated where a transformer departs from affine arithmetic. CKKS
+supports approximate packed arithmetic and maps naturally to dense projections, rotations, and
+accumulations~\cite{ckks2017}; LayerNorm, softmax, and GELU are not native CKKS operations. A
+non-interactive evaluator must approximate them with polynomial circuits, lengthening the
+multiplicative path and increasing the context, bootstrapping, and evaluation-key material that
+must be resident. Moving the exact functions to the key holder shortens those paths and resets the
+depth budget, but introduces interaction and a different threat model. Earlier systems establish
+both directions: THOR demonstrates non-interactive homomorphic transformer inference, while
+Safhire uses the same server-linear/client-nonlinear division studied here in convolutional
+networks~\cite{thor,safhire2025}. Our contribution is not the invention of that division. It is an
+auditable account of the correctness, memory behavior, and executed work that result when the
+division is applied to a released genomic transformer.
+
+We begin by establishing that the target computation is meaningful and independently reproducible.
+The released DNAGPT paths are evaluated across genomic-signal recognition, promoter and splice-site
+classification, and mRNA abundance regression, with task outputs frozen before encrypted work.
+An independent NumPy block is asserted against the upstream PyTorch implementation at
+$2\times10^{-5}$ for every released block and the task head, preventing an encrypted circuit and an
+unchecked reference from agreeing on the same defect. We then build two CKKS designs: a
+non-interactive circuit with polynomial nonlinearities, and a client-assisted circuit whose fixed,
+non-adaptive boundaries evaluate the released nonlinearities exactly. Instrumented evaluations
+record where each design stops in correctness and memory, while runtime assertions preserve the
+complete cryptographic operation schedule throughout the systems campaign.
+
+The results separate the three candidate barriers. At the measured boundary defined in
+Section~\ref{sec:limitations}, the client-assisted output has relative error
+$4.64\times10^{-9}$ against a $4\times10^{-2}$ tolerance fixed before evaluation. Correctness is
+not the barrier. The non-interactive design completed a released-weight block, but its composition
+configuration exceeded the tested $80$~GB memory envelope while loading its context and evaluation
+keys. Client re-encryption moves that accelerator-memory barrier, and the retained process peaks at
+$9.6$~GiB of GPU memory. Bounded caching addresses a separate risk on the host by preventing encoded
+plaintexts from accumulating across stages. The systems campaign removes repeated host encoding on
+an unchanged, checked circuit, but the repository does not yet contain the clean timing evidence
+required for a latency claim. The demonstrated path is feasible at its stated scope; practicality
+remains unresolved.
+
+The paper makes the following contributions:
+
+\begin{itemize}
+  \item It constructs a frozen plaintext reference for a released genomic foundation model across
+        three task families, with a two-stage verification chain from the upstream implementation
+        to the independent reference and from that reference to encrypted execution.
+  \item It specifies a client-assisted CKKS transformer protocol with exact nonlinearities at
+        fixed boundaries, including the packing, depth-reset mechanism, complete algorithms, and
+        the corresponding semi-honest threat model.
+  \item It evaluates a complete released-weight transformer block at the task-defined prompt and
+        verifies its output against the frozen reference under a tolerance declared in advance.
+  \item It reports a systems campaign whose operation schedule is asserted as an invariant,
+        together with the bounded cache that controls host memory and the redundant encoding and
+        sequential-boundary work that remain.
+  \item It gives separate feasibility and practicality verdicts and names the measurements required
+        to close a complete encrypted deployment.
+\end{itemize}

@@ -1,0 +1,72 @@
+# Resource trace of the measured encrypted block
+#
+# Sampled every 5 s during the run and thinned here to the reported points. This is the raw
+# material for the stage-timeline figure, which is the strongest single piece of evidence for
+# the architecture: it shows GPU utilization collapsing to 1-2 percent during the client stage,
+# and the host memory curve tracking the caching strategy exactly.
+#
+# Source: docs/hybrid/t123_walkthrough.md §8.
+
+meta:
+  updated: 2026-08-08
+  total_wall_s: 663
+  sample_interval_s: 5
+  gpu: "NVIDIA A100, 40 GB"
+  cores: 32
+  tag: "[V]"
+
+# t_s      seconds since process start
+# gpu_mib  GPU memory used by the evaluating process
+# gpu_pct  GPU utilization
+# rss_mib  host resident set size
+# load1    host one-minute load average, partly this process's own threads
+# stage    which phase of the block is running
+
+trace:
+  - {t_s: 0,   gpu_mib: 1,    gpu_pct: 0,  rss_mib: 11,    load1: 0.8,  stage: startup}
+  - {t_s: 42,  gpu_mib: 7791, gpu_pct: 39, rss_mib: 25529, load1: 5.8,  stage: qkv}
+  - {t_s: 83,  gpu_mib: 8815, gpu_pct: 38, rss_mib: 25530, load1: 3.3,  stage: qkv}
+  - {t_s: 125, gpu_mib: 8815, gpu_pct: 23, rss_mib: 12434, load1: 11.2, stage: attention_scores}
+  - {t_s: 168, gpu_mib: 8815, gpu_pct: 23, rss_mib: 12434, load1: 22.0, stage: attention_scores}
+  - {t_s: 211, gpu_mib: 8815, gpu_pct: 19, rss_mib: 12434, load1: 26.0, stage: attention_scores}
+  - {t_s: 254, gpu_mib: 8815, gpu_pct: 17, rss_mib: 12434, load1: 28.0, stage: attention_scores}
+  - {t_s: 296, gpu_mib: 8815, gpu_pct: 15, rss_mib: 12434, load1: 30.0, stage: attention_scores}
+  - {t_s: 339, gpu_mib: 8815, gpu_pct: 2,  rss_mib: 11557, load1: 22.0, stage: attention_context}
+  - {t_s: 380, gpu_mib: 8815, gpu_pct: 1,  rss_mib: 11557, load1: 16.0, stage: attention_context}
+  - {t_s: 422, gpu_mib: 8815, gpu_pct: 2,  rss_mib: 11557, load1: 10.0, stage: attention_context}
+  - {t_s: 464, gpu_mib: 8815, gpu_pct: 40, rss_mib: 18141, load1: 5.4,  stage: attention_projection}
+  - {t_s: 506, gpu_mib: 9839, gpu_pct: 40, rss_mib: 48610, load1: 3.3,  stage: mlp}
+  - {t_s: 548, gpu_mib: 9839, gpu_pct: 37, rss_mib: 48610, load1: 2.4,  stage: mlp}
+  - {t_s: 590, gpu_mib: 9839, gpu_pct: 35, rss_mib: 48610, load1: 1.8,  stage: mlp}
+  - {t_s: 630, gpu_mib: 9839, gpu_pct: 34, rss_mib: 48610, load1: 1.3,  stage: mlp}
+  - {t_s: 662, gpu_mib: 9839, gpu_pct: 0,  rss_mib: 20285, load1: 1.2,  stage: decrypt}
+
+# Stage bands, for shading the timeline figure.
+stages:
+  - {id: qkv,                  label: "LayerNorm + query/key/value projection", start_s: 0,   end_s: 115, executor: server}
+  - {id: attention_scores,     label: "Causal attention scores",                start_s: 125, end_s: 330, executor: mixed}
+  - {id: attention_context,    label: "Attention context",                      start_s: 330, end_s: 460, executor: client}
+  - {id: attention_projection, label: "Attention projection + residual",        start_s: 460, end_s: 500, executor: server}
+  - {id: mlp,                  label: "LayerNorm + MLP with GELU",              start_s: 500, end_s: 655, executor: server}
+  - {id: decrypt,              label: "Final decrypt",                          start_s: 655, end_s: 663, executor: client}
+
+# What the trace shows, stated once so figure captions can stay short.
+readings:
+  - id: read.not_gpu_bound
+    tag: "[V]"
+    statement: >
+      GPU utilization never exceeds 40 percent and falls to 1-2 percent for roughly 90 seconds
+      during the attention context stage. The evaluation is not GPU-bound at this scale; the
+      cost sits in host-side encoding and in the sequential client boundary.
+  - id: read.memory_is_the_design
+    tag: "[V]"
+    statement: >
+      The host memory curve reads directly as the caching strategy: it rises while a stage's
+      weight matrices are cached, drops at each stage flush, and peaks in the MLP stage, which
+      holds the most matrices.
+  - id: read.client_stage_is_idle_gpu
+    tag: "[V]"
+    statement: >
+      The stage with the lowest GPU utilization is also the stage still performing the most
+      redundant host encoding. That co-location is why the mask-plaintext cache is the clearest
+      remaining optimization target.

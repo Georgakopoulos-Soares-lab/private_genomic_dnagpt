@@ -1,0 +1,50 @@
+# kimon/env/fideslib.def
+# No-docker fallback: build the FIDESlib image from scratch with apptainer.
+# Mirrors docker/Dockerfile.fideslib exactly (same base, same pinned commit,
+# same asymmetric-Chebyshev patch, same cmake flags, sm_80/A100).
+#
+# Build from the REPO ROOT so the %files patch path resolves:
+#   cd <repo>; apptainer build kimon/env/fideslib.sif kimon/env/fideslib.def
+# (env/build_sif.sh def handles the cd for you.)
+#
+# Needs network at build time to pull the CUDA base + clone FIDESlib. If the
+# TACC build node has no outbound network, use the `archive` route instead.
+Bootstrap: docker
+From: nvidia/cuda:13.0.1-cudnn-devel-ubuntu24.04
+
+%files
+    docker/patches/fideslib-asymmetric-chebyshev.patch /opt/fideslib-asymmetric-chebyshev.patch
+
+%post
+    set -eux
+    export DEBIAN_FRONTEND=noninteractive
+    apt-get update
+    apt-get install -y --no-install-recommends ca-certificates cmake g++ gcc git make ninja-build
+    rm -rf /var/lib/apt/lists/*
+    cd /opt
+    git clone https://github.com/CAPS-UMU/FIDESlib.git
+    cd FIDESlib
+    git checkout 786c7600fb2f16b724e0acf73df367b27b8afed6
+    git submodule update --init --recursive
+    git apply --check /opt/fideslib-asymmetric-chebyshev.patch
+    git apply /opt/fideslib-asymmetric-chebyshev.patch
+    mkdir -p build && cd build
+    cmake .. \
+        -DCMAKE_BUILD_TYPE=Release \
+        -DFIDESLIB_ARCH=80 \
+        -DFIDESLIB_INSTALL_OPENFHE=ON \
+        -DFIDESLIB_COMPILE_BENCHMARKS=OFF \
+        -DFIDESLIB_COMPILE_TESTS=OFF
+    cmake --build . -j"$(nproc)"
+    cmake --install .
+
+%environment
+    export FIDESLIB_ROOT=/opt/FIDESlib
+
+%labels
+    fideslib_commit 786c7600fb2f16b724e0acf73df367b27b8afed6
+    arch sm_80_A100
+
+%test
+    git -C /opt/FIDESlib rev-parse HEAD
+    test -f /usr/local/share/fideslib/cmake/fideslibTargets.cmake

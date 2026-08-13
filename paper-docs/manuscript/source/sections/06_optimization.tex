@@ -1,0 +1,154 @@
+% ---------------------------------------------------------------------------
+% 6 Optimization -- the systems core of the paper
+% Source: evidence/optimizations.yaml (authoritative), docs/hybrid/t123_walkthrough.md §7, §9
+% Discipline: the operation schedule is identical at every step. Say so up front; it is what
+% makes the speedup attributable to systems work rather than to a cheaper circuit.
+%
+% Tone: this section is the good news and should read that way. Abandoned attempts appear only
+% where they explain a retained design choice (the clone, and the sequential client boundary),
+% one or two sentences each, in the subsection they explain. No catalogue of failures.
+% Only timing artifacts that satisfy the manuscript evidence rule may appear in the paper.
+% ---------------------------------------------------------------------------
+
+\section{Systems optimization at fixed circuit}
+\label{sec:optimization}
+
+Every comparison in this section holds the encrypted circuit fixed. The retained implementation
+executes the same $156$ dense products, $177{,}734$ ciphertext--plaintext multiplications,
+$1{,}506$ ciphertext--ciphertext multiplications, $8{,}173$ rotations, and $857$ client boundary
+crossings before and after optimization. Packing, multiplicative depth, boundary order, and the
+frozen plaintext reference are also unchanged. These properties are enforced at run time: the
+implementation compares the observed schedule and boundary counts with their expected values,
+checks the remaining depth before the MLP, and aborts on any deviation. The repository does not
+contain the clean timing artifacts needed for an elapsed-time comparison, so this section reports
+the verified changes in work and memory.
+
+This invariant separates systems work from circuit simplification. None of the retained changes
+removes a dense transform, reduces the number of attention tiles, moves linear algebra to the
+client, or relaxes the acceptance criterion. Each instead changes when host data are prepared,
+how long they remain resident, or where CPU work executes. The asserted schedule establishes that
+the retained implementation preserves the encrypted arithmetic while changing these systems paths.
+
+\subsection{Host-side encoding redundancy}
+The baseline rebuilt and encoded every packed diagonal for every dense product. Its $156$ products
+each required $1{,}024$ diagonal plaintexts, producing $159{,}744$ encoding operations per block.
+About $90\%$ of this work was byte-identical: the block has $12$ weight matrices, and each is
+used across all $13$ token groups. The GPU could not begin the corresponding multiplication until
+the host had prepared its plaintexts.
+
+In the baby-step giant-step transform, a plaintext diagonal is not merely a view of the original
+matrix. It must be packed, scaled, and encoded for the ciphertext level at which multiplication
+will occur. Repeating that conversion for every token group made a model-invariant representation
+step dominate the call path. Caching therefore targets plaintext representation while preserving
+the encrypted products and accumulations.
+
+The operation counts locate the redundancy without relying on elapsed time: identical weight
+diagonals are rebuilt across token groups even though the public matrix does not change. The
+optimization target is the lifetime and placement of plaintext preparation while encrypted matrix
+arithmetic remains fixed.
+
+\subsection{Encode once, clone per use}
+The retained cache encodes each distinct weight diagonal into a pristine host template. A
+multiplication receives a lightweight clone that shares the encoded host data by reference while
+carrying fresh device state; the clone is loaded and evicted for that operation. This removes
+$90\%$ of the $159{,}744$ encoding operations without keeping a plaintext object resident on the
+GPU between multiplications.
+
+Cloning is required by the evaluated backend's object semantics. Its plaintext-load path returns
+early when an object is already marked as loaded, so directly reusing a template across
+multiplicative levels can pair a new ciphertext level with stale residue-number-system limbs.
+Fresh device state on each clone forces a load at the level required by the current operation. An
+isolated GPU micro-test checked clone-versus-fresh-encode equality, cross-level reuse, stable device
+memory under repeated multiplication, and equality between parallel and serial encoding before the
+cache was applied to the complete block.
+
+Templates are indexed by both weight matrix and multiplicative level. This distinction preserves
+the backend's level contract while still sharing work among token groups that reach the same
+matrix at the same level. The cache therefore stores reusable encoded data, not a ciphertext or a
+mutable GPU object, and leaves homomorphic multiplication itself unchanged.
+
+\subsection{Bounding host memory}
+Removing repeated encoding exchanges computation for host memory. An early cache retained
+templates from every completed stage, and the operating system terminated the process with an
+allocation failure when the MLP began constructing its templates on top of those retained from
+projection and attention.
+
+Two exact changes bound the cache. First, a template is encoded directly at its multiplicative
+level of use, so it carries only the limbs needed by the receiving ciphertext. This changes no
+arithmetic because the backend would otherwise drop a level-$0$ plaintext to the same level before
+multiplication. Second, the implementation flushes the cache after query/key/value projection and
+after the attention projection. No weight matrix recurs across either boundary, so retaining those
+templates cannot produce another hit. The flush points are the final use sites for their respective
+weight sets.
+
+The lifetime policy follows the block topology. Within a stage, the group-major loop revisits its
+weights as it advances through token groups, so early eviction would discard real reuse. Across
+stages, the next operation consumes a different set of weights; eviction at that point releases
+memory without creating a later re-encoding. The cache consequently remains large enough to serve
+the schedule and no larger.
+
+The target-process resident-set trace follows this policy. Query/key/value projection reaches
+$25{,}530$~MiB. Attention begins after a flush and uses $12{,}434$~MiB. The MLP holds eight
+matrices and reaches the block peak of $48{,}610$~MiB. The largest live stage, rather than every
+encoded weight in the block, determines peak host memory.
+
+% fig_memory.pdf is temporarily excluded pending unit correction and regeneration; see
+% paper-docs/TODO.md.
+
+
+\subsection{Placement and parallelism}
+Plaintext preparation also depends on where host work runs. The retained implementation binds
+threads to physical cores and uses NUMA-local allocation so encoding threads stay close to the
+memory they allocate and to buffers staged for the GPU. Decryption, exact nonlinear evaluation,
+and re-encryption use the same host resources. Their elapsed-time effect awaits a sourced paired
+measurement.
+
+Template construction was then batched across the available $32$ cores with dynamic scheduling.
+Each diagonal can be encoded independently, making this step parallel without changing the order
+or result of encrypted multiplications. Parallel and serial template construction were checked for
+equal outputs before the parallel path was retained.
+
+Affinity and batching address different parts of the same host path: affinity controls placement,
+while batching exposes independent diagonals to the available cores. Together they make plaintext
+preparation a core-local parallel batch under the same cryptographic parameters.
+
+\begin{table}[t]\centering\small
+\caption{The optimization campaign. Every row leaves the operation schedule, packing,
+multiplicative depth, and frozen plaintext reference unchanged.}
+\label{tab:optimization}
+\begin{tabularx}{\textwidth}{Y l l}
+\toprule
+Change & Verified effect & Status \\
+\midrule
+Re-encode every plaintext per multiplication & $159{,}744$ encodings & baseline \\
+Thread affinity, NUMA-local allocation & host placement changed & retained \\
+Encode once, clone per use & removes $90\%$ of encodings & retained \\
+Parallel batched encoding & equal to serial encoding & retained \\
+Encode at use level, flush between stages & peak $48{,}610$~MiB RSS & enabling \\
+\midrule
+\textbf{Net} & \textbf{checked operation schedule unchanged} & \\
+\bottomrule
+\end{tabularx}
+\end{table}
+
+% fig_waterfall.pdf is temporarily excluded pending clean endpoint evidence and regeneration;
+% see paper-docs/TODO.md.
+
+\subsection{Remaining optimization targets}
+Mask plaintexts are still encoded afresh at $17{,}400$ uses per block. Head masks,
+score-isolation masks, lane masks, and copy-activity masks all have fixed values under the declared
+layout, so host templates could remove the same class of repeated work already eliminated for
+weight diagonals. This target remains unimplemented.
+
+A second opportunity lies in the four packed activation copies. They currently carry duplicates
+through a dense transform. An analyzed layout would apply distinct transforms to those copies,
+placing query, key, and value projections together and likewise combining the MLP expansion
+chunks. At fixed model arithmetic, the projected schedule reduces dense products from $156$ to
+$52$ and dense ciphertext--plaintext multiplications from $159{,}744$ to $53{,}248$; the total
+ciphertext--plaintext count falls by $60\%$ before mask and copy-repair overhead. The layout
+requires an exact reconstruction proof before implementation.
+
+Client work has a separate opportunity. Softmax accounts for $99.5\%$ of the values crossing the
+boundary, and each tile's cryptographic work is independent. Concurrent client boundaries were
+unsafe under the evaluated shared crypto context, so the retained implementation executes them
+sequentially. A thread-safe context would expose this independent work to concurrency.

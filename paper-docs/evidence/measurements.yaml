@@ -1,0 +1,626 @@
+# Paper measurement ledger
+#
+# Every number that may appear in the manuscript lives here, once, with its source.
+# The figure scripts read this file. The number lint (scripts/check_numbers.py) reads this file.
+# If a number is not here, it does not go in the paper.
+#
+# tag:  [V] measured   [U] unresolved/not measured   [A] assumed or derived
+# scope: what the number is actually about. Never widen a scope when quoting.
+#
+# Deliberately absent: SHA-256 fixture hashes, run identifiers, manifest rows, gate tokens,
+# host names, scheduler job numbers. Those are development bookkeeping, not scientific content.
+
+meta:
+  updated: 2026-08-08
+  encrypted_scope: >
+    One complete DNAGPT transformer block evaluated on encrypted activations at the full
+    103-token genomic-signal prompt length. Not the twelve-block classifier, not the task head,
+    and not encrypted token-index lookup.
+  hardware: >
+    One NVIDIA A100 GPU (40 GB) with 32 CPU cores, allocated as a dedicated node.
+  acceptance: >
+    A run passes when the decrypted output matches the frozen plaintext reference within a
+    relative infinity-norm tolerance of 4e-2.
+
+# ---------------------------------------------------------------------------
+# 1. The measured encrypted block
+# ---------------------------------------------------------------------------
+
+block_timing:
+  - id: block.wall
+    value: 663
+    unit: s
+    tag: "[V]"
+    scope: "One block, 103 tokens, end of process to start of process"
+    source: "docs/hybrid/t123_walkthrough.md §8"
+  - id: block.encrypted_evaluation
+    value: 652.545
+    unit: s
+    tag: "[V]"
+    scope: "Encrypted evaluation only; 98.4% of wall clock"
+    source: "docs/hybrid/t123_walkthrough.md §8"
+  - id: block.server_linear_algebra
+    value: 531.933
+    unit: s
+    tag: "[V]"
+    scope: "Server-side encrypted linear algebra on GPU; 80.2% of wall clock"
+    source: "docs/hybrid/t123_walkthrough.md §8"
+  - id: block.client_boundaries
+    value: 120.612
+    unit: s
+    tag: "[V]"
+    scope: "Client decrypt / exact evaluate / re-encrypt, CPU only; 18.2% of wall clock"
+    source: "docs/hybrid/t123_walkthrough.md §8"
+  - id: block.context_keygen_load
+    value: 4.653
+    unit: s
+    tag: "[V]"
+    scope: "Crypto context construction, key generation, and GPU key upload"
+    source: "docs/hybrid/t123_walkthrough.md §8"
+  - id: block.encrypt_input
+    value: 1.956
+    unit: s
+    tag: "[V]"
+    scope: "Encrypting the 13 input ciphertexts"
+    source: "docs/hybrid/t123_walkthrough.md §8"
+  - id: block.final_decrypt
+    value: 0.644
+    unit: s
+    tag: "[V]"
+    scope: "Decrypting the 13 output ciphertexts"
+    source: "docs/hybrid/t123_walkthrough.md §8"
+  - id: block.fixture_load
+    value: 0.045
+    unit: s
+    tag: "[V]"
+    scope: "Reading released weights and embeddings from disk"
+    source: "docs/hybrid/t123_walkthrough.md §8"
+
+cost_shares:
+  - id: share.server_pct
+    value: 80.2
+    unit: "%"
+    tag: "[V]"
+    scope: "Server share of block wall clock"
+    source: "docs/hybrid/t123_walkthrough.md §8"
+  - id: share.client_pct
+    value: 18.2
+    unit: "%"
+    tag: "[V]"
+    scope: "Client share of block wall clock"
+    source: "docs/hybrid/t123_walkthrough.md §8"
+  - id: share.client_of_encrypted_eval_pct
+    value: 18.5
+    unit: "%"
+    tag: "[V]"
+    scope: "Client share of encrypted evaluation (excludes setup and final decrypt)"
+    source: "docs/hybrid/t123_walkthrough.md §5"
+  - id: share.client_per_crossing
+    value: 0.141
+    unit: s
+    tag: "[A]"
+    scope: "120.612 s divided by 857 physical client crossings"
+    source: "derived from block.client_boundaries and ops.client_crossings_physical"
+    notes: >
+      An earlier shared-host estimate gave approximately 0.161 s per crossing. Quote the
+      derived value from the dedicated-node measurement, not the older estimate.
+
+# What the data owner actually has to provide. This is the deployment claim, and it is the
+# number a reader will check the scenario against.
+client_requirements:
+  - id: client.peak_ram
+    value: 14
+    unit: GB
+    tag: "[V]"
+    scope: "Peak client-side memory across a complete block at 103 tokens"
+    source: "Measured by the implementing engineer on the optimized configuration."
+    notes: >
+      This is the number that makes the deployment claim concrete: the data owner's side runs on
+      a laptop. Pending in open_provenance until the run lands in the repository.
+  - id: client.needs_gpu
+    value: false
+    tag: "[V]"
+    scope: "The data owner performs no GPU work at any point in the protocol"
+    source: "docs/hybrid/t123_walkthrough.md §6"
+  - id: client.share_documented
+    value: 18.2
+    unit: "%"
+    tag: "[V]"
+    scope: >
+      Client share of block wall clock in the documented run. Use this figure in the manuscript;
+      it is the one backed by a committed trace.
+    source: "docs/hybrid/t123_walkthrough.md §8"
+  - id: client.share_latest
+    value: 10
+    unit: "%"
+    tag: "[U]"
+    scope: >
+      Client share after further client-side optimization, attested but not yet documented.
+      Do not use until the supporting run is in the repository.
+    source: "Reported by the implementing engineer; run not yet pushed."
+
+correctness:
+  - id: err.global_relative
+    value: 4.64e-9
+    unit: "relative infinity norm"
+    tag: "[V]"
+    scope: "Whole decrypted block output versus the frozen plaintext reference"
+    source: "docs/hybrid/t123_walkthrough.md §8, Appendix"
+  - id: err.worst_token_relative
+    value: 4.70e-9
+    unit: "relative infinity norm"
+    tag: "[V]"
+    scope: "Worst single token position"
+    source: "docs/hybrid/t123_walkthrough.md"
+  - id: err.max_absolute
+    value: 7.44e-8
+    unit: "absolute"
+    tag: "[V]"
+    scope: "Largest absolute deviation across all 103 x 768 output values"
+    source: "docs/hybrid/t123_walkthrough.md"
+  - id: err.tolerance
+    value: 4e-2
+    unit: "relative infinity norm"
+    tag: "[V]"
+    scope: "Pre-declared acceptance tolerance, fixed before the run"
+    source: "docs/hybrid/t123_walkthrough.md Appendix"
+  - id: err.headroom_orders
+    value: 7
+    unit: "orders of magnitude"
+    tag: "[A]"
+    scope: "Ratio of tolerance to achieved error"
+    source: "derived from err.global_relative and err.tolerance"
+
+memory:
+  - id: mem.host_peak
+    value: 48.6
+    unit: GiB
+    tag: "[V]"
+    scope: "Peak host resident set size, reached during the MLP stage"
+    source: "docs/hybrid/t123_walkthrough.md §7, §8"
+  - id: mem.gpu_peak
+    value: 9.6
+    unit: GiB
+    tag: "[V]"
+    scope: "Peak GPU memory used by the evaluating process"
+    source: "docs/hybrid/t123_walkthrough.md §8"
+    notes: "9,839 MiB. Process footprint, not device-wide occupancy."
+  - id: mem.stage_qkv
+    value: 25.5
+    unit: GiB
+    tag: "[V]"
+    scope: "Host RSS during query/key/value projection; three weight matrices resident"
+    source: "docs/hybrid/t123_walkthrough.md §7"
+  - id: mem.stage_attention
+    value: 12.4
+    unit: GiB
+    tag: "[V]"
+    scope: "Host RSS during attention; no weight matrices resident after the stage flush"
+    source: "docs/hybrid/t123_walkthrough.md §7"
+  - id: mem.stage_mlp
+    value: 48.6
+    unit: GiB
+    tag: "[V]"
+    scope: "Host RSS during the MLP stage; eight weight matrices resident"
+    source: "docs/hybrid/t123_walkthrough.md §7"
+  - id: mem.unbounded_failure
+    value: 61.9
+    unit: GiB
+    tag: "[V]"
+    scope: >
+      Host RSS at which the unbounded-cache attempt was killed by the operating system.
+      The run aborted with an allocation failure partway into the MLP stage.
+    source: "docs/hybrid/t123_walkthrough.md §9"
+
+# ---------------------------------------------------------------------------
+# 2. Circuit invariants
+#
+# These are identical before and after every optimization in the campaign. They are what
+# makes the speedup attributable to systems work rather than to a weakened circuit.
+# ---------------------------------------------------------------------------
+
+ops:
+  - id: ops.dense_products
+    value: 156
+    unit: "dense encrypted matrix products"
+    tag: "[V]"
+    scope: "One block at 103 tokens with eight-token packing"
+    source: "docs/hybrid/roadmap.md, docs/hybrid/t123_walkthrough.md"
+  - id: ops.dense_products_unpacked
+    value: 1236
+    unit: "dense encrypted matrix products"
+    tag: "[A]"
+    scope: "Serial-equivalent count for the same block without token packing"
+    source: "docs/hybrid/roadmap.md"
+  - id: ops.packing_reduction_factor
+    value: 7.92
+    unit: "x"
+    tag: "[A]"
+    scope: >
+      Structural reduction in dense products from eight-token packing. This is an operation
+      count, not a latency measurement, and must never be quoted as a speedup.
+    source: "derived from ops.dense_products and ops.dense_products_unpacked"
+  - id: ops.ct_pt_multiplications
+    value: 177734
+    unit: "ciphertext-plaintext multiplications"
+    tag: "[V]"
+    scope: "One block at 103 tokens"
+    source: "docs/hybrid/roadmap.md, docs/hybrid/t123_walkthrough.md"
+  - id: ops.ct_ct_multiplications
+    value: 1506
+    unit: "ciphertext-ciphertext multiplications"
+    tag: "[V]"
+    scope: "One block at 103 tokens"
+    source: "docs/hybrid/roadmap.md, docs/hybrid/t123_walkthrough.md"
+  - id: ops.rotations
+    value: 8173
+    unit: "explicit rotations"
+    tag: "[V]"
+    scope: "One block at 103 tokens"
+    source: "docs/hybrid/roadmap.md"
+  - id: ops.reductions
+    value: 8776
+    unit: "reduction calls"
+    tag: "[V]"
+    scope: "One block at 103 tokens"
+    source: "docs/hybrid/roadmap.md"
+  - id: ops.client_crossings_physical
+    value: 857
+    unit: "boundary crossings"
+    tag: "[V]"
+    scope: "Physical decrypt/evaluate/re-encrypt operations performed by the data owner"
+    source: "docs/hybrid/t123_walkthrough.md"
+  - id: ops.client_instances_logical
+    value: 129162
+    unit: "nonlinear values"
+    tag: "[V]"
+    scope: >
+      Individual nonlinear values evaluated exactly by the client. One physical crossing
+      batches many logical instances; never conflate the two counts.
+    source: "docs/hybrid/t123_walkthrough.md"
+  - id: ops.score_tile_decryptions
+    value: 91
+    unit: "decryptions"
+    tag: "[V]"
+    scope: "Causal attention score tiles returned to the client for exact softmax"
+    source: "docs/hybrid/t123_walkthrough.md"
+  - id: ops.weight_tile_encryptions
+    value: 727
+    unit: "encryptions"
+    tag: "[V]"
+    scope: "Attention weight tiles re-encrypted by the client"
+    source: "docs/hybrid/t123_walkthrough.md"
+
+# Where the boundary traffic actually is. Softmax dominates; LayerNorm and GELU are rounding
+# error by comparison. Derived from the per-boundary counters in the driver.
+boundary_decomposition:
+  - id: boundary.layernorm_instances
+    value: 206
+    tag: "[A]"
+    scope: "Inverse-square-root values crossing at both LayerNorm sites (103 each)"
+    source: "derived from the boundary counters; verified in context/08_implementation_ground_truth.md"
+  - id: boundary.gelu_instances
+    value: 412
+    tag: "[A]"
+    scope: "GELU values crossing, equal to T x COPIES"
+    source: "derived; t123 driver gelu_boundary accumulates active x COPIES per group"
+  - id: boundary.softmax_instances
+    value: 128544
+    tag: "[A]"
+    scope: >
+      Attention values crossing: 64,272 scores decrypted plus 64,272 weights re-encrypted,
+      each equal to HEADS x T(T+1)/2.
+    source: "derived; verified against the driver's counters"
+  - id: boundary.softmax_share_pct
+    value: 99.5
+    unit: "%"
+    tag: "[A]"
+    scope: >
+      Softmax share of all logical values crossing the boundary. The attention nonlinearity is
+      the boundary cost; LayerNorm and GELU together are under one percent.
+    source: "derived from the three rows above and ops.client_instances_logical"
+
+ct_ct_decomposition:
+  - id: ctct.layernorm_centered_sq
+    value: 26
+    tag: "[V]"
+    scope: "LayerNorm centered x centered"
+    source: "docs/hybrid/t123_walkthrough.md §3.1"
+  - id: ctct.layernorm_centered_inverse
+    value: 26
+    tag: "[V]"
+    scope: "LayerNorm centered x client-returned inverse"
+    source: "docs/hybrid/t123_walkthrough.md §3.1"
+  - id: ctct.query_key
+    value: 727
+    tag: "[V]"
+    scope: "Query x shifted key"
+    source: "docs/hybrid/t123_walkthrough.md §3.1"
+  - id: ctct.weight_value
+    value: 727
+    tag: "[V]"
+    scope: "Attention weight x shifted value"
+    source: "docs/hybrid/t123_walkthrough.md §3.1"
+  - id: ctct.attention_share_pct
+    value: 97
+    unit: "%"
+    tag: "[A]"
+    scope: "Share of ciphertext-ciphertext multiplications that live in attention"
+    source: "derived from the four rows above"
+
+# ---------------------------------------------------------------------------
+# 3. Cryptographic and layout parameters
+# ---------------------------------------------------------------------------
+
+# The reference the encrypted run reproduces was itself validated against the released model.
+# Both stages belong in the paper; reporting only the second invites the objection that the
+# circuit and its reference could be wrong together.
+oracle_chain:
+  - id: oracle.reference_vs_upstream_tolerance
+    value: 2e-5
+    tag: "[V]"
+    scope: >
+      Tolerance at which the independent NumPy float64 block reference is asserted equal to the
+      upstream PyTorch block, per block, for all twelve blocks, and for the classifier head.
+      The export aborts on divergence.
+    source: "fhe/multiblock/export_fixture_t103.py:175-198, 224-240"
+  - id: oracle.released_model_has_no_biases
+    value: true
+    tag: "[V]"
+    scope: >
+      The evaluated 0.1b checkpoint carries no bias tensors. The checkpoint is loaded with its
+      missing-key set asserted exactly, so a bias expected by the module but absent would fail
+      that assertion. The encrypted circuit omits biases because the model has none.
+    source: "fhe/realweights/contract.py:38-53; fhe/multiblock/export_fixture_t103.py:366"
+  - id: oracle.reencryption_level
+    value: 0
+    tag: "[V]"
+    scope: >
+      Every client boundary returns a ciphertext at level 0, so each crossing fully resets the
+      multiplicative budget. Depth therefore bounds the longest run between two boundaries, not
+      the depth of the network -- which is why depth 13 suffices for a twelve-block model.
+    source: "t123 driver, all four boundary methods"
+
+parameters:
+  - id: param.security
+    value: "128-bit classical"
+    tag: "[V]"
+    scope: "Standard security level used for every reported run"
+    source: "docs/hybrid/tasks.md, results manifests"
+  - id: param.ring_dimension
+    value: 65536
+    tag: "[V]"
+    scope: "Polynomial ring degree"
+    source: "docs/hybrid/t123_walkthrough.md Appendix"
+  - id: param.slots
+    value: 32768
+    tag: "[V]"
+    scope: "Usable plaintext slots per ciphertext"
+    source: "docs/hybrid/t123_walkthrough.md Appendix"
+  - id: param.multiplicative_depth
+    value: 13
+    tag: "[V]"
+    scope: >
+      Smallest demonstrated passing depth at the retained scale, digit count, ring, and
+      packing. Not a claim that depth 13 is faster than other depths.
+    source: "docs/hybrid/roadmap.md, docs/hybrid/t123_walkthrough.md Appendix"
+  - id: param.level_at_block_end
+    value: 6
+    tag: "[V]"
+    scope: "Levels remaining of 13 when the block completes"
+    source: "docs/hybrid/t123_walkthrough.md"
+  - id: param.key_switch_digits
+    value: 3
+    tag: "[V]"
+    scope: "Hybrid key-switching digits"
+    source: "docs/hybrid/t123_walkthrough.md Appendix"
+  - id: param.scale_bits
+    value: 50
+    tag: "[V]"
+    scope: "Fixed-point scaling bits per level"
+    source: "docs/hybrid/t123_walkthrough.md Appendix"
+  - id: param.first_modulus_bits
+    value: 60
+    tag: "[V]"
+    scope: "First modulus size"
+    source: "docs/hybrid/t123_walkthrough.md Appendix"
+  - id: param.rotation_keys
+    value: 80
+    tag: "[V]"
+    scope: "Rotation keys generated and uploaded to the GPU"
+    source: "docs/hybrid/t123_walkthrough.md"
+
+layout:
+  - id: layout.embedding_width
+    value: 768
+    tag: "[V]"
+    scope: "DNAGPT-0.1b hidden width"
+    source: "docs/hybrid/t123_walkthrough.md Appendix"
+  - id: layout.heads
+    value: 12
+    tag: "[V]"
+    scope: "Attention heads"
+    source: "docs/hybrid/t123_walkthrough.md Appendix"
+  - id: layout.head_dim
+    value: 64
+    tag: "[V]"
+    scope: "Dimensions per head"
+    source: "docs/hybrid/t123_walkthrough.md Appendix"
+  - id: layout.mlp_width
+    value: 3072
+    tag: "[V]"
+    scope: "MLP expansion width"
+    source: "docs/hybrid/t123_walkthrough.md Appendix"
+  - id: layout.pack_width
+    value: 1024
+    tag: "[V]"
+    scope: "768 padded to a power of two for the baby-step giant-step transform"
+    source: "docs/hybrid/t123_walkthrough.md Appendix"
+  - id: layout.copies
+    value: 4
+    tag: "[V]"
+    scope: "Activation copies per ciphertext, equal to MLP width divided by hidden width"
+    source: "docs/hybrid/t123_walkthrough.md Appendix"
+  - id: layout.token_lanes
+    value: 8
+    tag: "[V]"
+    scope: "Tokens packed per ciphertext"
+    source: "docs/hybrid/t123_walkthrough.md Appendix"
+  - id: layout.token_groups
+    value: 13
+    tag: "[V]"
+    scope: "Ciphertext groups needed for 103 tokens at eight tokens per group"
+    source: "docs/hybrid/t123_walkthrough.md Appendix"
+  - id: layout.bsgs_split
+    value: "32 x 32"
+    tag: "[V]"
+    scope: "Baby-step giant-step decomposition of the 1024-wide transform"
+    source: "docs/hybrid/t123_walkthrough.md Appendix"
+
+# ---------------------------------------------------------------------------
+# 4. Prompt length derivation
+#
+# 103 is arithmetic, not a design choice. State the derivation whenever the number appears.
+# ---------------------------------------------------------------------------
+
+prompt_length:
+  - id: prompt.gsr_basepairs
+    value: 600
+    unit: bp
+    tag: "[V]"
+    scope: "Genomic signal recognition input window"
+    source: "docs/tasks.md, Kimon tokenization table"
+  - id: prompt.kmer
+    value: 6
+    tag: "[V]"
+    scope: "DNAGPT tokenizes overlapping 6-mers"
+    source: "DNAGPT upstream tokenizer"
+  - id: prompt.gsr_kmer_tokens
+    value: 100
+    tag: "[V]"
+    scope: "600 bp divided by 6"
+    source: "Kimon tokenization table"
+  - id: prompt.gsr_special_tokens
+    value: 3
+    tag: "[V]"
+    scope: "Task-format special tokens surrounding the sequence"
+    source: "Kimon tokenization table"
+  - id: prompt.gsr_total
+    value: 103
+    unit: tokens
+    tag: "[V]"
+    scope: "Complete tokenized genomic-signal prompt; the encrypted anchor length"
+    source: "derived: 600 / 6 + 3"
+
+# ---------------------------------------------------------------------------
+# 5. Plaintext reference model (Phase A) — the oracle the encrypted run must reproduce
+# ---------------------------------------------------------------------------
+
+plaintext_baseline:
+  - id: base.gsr_accuracy
+    value: 0.9124
+    tag: "[V]"
+    scope: "Human polyadenylation-signal recognition, released classification head, n = 22,604"
+    reference: 0.9151
+    reference_name: "DNAGPT"
+    reference_scope: >
+      DNAGPT's own reported accuracy for the 0.1B "M" variant on human PAS(AATAAA)
+      (its Table S2), measured on a held-out test split of roughly a quarter of the
+      set (train:val:test = 6:1.5:2.5). This work evaluates the full 22,604-example
+      balanced set, so the comparison is same-model but not same-split.
+    source: "docs/tasks.md; reference corrected in reviews/2026-08-08-paper-sources.md"
+  - id: base.gsr_f1
+    value: 0.916
+    tag: "[V]"
+    scope: "Same run as base.gsr_accuracy"
+    source: "docs/tasks.md"
+  - id: base.gsr_n
+    value: 22604
+    tag: "[V]"
+    scope: "Canonical test split size"
+    source: "docs/tasks.md"
+  - id: base.gue_prom_core_mcc
+    value: 0.680
+    tag: "[V]"
+    scope: "Core promoter detection, locally fine-tuned head"
+    reference: 0.69
+    reference_name: "DNABERT-2"
+    source: "docs/tasks.md"
+  - id: base.gue_prom_300_mcc
+    value: 0.897
+    tag: "[V]"
+    scope: "300 bp promoter detection, locally fine-tuned head; exceeds the reference"
+    reference: 0.87
+    reference_name: "DNABERT-2"
+    source: "docs/tasks.md"
+  - id: base.gue_splice_mcc
+    value: 0.831
+    tag: "[V]"
+    scope: "Reconstructed splice-site classification, locally fine-tuned head"
+    reference: 0.85
+    reference_name: "DNABERT-2"
+    source: "docs/tasks.md"
+  - id: base.mrna_r2
+    value: 0.562
+    tag: "[V]"
+    scope: >
+      Human mRNA abundance regression, released head, n = 1,000. Model-fidelity evidence only;
+      this task is outside the encrypted scope.
+    reference: 0.62
+    reference_name: "DNAGPT"
+    source: "docs/tasks.md"
+  - id: base.mrna_pearson
+    value: 0.753
+    tag: "[V]"
+    scope: "Same run as base.mrna_r2"
+    source: "docs/tasks.md"
+
+# ---------------------------------------------------------------------------
+# 6. Non-interactive baseline (the architecture that was set aside)
+# ---------------------------------------------------------------------------
+
+non_interactive:
+  - id: noninteractive.block_closed
+    value: true
+    tag: "[V]"
+    scope: >
+      A fully non-interactive configuration, with polynomial approximations of every
+      nonlinearity and no intermediate decryption, completed one real-weight block.
+    source: "docs/pure/measurements.md"
+  - id: noninteractive.memory_envelope
+    value: 80
+    unit: GB
+    tag: "[V]"
+    scope: >
+      GPU memory available in the tested configuration. Chained multi-block composition
+      exceeded this envelope during context and evaluation-key loading.
+    source: "docs/pure/measurements.md, docs/shared/architecture_options.md"
+    notes: >
+      Scoped to the chosen library, parameters, packing, and hardware. Not an impossibility
+      result for non-interactive CKKS.
+
+# ---------------------------------------------------------------------------
+# 7. Composition
+# ---------------------------------------------------------------------------
+
+composition:
+  - id: compose.two_block_error
+    value: 8.48e-11
+    unit: "relative infinity norm"
+    tag: "[V]"
+    scope: >
+      Two consecutive released blocks composed at two tokens through a full-hidden-state
+      client refresh. Error after the second block.
+    source: "docs/hybrid/tasks.md"
+  - id: compose.two_block_memory_growth
+    value: false
+    tag: "[V]"
+    scope: "GPU memory peaked in the first block and did not increase in the second"
+    source: "docs/hybrid/tasks.md"
+  - id: compose.twelve_block_at_task_length
+    value: null
+    tag: "[U]"
+    scope: >
+      The twelve-block driver with the released task head is built and passes local
+      contracts, but has not been run at 103 tokens.
+    source: "CLAUDE.md, docs/hybrid/roadmap.md"

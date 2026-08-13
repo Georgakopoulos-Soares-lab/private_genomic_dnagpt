@@ -56,4 +56,4 @@ Current interpretation and execution order live in:
 - [`../docs/overview.md`](../docs/overview.md)
 - [`../docs/roadmap.md`](../docs/roadmap.md)
 - [`../docs/hybrid/roadmap.md`](../docs/hybrid/roadmap.md)
-- [`../docs/paper/03_results_and_limits.md`](../docs/paper/03_results_and_limits.md)
+- [`../paper-docs/context/04_results_and_limits.md`](../paper-docs/context/04_results_and_limits.md)
