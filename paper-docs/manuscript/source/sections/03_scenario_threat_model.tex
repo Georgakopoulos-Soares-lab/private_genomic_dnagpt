@@ -27,10 +27,22 @@ The protocol is relevant only where these roles are fixed. If a client is allowe
 run the model, local plaintext inference is the simpler architecture.
 
 \subsection{Local inference as a comparison}
-Where model distribution is permitted, the client can avoid all cryptographic work by running the
-ordinary forward pass. Client assistance cannot provide a computational advantage over that
-option. Its purpose is to make a service-only model available without sending the genomic input in
-plaintext.
+The sharpest objection to this protocol is best stated with our own measurements, at full strength,
+before it is answered. The data owner already evaluates LayerNorm, causal softmax, and GELU, so it
+is not spared the nonlinear work. In the complete encrypted inference reported in
+Section~\ref{sec:results} it spends $956.187$~s of its own CPU time doing so, against a plaintext
+forward pass of this released $0.1$-billion-parameter model at $103$ tokens that finishes in well
+under a second on the same class of hardware. The data owner therefore performs orders of magnitude
+more work inside the protocol than it would need to run the model itself, and in this study the
+weights are public, so no model-secrecy argument compels the arrangement either. Every one of those
+statements is correct, and none of them is contested below.
+
+The answer is not that the arithmetic is wrong. It is that the local baseline is not a cheaper
+route to the same answer but a different deployment, available only where the client may hold the
+model in plaintext. Where model distribution is permitted, the client can avoid all cryptographic
+work by running the ordinary forward pass, and it should. Client assistance cannot provide a
+computational advantage over that option, and this paper does not claim one. Its purpose is to make
+a service-only model available without sending the genomic input in plaintext.
 
 That comparison changes the deployment premise. A served model is available to the data owner only
 through the provider's interface; handing the client the weights creates a different service. Under
@@ -105,6 +117,6 @@ from the compute provider.
 
 Malicious servers, authenticated transport, production key custody, traffic analysis, timing and
 physical side channels, and compromised clients are outside the evaluated boundary. Encrypted
-scope begins after token-index lookup, so private lookup is also unresolved. The data owner sees
+scope begins after token-index lookup, so private lookup is also unresolved. The embedded vectors that cross the boundary are not a weaker secret than the sequence: embeddings from DNA foundation models have been inverted to recover the underlying sequence with high fidelity~\cite{dnaembeddinginversion2026}, which is why they are encrypted here rather than sent in clear. The data owner sees
 its own intermediate activations and final output; privacy from the key holder is not an objective
 of this protocol.

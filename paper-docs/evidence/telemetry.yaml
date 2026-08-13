@@ -7,8 +7,13 @@
 #
 # Source: docs/hybrid/t123_walkthrough.md §8.
 
+# NOTE: this first block describes the SINGLE-BLOCK trace from a shared-partition run. It is
+# retained for provenance and for quantities contention cannot affect (op counts, depth, error).
+# Its timings must not enter the manuscript. The complete-model sections below are the clean
+# dedicated-node evidence.
 meta:
   updated: 2026-08-08
+  scope: "Single block, shared partition. Timings not usable in the manuscript."
   total_wall_s: 663
   sample_interval_s: 5
   gpu: "NVIDIA A100, 40 GB"
@@ -70,3 +75,171 @@ readings:
       The stage with the lowest GPU utilization is also the stage still performing the most
       redundant host encoding. That co-location is why the mask-plaintext cache is the clearest
       remaining optimization target.
+
+# ---------------------------------------------------------------------------
+# Contention check for the complete-model run of 2026-08-12
+#
+# The manuscript may only report timing measured on an uncontended node. This section is the
+# evidence for that claim about the complete-model run, checked against its committed
+# telemetry (653 samples) and its scheduler output rather than asserted.
+#
+# Source: results/runs/fhe_fides_real_d768_t103_12blocks_head_cpudiagcache_t123_v3_scheme_b_a100_20260812
+#         {_telemetry.csv, _slurm.out}
+# ---------------------------------------------------------------------------
+
+complete_model_contention:
+  meta:
+    updated: 2026-08-13
+    total_wall_s: 6683
+    samples: 653
+    gpu: "NVIDIA A100-PCIE-40GB"
+    cores: 32
+    tag: "[V]"
+
+  checks:
+    - id: clean.whole_node_partition
+      tag: "[V]"
+      statement: >
+        The job ran in the whole-node A100 partition, not the shared per-GPU partition that the
+        earlier contended single-block runs used. All three of the node's A100 devices were
+        visible to this job, which is what a whole-node allocation looks like.
+      source: "batch script: #SBATCH -p gpu-a100; slurm.out device enumeration"
+      caveat: >
+        The script does not request --exclusive, so exclusivity rests on the partition's
+        allocation policy rather than on a flag recorded in the artifact.
+    - id: clean.node_empty_at_allocation
+      tag: "[V]"
+      statement: >
+        All three A100 devices reported 0 MiB used and 0 percent utilization when the job
+        started, so no co-tenant was present at allocation.
+      source: "slurm.out header"
+    - id: clean.other_gpus_are_our_own_contexts
+      tag: "[A]"
+      statement: >
+        The other two devices sit at exactly 850 MiB from 42 s onward. At that same sample the
+        evaluating device first shows 425 MiB, and 850 = 2 x 425: the two idle devices each hold
+        one CUDA context the size of this process's own, created when it enumerated all visible
+        devices. A co-tenant's footprint would neither equal twice ours nor stay constant for
+        the remaining 6,600 s.
+      source: >
+        telemetry CSV: gpu0_mem_used_mib and gpu_others_mem_mib at elapsed_s = 42; constant
+        across 649 of 653 samples. Device enumeration at [42 s] in the run log.
+    - id: clean.no_cpu_oversubscription
+      tag: "[A]"
+      statement: >
+        Host one-minute load average peaks at 29.1 while this job requested 32 threads, and the
+        per-process busy-core figure peaks at 26.8. Load never rises to a level that would
+        indicate the node's cores were oversubscribed during the run.
+      source: "telemetry CSV: host_load1 and cpu_cores_busy, max over 653 samples"
+      caveat: >
+        host_load1 is a decayed node-wide average and cpu_cores_busy is an instantaneous
+        per-process sample, so the two cannot be differenced to isolate a co-tenant. The node's
+        total core count is not recorded in any committed artifact, so 32 is a thread request
+        and not the denominator.
+    - id: clean.gpu_headroom_persists_at_full_model
+      tag: "[A]"
+      statement: >
+        GPU utilization has median 32 percent and maximum 51 percent across the complete model,
+        confirming at whole-model scale the single-block finding that the evaluation is not
+        GPU-bound.
+      source: "telemetry CSV: gpu0_util_pct"
+    - id: clean.memory_flat_across_blocks
+      tag: "[A]"
+      statement: >
+        GPU memory rises during context and key loading, reaches 9839 MiB at about 400 s, and
+        then holds exactly that value for the remaining 94 percent of the run. It does not grow
+        with block index, so composition through client refresh accumulates no accelerator
+        memory across the twelve blocks.
+      source: "telemetry CSV: gpu0_mem_used_mib, constant at 9839 from elapsed_s = 400"
+
+# ---------------------------------------------------------------------------
+# Resource trace of the complete-model run of 2026-08-12
+#
+# Thinned from the committed 653-sample telemetry to 73 points. This is the trace behind the
+# whole-model timeline figure. It shows two things the single-block trace could only suggest:
+# GPU utilization never approaches saturation across the complete model, and host memory
+# oscillates once per block instead of accumulating across the twelve.
+#
+# Source: results/runs/fhe_fides_real_d768_t103_12blocks_head_cpudiagcache_t123_v3_scheme_b_a100_20260812_telemetry.csv
+# ---------------------------------------------------------------------------
+
+complete_model_trace:
+  meta:
+    total_wall_s: 6683
+    blocks: 12
+    sample_interval_s: 10
+    tag: "[V]"
+  trace:
+  - {t_s: 42, gpu_pct: 0, gpu_mib: 425, rss_mib: 5206, load1: 2.80}
+  - {t_s: 134, gpu_pct: 30, gpu_mib: 8815, rss_mib: 14705, load1: 3.96}
+  - {t_s: 226, gpu_pct: 33, gpu_mib: 8815, rss_mib: 14705, load1: 17.88}
+  - {t_s: 318, gpu_pct: 2, gpu_mib: 8815, rss_mib: 14718, load1: 24.94}
+  - {t_s: 411, gpu_pct: 39, gpu_mib: 9839, rss_mib: 44212, load1: 10.51}
+  - {t_s: 503, gpu_pct: 37, gpu_mib: 9839, rss_mib: 44261, load1: 3.11}
+  - {t_s: 595, gpu_pct: 39, gpu_mib: 9839, rss_mib: 26553, load1: 1.53}
+  - {t_s: 687, gpu_pct: 32, gpu_mib: 9839, rss_mib: 18840, load1: 5.50}
+  - {t_s: 780, gpu_pct: 32, gpu_mib: 9839, rss_mib: 18850, load1: 24.57}
+  - {t_s: 872, gpu_pct: 2, gpu_mib: 9839, rss_mib: 18858, load1: 18.95}
+  - {t_s: 964, gpu_pct: 38, gpu_mib: 9839, rss_mib: 44869, load1: 10.32}
+  - {t_s: 1056, gpu_pct: 38, gpu_mib: 9839, rss_mib: 44868, load1: 3.07}
+  - {t_s: 1148, gpu_pct: 39, gpu_mib: 9839, rss_mib: 32536, load1: 2.34}
+  - {t_s: 1240, gpu_pct: 25, gpu_mib: 9839, rss_mib: 23522, load1: 7.08}
+  - {t_s: 1333, gpu_pct: 27, gpu_mib: 9839, rss_mib: 23535, load1: 24.17}
+  - {t_s: 1425, gpu_pct: 2, gpu_mib: 9839, rss_mib: 23545, load1: 18.12}
+  - {t_s: 1517, gpu_pct: 36, gpu_mib: 9839, rss_mib: 45702, load1: 8.29}
+  - {t_s: 1610, gpu_pct: 37, gpu_mib: 9839, rss_mib: 45702, load1: 2.55}
+  - {t_s: 1702, gpu_pct: 34, gpu_mib: 9839, rss_mib: 34827, load1: 1.34}
+  - {t_s: 1793, gpu_pct: 30, gpu_mib: 9839, rss_mib: 27605, load1: 3.36}
+  - {t_s: 1885, gpu_pct: 27, gpu_mib: 9839, rss_mib: 27609, load1: 23.97}
+  - {t_s: 1978, gpu_pct: 2, gpu_mib: 9839, rss_mib: 27609, load1: 20.33}
+  - {t_s: 2070, gpu_pct: 36, gpu_mib: 9839, rss_mib: 47752, load1: 9.84}
+  - {t_s: 2162, gpu_pct: 32, gpu_mib: 9839, rss_mib: 47752, load1: 2.99}
+  - {t_s: 2254, gpu_pct: 39, gpu_mib: 9839, rss_mib: 34868, load1: 5.35}
+  - {t_s: 2346, gpu_pct: 31, gpu_mib: 9839, rss_mib: 27453, load1: 12.57}
+  - {t_s: 2438, gpu_pct: 26, gpu_mib: 9839, rss_mib: 27459, load1: 19.86}
+  - {t_s: 2530, gpu_pct: 2, gpu_mib: 9839, rss_mib: 27461, load1: 13.12}
+  - {t_s: 2622, gpu_pct: 34, gpu_mib: 9839, rss_mib: 50554, load1: 7.92}
+  - {t_s: 2715, gpu_pct: 34, gpu_mib: 9839, rss_mib: 50554, load1: 2.48}
+  - {t_s: 2807, gpu_pct: 41, gpu_mib: 9839, rss_mib: 36579, load1: 2.46}
+  - {t_s: 2899, gpu_pct: 32, gpu_mib: 9839, rss_mib: 27057, load1: 7.68}
+  - {t_s: 2991, gpu_pct: 32, gpu_mib: 9839, rss_mib: 27062, load1: 18.94}
+  - {t_s: 3083, gpu_pct: 2, gpu_mib: 9839, rss_mib: 27062, load1: 15.50}
+  - {t_s: 3175, gpu_pct: 41, gpu_mib: 9839, rss_mib: 50928, load1: 7.91}
+  - {t_s: 3267, gpu_pct: 35, gpu_mib: 9839, rss_mib: 50928, load1: 2.63}
+  - {t_s: 3359, gpu_pct: 33, gpu_mib: 9839, rss_mib: 34212, load1: 1.76}
+  - {t_s: 3451, gpu_pct: 30, gpu_mib: 9839, rss_mib: 27912, load1: 11.81}
+  - {t_s: 3543, gpu_pct: 30, gpu_mib: 9839, rss_mib: 27921, load1: 17.54}
+  - {t_s: 3635, gpu_pct: 2, gpu_mib: 9839, rss_mib: 26816, load1: 18.13}
+  - {t_s: 3727, gpu_pct: 30, gpu_mib: 9839, rss_mib: 50585, load1: 7.19}
+  - {t_s: 3819, gpu_pct: 32, gpu_mib: 9839, rss_mib: 50585, load1: 2.38}
+  - {t_s: 3911, gpu_pct: 38, gpu_mib: 9839, rss_mib: 34929, load1: 3.81}
+  - {t_s: 4004, gpu_pct: 30, gpu_mib: 9839, rss_mib: 26678, load1: 6.39}
+  - {t_s: 4096, gpu_pct: 30, gpu_mib: 9839, rss_mib: 26682, load1: 22.34}
+  - {t_s: 4189, gpu_pct: 2, gpu_mib: 9839, rss_mib: 26683, load1: 20.50}
+  - {t_s: 4281, gpu_pct: 33, gpu_mib: 9839, rss_mib: 48523, load1: 10.70}
+  - {t_s: 4373, gpu_pct: 35, gpu_mib: 9839, rss_mib: 48523, load1: 3.33}
+  - {t_s: 4465, gpu_pct: 38, gpu_mib: 9839, rss_mib: 36025, load1: 1.55}
+  - {t_s: 4557, gpu_pct: 29, gpu_mib: 9839, rss_mib: 29322, load1: 5.89}
+  - {t_s: 4649, gpu_pct: 29, gpu_mib: 9839, rss_mib: 29326, load1: 24.70}
+  - {t_s: 4741, gpu_pct: 2, gpu_mib: 9839, rss_mib: 29325, load1: 23.00}
+  - {t_s: 4834, gpu_pct: 0, gpu_mib: 9839, rss_mib: 45973, load1: 8.47}
+  - {t_s: 4926, gpu_pct: 36, gpu_mib: 9839, rss_mib: 48223, load1: 2.61}
+  - {t_s: 5018, gpu_pct: 41, gpu_mib: 9839, rss_mib: 26394, load1: 1.28}
+  - {t_s: 5110, gpu_pct: 32, gpu_mib: 9839, rss_mib: 26551, load1: 4.38}
+  - {t_s: 5202, gpu_pct: 32, gpu_mib: 9839, rss_mib: 26554, load1: 15.34}
+  - {t_s: 5294, gpu_pct: 2, gpu_mib: 9839, rss_mib: 26555, load1: 18.34}
+  - {t_s: 5386, gpu_pct: 22, gpu_mib: 9839, rss_mib: 44071, load1: 8.54}
+  - {t_s: 5478, gpu_pct: 31, gpu_mib: 9839, rss_mib: 48359, load1: 2.68}
+  - {t_s: 5570, gpu_pct: 12, gpu_mib: 9839, rss_mib: 30477, load1: 5.10}
+  - {t_s: 5662, gpu_pct: 30, gpu_mib: 9839, rss_mib: 26449, load1: 4.54}
+  - {t_s: 5754, gpu_pct: 31, gpu_mib: 9839, rss_mib: 26448, load1: 16.12}
+  - {t_s: 5846, gpu_pct: 2, gpu_mib: 9839, rss_mib: 26447, load1: 13.70}
+  - {t_s: 5938, gpu_pct: 38, gpu_mib: 9839, rss_mib: 50420, load1: 9.64}
+  - {t_s: 6031, gpu_pct: 39, gpu_mib: 9839, rss_mib: 50424, load1: 2.87}
+  - {t_s: 6123, gpu_pct: 31, gpu_mib: 9839, rss_mib: 28948, load1: 4.49}
+  - {t_s: 6215, gpu_pct: 32, gpu_mib: 9839, rss_mib: 26096, load1: 4.26}
+  - {t_s: 6307, gpu_pct: 27, gpu_mib: 9839, rss_mib: 26098, load1: 16.95}
+  - {t_s: 6399, gpu_pct: 2, gpu_mib: 9839, rss_mib: 25715, load1: 21.17}
+  - {t_s: 6491, gpu_pct: 37, gpu_mib: 9839, rss_mib: 43116, load1: 10.77}
+  - {t_s: 6583, gpu_pct: 39, gpu_mib: 9839, rss_mib: 48406, load1: 3.17}
+  - {t_s: 6675, gpu_pct: 12, gpu_mib: 9839, rss_mib: 26633, load1: 7.21}

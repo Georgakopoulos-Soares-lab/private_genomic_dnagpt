@@ -10,24 +10,38 @@
 % Only timing artifacts that satisfy the manuscript evidence rule may appear in the paper.
 % ---------------------------------------------------------------------------
 
-\section{Systems optimization at fixed circuit}
+\section{Host-side systems work at fixed circuit}
 \label{sec:optimization}
 
-Every comparison in this section holds the encrypted circuit fixed. The retained implementation
+The encrypted circuit is not where this section's result lies. The arithmetic of
+Section~\ref{sec:protocol} was already correct at one block before any of the work described here
+was done, and none of that work changes it. What the work established is that the obvious host-side
+economy --- encode each distinct weight diagonal once instead of once per use --- is not usable in
+its obvious form. An implementation that retained every encoded template was killed by the operating
+system at $61{,}863$~MiB resident, with an allocation failure at the moment the MLP stage began
+building templates on top of everything cached by earlier stages. Bounding the cache to one live
+stage is therefore an enabling result rather than a refinement: it is what turns a fatal cache into
+a beneficial one, and it is why peak host memory is set by the largest single stage instead of by
+every encoded weight in the block. The rest of this section reports the same class of work ---
+when host data are prepared, how long they stay resident, and where CPU work executes --- under one
+discipline, stated next.
+
+Every change in this section holds the encrypted circuit fixed. The retained implementation
 executes the same $156$ dense products, $177{,}734$ ciphertext--plaintext multiplications,
 $1{,}506$ ciphertext--ciphertext multiplications, $8{,}173$ rotations, and $857$ client boundary
-crossings before and after optimization. Packing, multiplicative depth, boundary order, and the
+crossings before and after the change. Packing, multiplicative depth, boundary order, and the
 frozen plaintext reference are also unchanged. These properties are enforced at run time: the
 implementation compares the observed schedule and boundary counts with their expected values,
-checks the remaining depth before the MLP, and aborts on any deviation. The repository does not
-contain the clean timing artifacts needed for an elapsed-time comparison, so this section reports
-the verified changes in work and memory.
+checks the remaining depth before the MLP, and aborts on any deviation.
 
-This invariant separates systems work from circuit simplification. None of the retained changes
-removes a dense transform, reduces the number of attention tiles, moves linear algebra to the
-client, or relaxes the acceptance criterion. Each instead changes when host data are prepared,
-how long they remain resident, or where CPU work executes. The asserted schedule establishes that
-the retained implementation preserves the encrypted arithmetic while changing these systems paths.
+That invariant is what makes the changes attributable to systems work rather than to a cheaper
+circuit, and it is asserted rather than argued. None of the retained changes removes a dense
+transform, reduces the number of attention tiles, moves linear algebra to the client, or relaxes
+the acceptance criterion. This section consequently reports verified changes in executed work and
+in memory, and no elapsed-time comparison: no dedicated-node measurement of the pre-optimization
+configuration exists, and a speedup quoted against a contended baseline would not be a measurement
+of these changes. The complete-model timings in Section~\ref{sec:results} come from the retained
+implementation only.
 
 \subsection{Host-side encoding redundancy}
 The baseline rebuilt and encoded every packed diagonal for every dense product. Its $156$ products
@@ -68,12 +82,9 @@ matrix at the same level. The cache therefore stores reusable encoded data, not 
 mutable GPU object, and leaves homomorphic multiplication itself unchanged.
 
 \subsection{Bounding host memory}
-Removing repeated encoding exchanges computation for host memory. An early cache retained
-templates from every completed stage, and the operating system terminated the process with an
-allocation failure when the MLP began constructing its templates on top of those retained from
-projection and attention.
-
-Two exact changes bound the cache. First, a template is encoded directly at its multiplicative
+Removing repeated encoding exchanges computation for host memory, and that is the trade named at
+the start of this section: an early cache retained templates from every completed stage and the
+process did not survive the MLP. Two exact changes bound the cache. First, a template is encoded directly at its multiplicative
 level of use, so it carries only the limbs needed by the receiving ciphertext. This changes no
 arithmetic because the backend would otherwise drop a level-$0$ plaintext to the same level before
 multiplication. Second, the implementation flushes the cache after query/key/value projection and
@@ -92,9 +103,11 @@ $25{,}530$~MiB. Attention begins after a flush and uses $12{,}434$~MiB. The MLP 
 matrices and reaches the block peak of $48{,}610$~MiB. The largest live stage, rather than every
 encoded weight in the block, determines peak host memory.
 
-% fig_memory.pdf is temporarily excluded pending unit correction and regeneration; see
-% paper-docs/TODO.md.
-
+\begin{figure}[tb]\centering
+  \includegraphics[width=0.86\textwidth]{fig_memory.pdf}
+  \caption{Flushing the encoded-plaintext cache between stages bounds peak host memory to the largest single stage rather than the whole block. Without the flush the cache grew until the operating system killed the process.}
+  \label{fig:memory}
+\end{figure}
 
 \subsection{Placement and parallelism}
 Plaintext preparation also depends on where host work runs. The retained implementation binds
@@ -113,8 +126,10 @@ while batching exposes independent diagonals to the available cores. Together th
 preparation a core-local parallel batch under the same cryptographic parameters.
 
 \begin{table}[t]\centering\small
-\caption{The optimization campaign. Every row leaves the operation schedule, packing,
-multiplicative depth, and frozen plaintext reference unchanged.}
+\caption{Host-side changes at fixed circuit. Every row leaves the operation schedule, packing,
+multiplicative depth, and frozen plaintext reference unchanged. Effects are verified changes in
+executed work or in memory; the table carries no elapsed-time column, because no dedicated-node
+measurement of the pre-optimization configuration exists.}
 \label{tab:optimization}
 \begin{tabularx}{\textwidth}{Y l l}
 \toprule
@@ -131,11 +146,12 @@ Encode at use level, flush between stages & peak $48{,}610$~MiB RSS & enabling \
 \end{tabularx}
 \end{table}
 
-% fig_waterfall.pdf is temporarily excluded pending clean endpoint evidence and regeneration;
-% see paper-docs/TODO.md.
+% No waterfall figure: it needs two supported timing endpoints, and the pre-optimization
+% baseline has no committed dedicated-node measurement. The generator is retained in
+% scripts/figures.py but is not registered in FIGURES.
 
 \subsection{Remaining optimization targets}
-Mask plaintexts are still encoded afresh at $17{,}400$ uses per block. Head masks,
+Mask plaintexts are still encoded afresh at approximately $17{,}400$ uses per block. Head masks,
 score-isolation masks, lane masks, and copy-activity masks all have fixed values under the declared
 layout, so host templates could remove the same class of repeated work already eliminated for
 weight diagonals. This target remains unimplemented.
@@ -144,9 +160,10 @@ A second opportunity lies in the four packed activation copies. They currently c
 through a dense transform. An analyzed layout would apply distinct transforms to those copies,
 placing query, key, and value projections together and likewise combining the MLP expansion
 chunks. At fixed model arithmetic, the projected schedule reduces dense products from $156$ to
-$52$ and dense ciphertext--plaintext multiplications from $159{,}744$ to $53{,}248$; the total
-ciphertext--plaintext count falls by $60\%$ before mask and copy-repair overhead. The layout
-requires an exact reconstruction proof before implementation.
+approximately $52$ and dense ciphertext--plaintext multiplications from $159{,}744$ to
+approximately $53{,}248$; the total ciphertext--plaintext count falls by roughly $60\%$ before mask
+and copy-repair overhead. This is a derived projection for an unimplemented layout, and it requires
+an exact reconstruction proof before implementation.
 
 Client work has a separate opportunity. Softmax accounts for $99.5\%$ of the values crossing the
 boundary, and each tile's cryptographic work is independent. Concurrent client boundaries were

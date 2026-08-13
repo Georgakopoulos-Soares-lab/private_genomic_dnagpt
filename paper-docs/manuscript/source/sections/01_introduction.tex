@@ -17,8 +17,10 @@ category~\cite{gdpr}. The same sequence is the input on which genomic foundation
 their value: DNAGPT serves classification, regression, and generation tasks through a common
 transformer backbone~\cite{dnagpt2023}. When that model is served rather than distributed, a data
 owner without accelerator hardware must otherwise disclose the sequence to the provider or forgo
-the inference. Homomorphic encryption offers a route for the provider to compute without receiving
-the genomic values in plaintext.
+the inference. Nor is handing over an embedding a way out: per-token embeddings from DNA foundation
+models have been shown to permit near-perfect reconstruction of the underlying
+sequence~\cite{dnaembeddinginversion2026}. Homomorphic encryption offers a route for the provider to
+compute without receiving the genomic values in plaintext.
 
 DNAGPT's public release makes the experiment auditable and also makes this particular artifact
 available for local execution. We use it as a reproducible surrogate for a genomic model offered
@@ -46,6 +48,19 @@ networks~\cite{thor,safhire2025}. Our contribution is not the invention of that 
 auditable account of the correctness, memory behavior, and executed work that result when the
 division is applied to a released genomic transformer.
 
+The cost comparison between those two directions does not favour the one studied here, and we
+state that before reporting our own numbers rather than after. THOR evaluates a $12$-layer,
+$768$-wide encoder at $128$ tokens on a single A100, at ring degree $2^{16}$, depth $13$, and
+$128$-bit security, in $602$~s with no client interaction at any point~\cite{thor}; MOAI reports a
+further reduction against it~\cite{moai2025}. Those are this study's cryptographic parameters, this
+study's accelerator, a comparable model shape, and a longer prompt. The complete encrypted
+inference reported below took $6683$~s and required an online key holder throughout, roughly an
+order of magnitude above THOR's reported figure. This paper therefore does not claim that client
+assistance is the cheap way to evaluate a transformer under encryption. It claims a different set
+of properties, and Section~\ref{sec:related} develops the comparison: the released nonlinearities
+are evaluated exactly rather than approximated, no homomorphic bootstrap is performed, and the
+decrypted prediction is checkable against a frozen plaintext reference for the released weights.
+
 We begin by establishing that the target computation is meaningful and independently reproducible.
 The released DNAGPT paths are evaluated across genomic-signal recognition, promoter and splice-site
 classification, and mRNA abundance regression, with task outputs frozen before encrypted work.
@@ -57,17 +72,24 @@ non-adaptive boundaries evaluate the released nonlinearities exactly. Instrument
 record where each design stops in correctness and memory, while runtime assertions preserve the
 complete cryptographic operation schedule throughout the systems campaign.
 
-The results separate the three candidate barriers. At the measured boundary defined in
-Section~\ref{sec:limitations}, the client-assisted output has relative error
-$4.64\times10^{-9}$ against a $4\times10^{-2}$ tolerance fixed before evaluation. Correctness is
-not the barrier. The non-interactive design completed a released-weight block, but its composition
-configuration exceeded the tested $80$~GB memory envelope while loading its context and evaluation
-keys. Client re-encryption moves that accelerator-memory barrier, and the retained process peaks at
-$9.6$~GiB of GPU memory. Bounded caching addresses a separate risk on the host by preventing encoded
-plaintexts from accumulating across stages. The systems campaign removes repeated host encoding on
-an unchanged, checked circuit, but the repository does not yet contain the clean timing evidence
-required for a latency claim. The demonstrated path is feasible at its stated scope; practicality
-remains unresolved.
+The results separate the three candidate barriers. The client-assisted design evaluates the
+complete model, all twelve released blocks and the released task head at the task's own prompt
+length, and reproduces the frozen plaintext label with $8.56\times10^{-9}$ relative margin error
+against a $4\times10^{-2}$ tolerance fixed before evaluation. Correctness is not the barrier. The
+non-interactive design completed a single released-weight block, but its composition configuration
+exceeded the tested $80$~GB memory envelope while loading its context and evaluation keys. Client
+re-encryption removes that accelerator-memory barrier rather than deferring it: multiplicative
+depth is bounded by the longest segment between two client boundaries instead of by network depth,
+so GPU memory stays at $9839$~MiB with no growth across the twelve blocks and the model needs no
+homomorphic bootstrap. That envelope was reached by the backend, packing, and parameters evaluated
+here, and other non-interactive implementations of comparable encoders do not report it, so the
+barrier removed is the one this configuration met rather than a general property of non-interactive
+CKKS. Bounded caching addresses a separate risk on the host by preventing encoded plaintexts
+from accumulating across stages, and is what allows the complete model to run without the host
+process being terminated. Cost is the barrier that remains: one encrypted classification
+was measured at $1.86$~hours on an A100 GPU node, in a single execution, which forecloses
+interactive use while leaving batch analysis available. That cost is not imposed by the
+accelerator, whose utilization never exceeds $51\%$.
 
 The paper makes the following contributions:
 
@@ -78,11 +100,14 @@ The paper makes the following contributions:
   \item It specifies a client-assisted CKKS transformer protocol with exact nonlinearities at
         fixed boundaries, including the packing, depth-reset mechanism, complete algorithms, and
         the corresponding semi-honest threat model.
-  \item It evaluates a complete released-weight transformer block at the task-defined prompt and
-        verifies its output against the frozen reference under a tolerance declared in advance.
-  \item It reports a systems campaign whose operation schedule is asserted as an invariant,
-        together with the bounded cache that controls host memory and the redundant encoding and
-        sequential-boundary work that remain.
+  \item It executes a complete released-weight model, twelve blocks and the task head, at the
+        task-defined prompt, and verifies the decrypted prediction against the frozen reference
+        under a tolerance declared in advance.
+  \item It reports host-side systems work carried out under a run-time assertion that the
+        encrypted operation schedule, packing, and depth are unchanged, including the bounded
+        plaintext cache that keeps host memory within the largest single stage and thereby makes
+        the complete run executable at all, and the redundant encoding and sequential-boundary
+        work that remain.
   \item It gives separate feasibility and practicality verdicts and names the measurements required
         to close a complete encrypted deployment.
 \end{itemize}

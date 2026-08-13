@@ -215,11 +215,17 @@ def fig_graphical_abstract(out: pathlib.Path) -> pathlib.Path:
         style="italic",
     )
 
+    # Every headline value below comes from the complete-model run, the only clean
+    # dedicated-node artifact. The earlier per-block timing and the client peak-memory
+    # figure are not used here because neither has committed dedicated-node evidence.
     results = [
         (f"{L.value('prompt.gsr_total')} tokens", "the full task prompt"),
-        (f"{L.value('block.encrypted_evaluation'):,.0f} s", "one transformer block"),
-        (r"$4.6\times10^{-9}$", "error vs. the plaintext model"),
-        (f"{L.value('client.peak_ram')} GB", "peak client memory, no GPU"),
+        (f"{L.value('full.wall_hours')} h", "one complete encrypted inference"),
+        (r"$8.56\times10^{-9}$", "margin error vs. the plaintext model"),
+        (
+            f"{L.value('full.client_share_of_eval')}\\%",
+            "the data owner's share, CPU only",
+        ),
     ]
     for i, (big, small) in enumerate(results):
         labelled_box(
@@ -291,7 +297,7 @@ def fig_architecture(out: pathlib.Path) -> pathlib.Path:
     ax.text(
         54,
         92.0,
-        "holds the model  ·  sees only ciphertexts  ·  one A100",
+        "holds the model  ·  no plaintext activation, no secret key  ·  one A100",
         fontsize=10.2,
         color=GRAY,
         va="center",
@@ -664,61 +670,44 @@ def fig_waterfall(out: pathlib.Path) -> pathlib.Path:
 
 
 def fig_timeline(out: pathlib.Path) -> pathlib.Path:
-    tel = load("telemetry")
-    trace, stages = tel["trace"], tel["stages"]
+    """Resource trace of the complete encrypted inference.
+
+    Drawn from the complete-model run, which is the only clean dedicated-node artifact. The
+    earlier per-block stage trace came from a shared partition and is therefore not plotted.
+    """
+    tel = load("telemetry")["complete_model_trace"]
+    trace = tel["trace"]
     total = tel["meta"]["total_wall_s"]
 
     t = np.array([r["t_s"] for r in trace], dtype=float)
     gpu_pct = np.array([r["gpu_pct"] for r in trace], dtype=float)
-    rss = np.array([r["rss_mib"] for r in trace], dtype=float) / 1024.0
-    gpu_mem = np.array([r["gpu_mib"] for r in trace], dtype=float) / 1024.0
+    rss = np.array([r["rss_mib"] for r in trace], dtype=float)
+    gpu_mem = np.array([r["gpu_mib"] for r in trace], dtype=float)
 
-    fig, (axl, ax1, ax2) = plt.subplots(
-        3,
+    fig, (ax1, ax2) = plt.subplots(
+        2,
         1,
-        figsize=(13.4, 7.8),
+        figsize=(13.4, 7.0),
         dpi=DPI,
         sharex=True,
-        gridspec_kw={"height_ratios": [0.30, 1.15, 1.0], "hspace": 0.10},
+        gridspec_kw={"height_ratios": [1.0, 1.0], "hspace": 0.12},
     )
 
-    band = {"server": SERVER_PALE, "client": CLIENT_PALE, "mixed": PALE_ORANGE}
+    # No block-boundary guides: the twelve cycles are legible in the data itself, and drawn
+    # boundaries would be nominal (equal division) rather than measured start times.
 
-    # Dedicated label lane, so stage names can never collide with the plots.
-    axl.set_ylim(0, 1)
-    axl.axis("off")
-    for i, st in enumerate(stages):
-        axl.axvspan(
-            st["start_s"],
-            st["end_s"],
-            color=band[st["executor"]],
-            alpha=0.75,
-            linewidth=0,
-        )
-        axl.text(
-            (st["start_s"] + st["end_s"]) / 2,
-            0.5 if i % 2 == 0 else 0.5,
-            st["label"].replace(" + ", "\n"),
-            ha="center",
-            va="center",
-            fontsize=8.2,
-            color=BLACK,
-            linespacing=1.2,
-        )
-
-    for ax in (ax1, ax2):
-        for st in stages:
-            ax.axvspan(
-                st["start_s"],
-                st["end_s"],
-                color=band[st["executor"]],
-                alpha=0.5,
-                linewidth=0,
-                zorder=0,
-            )
-
-    ax1.plot(
-        t, gpu_pct, color=NAVY, linewidth=2.2, marker="o", markersize=3.6, zorder=3
+    ax1.plot(t, gpu_pct, color=NAVY, linewidth=1.7, zorder=3)
+    # 51 is the maximum over all 653 samples; the plotted curve is thinned, so its own visible
+    # maximum is lower. Label the line for what it is to avoid implying the curve reaches it.
+    ax1.axhline(51, color=GRAY, linewidth=1.1, linestyle="--", zorder=2)
+    ax1.text(
+        total * 0.995,
+        53,
+        "51% — maximum over the full 653-sample trace",
+        color=GRAY,
+        fontsize=9.6,
+        ha="right",
+        va="bottom",
     )
     ax1.set_ylabel("GPU utilization (%)", fontsize=11)
     ax1.set_ylim(0, 100)
@@ -726,72 +715,41 @@ def fig_timeline(out: pathlib.Path) -> pathlib.Path:
     ax1.grid(axis="y", color=LIGHT_GRAY, linewidth=0.8)
     ax1.set_axisbelow(True)
 
-    idle = [r for r in trace if r["stage"] == "attention_context"]
-    if idle:
-        mid = idle[len(idle) // 2]
-        ax1.annotate(
-            "GPU idle while the data owner\nevaluates the attention weights",
-            xy=(mid["t_s"], mid["gpu_pct"] + 1.5),
-            xytext=(150, 68),
-            fontsize=10.5,
-            color=CLIENT,
-            fontweight="bold",
-            ha="left",
-            arrowprops=dict(
-                arrowstyle="-|>",
-                color=CLIENT,
-                linewidth=1.5,
-                connectionstyle="arc3,rad=-0.25",
-            ),
-        )
-
-    ax2.plot(
-        t,
-        rss,
-        color=CHART_BLUE,
-        linewidth=2.2,
-        marker="o",
-        markersize=3.6,
-        label="host memory",
-        zorder=3,
-    )
+    ax2.plot(t, rss, color=CHART_BLUE, linewidth=1.7, label="host memory", zorder=3)
     ax2.plot(
         t,
         gpu_mem,
         color=GREEN,
-        linewidth=1.9,
+        linewidth=1.7,
         linestyle="--",
-        marker="s",
-        markersize=3.0,
         label="GPU memory",
         zorder=3,
     )
-    ax2.set_ylabel("Memory (GiB)", fontsize=11)
+    ax2.set_ylabel("Memory (MiB)", fontsize=11)
     ax2.set_xlabel("Seconds since process start", fontsize=11)
 
     fail = Ledger().value("mem.unbounded_failure")
-    ax2.set_ylim(0, fail * 1.30)
-    ax2.set_yticks([0, 20, 40, 60])
+    ax2.set_ylim(0, fail * 1.22)
     ax2.axhline(fail, color=FAILURE, linewidth=1.3, linestyle=":")
     ax2.text(
         total * 0.995,
-        fail * 1.04,
-        f"{fail} GiB — where the unbounded cache was killed",
+        fail * 1.02,
+        f"{fail:,} MiB — where the unbounded cache was killed",
         color=FAILURE,
         fontsize=9.2,
         ha="right",
         va="bottom",
     )
     ax2.legend(
-        frameon=False, fontsize=10, loc="upper left", ncol=2, bbox_to_anchor=(0.0, 1.02)
+        frameon=False, fontsize=10, loc="upper left", ncol=2, bbox_to_anchor=(0.0, 1.04)
     )
     despine(ax2)
     ax2.grid(axis="y", color=LIGHT_GRAY, linewidth=0.8)
     ax2.set_axisbelow(True)
 
     ax1.set_xlim(0, total)
-    axl.set_title(
-        "The evaluation is not GPU-bound, and the memory curve is the caching strategy",
+    ax1.set_title(
+        "Twelve blocks cost what one block costs, and the GPU is never the limit",
         fontsize=13,
         fontweight="bold",
         color=BLACK,
@@ -811,7 +769,7 @@ def fig_memory(out: pathlib.Path) -> pathlib.Path:
         for o in load("optimizations")["retained"]
         if o["id"] == "opt.bounded_host_memory"
     )
-    values = bounded["effect_gib"]
+    values = bounded["effect_mib"]
     labels = [
         "Query / key / value\n3 weight matrices resident",
         "Attention\nnone resident",
@@ -825,8 +783,8 @@ def fig_memory(out: pathlib.Path) -> pathlib.Path:
     for b, v in zip(bars, values):
         ax.text(
             b.get_x() + b.get_width() / 2,
-            v + 1.1,
-            f"{v} GiB",
+            v + 1100,
+            f"{v:,} MiB",
             ha="center",
             va="bottom",
             fontsize=12.5,
@@ -837,8 +795,8 @@ def fig_memory(out: pathlib.Path) -> pathlib.Path:
     ax.axhline(fail, color=FAILURE, linewidth=1.6, linestyle="--", zorder=2)
     ax.text(
         2.52,
-        fail - 1.4,
-        f"{fail} GiB — the unbounded cache\nwas killed by the operating system",
+        fail - 1400,
+        f"{fail:,} MiB — the unbounded cache\nwas killed by the operating system",
         color=FAILURE,
         fontsize=9.8,
         ha="right",
@@ -848,7 +806,7 @@ def fig_memory(out: pathlib.Path) -> pathlib.Path:
 
     ax.set_xticks(range(3))
     ax.set_xticklabels(labels, fontsize=10.5)
-    ax.set_ylabel("Peak host memory (GiB)", fontsize=11)
+    ax.set_ylabel("Peak host memory (MiB)", fontsize=11)
     ax.set_ylim(0, fail * 1.22)
     ax.set_xlim(-0.62, 2.62)
     despine(ax)
@@ -867,15 +825,17 @@ def fig_memory(out: pathlib.Path) -> pathlib.Path:
 
 
 def fig_cost_split(out: pathlib.Path) -> pathlib.Path:
+    # The complete-model run is the only clean dedicated-node timing artifact, so the split is
+    # drawn from it rather than from the single block.
     L = Ledger()
-    server = L.value("block.server_linear_algebra")
-    client = L.value("block.client_boundaries")
-    setup = L.value("block.context_keygen_load") + L.value("block.encrypt_input")
-    tail = L.value("block.final_decrypt") + L.value("block.fixture_load")
-    other = setup + tail
-    wall = L.value("block.wall")
-    crossings = L.value("ops.client_crossings_physical")
-    ram = L.value("client.peak_ram")
+    server = L.value("full.server_linear_algebra")
+    client = L.value("full.client_boundaries")
+    setup = L.value("full.context_keygen_load") + L.value("full.encrypt_input")
+    tail = L.value("full.final_decrypt") + L.value("full.fixture_load")
+    other = setup + tail + L.value("full.uninstrumented_remainder")
+    wall = L.value("full.wall")
+    crossings = L.value("full.crossings_physical")
+    gpu_mib = L.value("full.gpu_peak_mib")
 
     fig, (ax, axr) = plt.subplots(
         1,
@@ -908,7 +868,7 @@ def fig_cost_split(out: pathlib.Path) -> pathlib.Path:
             ax.text(
                 left + val / 2,
                 0.02,
-                f"{val:,.0f} s\n{100 * val / wall:.1f}%",
+                f"{val:,.0f} s\n{100 * val / wall:.1f}% of wall",
                 ha="center",
                 va="center",
                 fontsize=12.5,
@@ -948,14 +908,21 @@ def fig_cost_split(out: pathlib.Path) -> pathlib.Path:
     ax.text(
         1.0,
         -0.155,
-        f"setup, encryption and final decrypt account for the remaining {other:.1f} s",
+        f"setup, encryption, final decrypt and uninstrumented time account for the "
+        f"remaining {other:.0f} s",
         transform=ax.transAxes,
         fontsize=9.2,
         color=GRAY,
         ha="right",
         va="top",
     )
-    title(ax, f"One transformer block, 103 tokens — {wall:,.0f} s wall clock")
+    title(
+        ax,
+        f"Complete encrypted inference, 12 blocks and task head at 103 tokens — "
+        f"{wall:,.0f} s wall clock",
+        "One execution on an uncontended node. Server and client shares sum exactly to "
+        "encrypted evaluation.",
+    )
 
     axr.axis("off")
     axr.set_xlim(0, 100)
@@ -967,7 +934,7 @@ def fig_cost_split(out: pathlib.Path) -> pathlib.Path:
         98,
         34,
         "Data owner",
-        f"{client:,.0f} s  \u00b7  no GPU  \u00b7  ~{ram} GB peak memory\n"
+        f"{client:,.0f} s  \u00b7  no GPU  \u00b7  CPU only\n"
         f"holds the genome and the secret key",
         facecolor=CLIENT_PALE,
         edgecolor=CLIENT,
@@ -981,8 +948,8 @@ def fig_cost_split(out: pathlib.Path) -> pathlib.Path:
         98,
         34,
         "Compute provider",
-        f"{server:,.0f} s  \u00b7  one A100 GPU\n"
-        f"holds the model; observes only ciphertexts",
+        f"{server:,.0f} s  \u00b7  one A100  \u00b7  {gpu_mib:,} MiB peak\n"
+        f"holds the model; sees no plaintext, no secret key",
         facecolor=SERVER_PALE,
         edgecolor=SERVER,
         title_size=14,
@@ -990,7 +957,12 @@ def fig_cost_split(out: pathlib.Path) -> pathlib.Path:
     )
     arrow(axr, 50, 55, 50, 41, color=GRAY, lw=1.6, style="<|-|>")
     axr.text(
-        53, 48, f"{crossings} boundary crossings", fontsize=9.8, color=GRAY, va="center"
+        53,
+        48,
+        f"{crossings:,} boundary crossings",
+        fontsize=9.8,
+        color=GRAY,
+        va="center",
     )
 
     return emit(fig, out, "fig_cost_split")
@@ -1000,58 +972,68 @@ def fig_cost_split(out: pathlib.Path) -> pathlib.Path:
 
 
 def fig_scaling(out: pathlib.Path) -> pathlib.Path:
-    """Per-block cost across the encrypted-scope tasks, anchored on the one measured point."""
+    """Circuit size across the encrypted-scope tasks, with the one measured inference marked.
+
+    This plots circuit size, not time. Per-task time estimates were removed from the ledger:
+    they were built from per-block timings measured on a shared partition, which the manuscript
+    may not use. Only genomic signal recognition has a measured complete inference.
+    """
     sc = load("scaling")
     tasks = list(reversed(sc["tasks"]))  # longest prompt at the top
     names = [t["name"] for t in tasks]
-    secs = [t["block_seconds"] for t in tasks]
+    tiles = [t["causal_score_tiles"] for t in tasks]
     toks = [t["tokens"] for t in tasks]
     groups = [t["token_groups"] for t in tasks]
-    passes = [t["full_pass_human"] for t in tasks]
-    measured = [t["block_tag"] == "[V]" for t in tasks]
+    measured = [t.get("full_pass_tag") == "[V]" for t in tasks]
 
     y = np.arange(len(tasks))
-    fig, ax = plt.subplots(figsize=(11.4, 5.6), dpi=DPI)
+    fig, ax = plt.subplots(figsize=(11.4, 5.4), dpi=DPI)
 
-    for i, (sv, m) in enumerate(zip(secs, measured)):
+    for i, (tv, m) in enumerate(zip(tiles, measured)):
         ax.barh(
             i,
-            sv,
+            tv,
             height=0.56,
             facecolor=SERVER if m else "white",
             edgecolor=SERVER if m else GRAY,
             linewidth=1.6 if m else 1.2,
             hatch=None if m else "///",
-            alpha=1.0 if m else 0.9,
             zorder=3,
         )
         ax.text(
-            sv + max(secs) * 0.018,
+            tv + max(tiles) * 0.018,
             i,
-            f"{sv:,.0f} s",
+            f"{tv:,} score tiles",
             va="center",
             ha="left",
-            fontsize=11.5,
+            fontsize=11.0,
             fontweight="bold" if m else "normal",
             color=BLACK if m else GRAY,
         )
-        ax.text(
-            sv + max(secs) * 0.115,
-            i,
-            f"·  twelve blocks {passes[i]}",
-            va="center",
-            ha="left",
-            fontsize=9.6,
-            color=GRAY,
-        )
+
+    anchor = next(t for t in tasks if t.get("full_pass_tag") == "[V]")
+    ai = names.index(anchor["name"])
+    ax.text(
+        max(tiles) * 0.035,
+        ai,
+        f"measured complete inference: {anchor['full_pass_human']}",
+        va="center",
+        ha="left",
+        fontsize=10.2,
+        color="white",
+        fontweight="bold",
+    )
 
     ax.set_yticks(y)
     ax.set_yticklabels(
         [f"{n}\n{tk} tokens · {g} groups" for n, tk, g in zip(names, toks, groups)],
         fontsize=10.2,
     )
-    ax.set_xlabel("Time per transformer block (s)", fontsize=11)
-    ax.set_xlim(0, max(secs) * 1.42)
+    ax.set_xlabel(
+        "Causal attention score tiles per block  (lower-triangular group pairs)",
+        fontsize=11,
+    )
+    ax.set_xlim(0, max(tiles) * 1.52)
     ax.set_ylim(-0.62, len(tasks) - 0.30)
     despine(ax, keep=("bottom",))
     ax.grid(axis="x", color=LIGHT_GRAY, linewidth=0.8)
@@ -1059,30 +1041,32 @@ def fig_scaling(out: pathlib.Path) -> pathlib.Path:
 
     ax.legend(
         handles=[
-            Patch(facecolor=SERVER, edgecolor=SERVER, label="measured"),
+            Patch(
+                facecolor=SERVER, edgecolor=SERVER, label="complete inference measured"
+            ),
             Patch(
                 facecolor="white",
                 edgecolor=GRAY,
                 hatch="///",
-                label="projected at fixed circuit",
+                label="circuit size only, not timed",
             ),
         ],
         frameon=False,
-        fontsize=10,
+        fontsize=9.6,
         loc="lower right",
-        bbox_to_anchor=(1.0, 1.005),
-        ncol=2,
+        bbox_to_anchor=(1.0, 0.02),
+        ncol=1,
     )
 
     excl = sc["out_of_encrypted_scope"][0]
     ax.text(
         0.0,
         -0.185,
-        f"Excluded: mRNA abundance regression at {excl['tokens']:,} tokens needs "
-        f"{excl['token_groups']} ciphertext groups and roughly 48,000 causal score "
-        f"tiles — a different problem, not a longer one.",
+        f"Outside the encrypted scope: {excl['name']} needs {excl['tokens']:,} tokens and "
+        f"{excl['token_groups']} groups, or {excl['causal_score_tiles']:,} score tiles — "
+        f"a different regime, not a longer prompt.",
         transform=ax.transAxes,
-        fontsize=9.2,
+        fontsize=9.4,
         color=GRAY,
         ha="left",
         va="top",
@@ -1090,9 +1074,9 @@ def fig_scaling(out: pathlib.Path) -> pathlib.Path:
 
     title(
         ax,
-        "The task that was measured is the longest one",
-        "Token counts follow from the task: base pairs divided by six, plus task specials. "
-        "The twelve-block figures are projections.",
+        "Prompt length sets circuit size quadratically",
+        "Token count grows linearly with the task window; the causal schedule grows with the "
+        "square of the ciphertext-group count.",
     )
     return emit(fig, out, "fig_scaling")
 
@@ -1202,7 +1186,10 @@ FIGURES = {
     "graphical_abstract": fig_graphical_abstract,
     "architecture": fig_architecture,
     "packing": fig_packing,
-    "waterfall": fig_waterfall,
+    # "waterfall" is deliberately not generated. It needs two supported timing endpoints, and
+    # the pre-optimization baseline has no committed dedicated-node measurement -- only an
+    # attested value (see open_provenance in optimizations.yaml). The generator is kept so the
+    # figure can be restored if that measurement ever lands.
     "timeline": fig_timeline,
     "memory": fig_memory,
     "cost_split": fig_cost_split,

@@ -44,7 +44,7 @@ Polyadenylation-signal recognition$^{\ddagger}$ & accuracy & 0.9124 & 0.9151 & \
 Core promoter detection & MCC & 0.680 & 0.69 & \citet{dnabert2} \\
 300\,bp promoter detection & MCC & 0.897 & 0.87 & \citet{dnabert2} \\
 Splice-site classification & MCC & 0.831 & 0.85 & \citet{dnabert2} \\
-mRNA abundance regression$^{\dagger}$ & $r^2$ & 0.562 & 0.62 & \citet{dnagpt2023} \\
+mRNA abundance regression$^{\dagger\S}$ & $r^2$ & 0.562 & 0.62 & \citet{dnagpt2023} \\
  & Pearson $r$ & 0.753 & --- & \\
 \bottomrule
 \end{tabularx}
@@ -53,7 +53,10 @@ mRNA abundance regression$^{\dagger}$ & $r^2$ & 0.562 & 0.62 & \citet{dnagpt2023
 measured on a held-out quarter of the set; this work evaluates all $22{,}604$ examples. The
 comparison is same-model but not same-split.\\
 $^{\dagger}$Model-fidelity evidence only. This task is outside the encrypted
-scope; see Section~\ref{sec:limitations}.}
+scope; see Section~\ref{sec:limitations}.\\
+$^{\S}$The released regression head evaluated here is fine-tuned from the human-pretrained
+$0.1$B variant, while the reference is reported for the mammal-pretrained variant, so the
+backbones differ.}
 \end{table}
 
 \begin{figure}[tb]\centering
@@ -67,8 +70,9 @@ regression tasks. On the complete polyadenylation-signal test set of $22{,}604$ 
 released classifier reaches $0.9124$ accuracy and $0.916$ F1, against the $0.9151$ accuracy
 \citet{dnagpt2023} report for this model class on a held-out quarter of that set. The locally
 fine-tuned understanding-benchmark heads reach MCC $0.680$, $0.897$, and $0.831$ on core-promoter,
-promoter, and splice-site detection, against the $0.69$, $0.87$, and $0.85$ reported by
-\citet{dnabert2} on the same splits. The released abundance-regression head reaches $r^2=0.562$
+promoter, and splice-site detection, against the $0.69$, $0.87$, and $0.85$ that \citet{dnabert2}
+report for DNABERT-2 itself on the same splits; other models in that benchmark score higher on two
+of the three. The released abundance-regression head reaches $r^2=0.562$
 and Pearson $r=0.753$, against the $0.62$ \citet{dnagpt2023} report over the \citet{xpresso}
 regression baseline. These results establish model fidelity; encrypted evaluation is still
 required to establish cryptographic feasibility.

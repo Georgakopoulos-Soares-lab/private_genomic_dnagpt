@@ -8,14 +8,15 @@
 % environments for the threat model.
 % ---------------------------------------------------------------------------
 
-% Latin Modern before fontenc: the default CM fonts have no T1 bold small-caps, which
-% the \scshape\bfseries section headings below request. Without this the engine
-% substitutes silently and the headings lose their weight.
+% Latin Modern gives proper T1 outlines rather than the bitmap CM defaults.
 \usepackage{lmodern}
 \usepackage[T1]{fontenc}
-% Latin Modern ships bold small-caps as series "b", not the "bx" that \bfseries
-% requests, so map one onto the other rather than let the engine substitute.
-\DeclareFontShape{T1}{lmr}{bx}{sc}{<->ssub*lmr/b/sc}{}
+% Neither CM nor Latin Modern ships bold small-caps, so the \bfseries\scshape section
+% headings below have always silently rendered as bold upright. Declaring that
+% substitution explicitly changes nothing on the page and stops the warning. If real
+% bold small-caps headings are wanted, that needs a different text font, which would
+% change the house look this preamble deliberately shares with the previous submission.
+\DeclareFontShape{T1}{lmr}{bx}{sc}{<->ssub*lmr/bx/n}{}
 \usepackage[utf8]{inputenc}
 \usepackage{cmap}
 \ifdefined\pdfgentounicode \input{glyphtounicode} \pdfgentounicode=1 \fi
