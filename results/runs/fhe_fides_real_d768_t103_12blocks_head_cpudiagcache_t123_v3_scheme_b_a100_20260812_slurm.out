@@ -1,0 +1,39 @@
+=================== kimon config3 e2e T123_V3 (monitored, SLURM batch) ===================
+job=3359783 node=c315-016.ls6.tacc.utexas.edu omp=32 proc_bind=close places=cores
+gpu = 0, NVIDIA A100-PCIE-40GB, 40960 MiB, 0 MiB, 0 %
+gpu = 1, NVIDIA A100-PCIE-40GB, 40960 MiB, 0 MiB, 0 %
+gpu = 2, NVIDIA A100-PCIE-40GB, 40960 MiB, 0 MiB, 0 %
+============================================================================================
+wall_clock_s=6683
+--- run.log (tail) ---
+[  6681 s]     "nonlinearity_round_trips": 10286,
+[  6681 s]     "full_hidden_state_refresh_round_trips": 11,
+[  6681 s]     "last_token_refresh_round_trips": 1,
+[  6681 s]     "head_silu_round_trips": 1,
+[  6681 s]     "logical_boundary_instances": 1551081,
+[  6681 s]     "boundary_seconds_total": 956.18700772400064
+[  6681 s]   },
+[  6681 s]   "timings_seconds": {
+[  6681 s]     "load_verified_fixture": 23.494043551999997,
+[  6681 s]     "context_keygen_load": 3.9446968309999999,
+[  6681 s]     "encrypt_embedded_inputs": 1.2648516860000001,
+[  6681 s]     "blocks_encrypted_evaluation": 6565.9929350470011,
+[  6681 s]     "head_encrypted_evaluation": 9.045895324,
+[  6681 s]     "refreshes": 19.709652826999999,
+[  6681 s]     "encrypted_evaluation": 6594.7484831980018,
+[  6681 s]     "client_boundary_seconds_total": 956.18700772400064,
+[  6681 s]     "server_linear_algebra_seconds": 5638.5614754740009,
+[  6681 s]     "final_decrypt": 0.043833214000000002
+[  6681 s]   },
+[  6681 s]   "all_finite": true,
+[  6681 s]   "tol": 0.040000000000000001,
+[  6681 s]   "passed": true,
+[  6681 s]   "input_boundary": "token plus position embeddings encrypted by client",
+[  6681 s]   "intermediate_decrypt_attempts": 0,
+[  6681 s]   "declared_client_boundary_crossings": 10299,
+[  6681 s]   "declared_logical_boundary_instances": 1551081,
+[  6681 s]   "final_decrypt_calls": 1,
+[  6681 s]   "evaluator_has_private_key": false
+[  6681 s] }
+[  6681 s] REAL_DNAGPT_FIDES_SCHEME_B_ALL_BLOCKS_HEAD_T103_CPUDIAGCACHE_T123_V3_PASS
+[PASS] config3 e2e T123_V3 (monitored) -> /scratch/10899/kimopro/private_genomic_dnagpt/kimon/logs/config3_all_opts/fhe_c3_allopts_e2e_t123_v3_monitored_scheme_b_all_blocks_head_t103_cpudiagcache_t123_v3_a100_3359783/fhe_c3_allopts_e2e_t123_v3_monitored_scheme_b_all_blocks_head_t103_cpudiagcache_t123_v3_a100_3359783.json

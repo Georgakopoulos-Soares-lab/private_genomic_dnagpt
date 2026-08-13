@@ -2066,6 +2066,9 @@ runs:
       fixture_manifest_sha256: "2b39c40c56af8bdd596a903405c052a40a59c1258937a442f15f5d53697d787a"
       fixture_contract_sha256: "21256363bd81e142f8564517c4c4e3e8c424def5551baf51e8f59d4ca407b16c"
       telemetry_csv: "results/runs/fhe_fides_real_d768_t103_12blocks_head_cpudiagcache_t123_v3_scheme_b_a100_20260812_telemetry.csv"
+      run_log: "results/runs/fhe_fides_real_d768_t103_12blocks_head_cpudiagcache_t123_v3_scheme_b_a100_20260812_run.log"
+      slurm_stdout: "results/runs/fhe_fides_real_d768_t103_12blocks_head_cpudiagcache_t123_v3_scheme_b_a100_20260812_slurm.out"
+      slurm_stderr: "results/runs/fhe_fides_real_d768_t103_12blocks_head_cpudiagcache_t123_v3_scheme_b_a100_20260812_slurm.err"
     verdict: >
       [V] PASS -- the first complete, task-length encrypted DNAGPT forward
       pass in this project: all 12 released transformer blocks plus the

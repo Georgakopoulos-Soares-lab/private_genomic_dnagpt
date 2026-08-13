@@ -1,0 +1,2064 @@
+[     1 s] [platform-contract] run_scheme_b_all_blocks_head_t103_cpudiagcache_t123_v3.sh -> fixture_all_blocks_head_t103.sha256
+[    41 s] [stage] GenCryptoContext done
+[    41 s] [stage] KeyGen done
+[    42 s] [stage] EvalRotateKeyGen done rotation_keys=80
+[    42 s] GPU 0: NVIDIA A100-PCIE-40GB
+[    42 s]  SMs: 108, SharedMem: 164 KB, Blocks/SM: 32, Threads/SM: 2048, L2 size: 40 MB, Bus: 5120-bit
+[    42 s] GPU 1: NVIDIA A100-PCIE-40GB
+[    42 s]  SMs: 108, SharedMem: 164 KB, Blocks/SM: 32, Threads/SM: 2048, L2 size: 40 MB, Bus: 5120-bit
+[    42 s] GPU 2: NVIDIA A100-PCIE-40GB
+[    42 s]  SMs: 108, SharedMem: 164 KB, Blocks/SM: 32, Threads/SM: 2048, L2 size: 40 MB, Bus: 5120-bit
+[    45 s] [stage] context ready ring=65536 slots=32768 token_batch=8
+[    46 s] [stage] initial encryption done token_groups=13
+[    46 s] [stage] block=0 begin
+[    46 s] [boundary] ln1 logical=8
+[    55 s] [stage] qkv group=0 active=8 level=3
+[    55 s] [boundary] ln1 logical=8
+[    61 s] [stage] qkv group=1 active=8 level=3
+[    61 s] [boundary] ln1 logical=8
+[    67 s] [stage] qkv group=2 active=8 level=3
+[    68 s] [boundary] ln1 logical=8
+[    74 s] [stage] qkv group=3 active=8 level=3
+[    74 s] [boundary] ln1 logical=8
+[    80 s] [stage] qkv group=4 active=8 level=3
+[    80 s] [boundary] ln1 logical=8
+[    86 s] [stage] qkv group=5 active=8 level=3
+[    86 s] [boundary] ln1 logical=8
+[    93 s] [stage] qkv group=6 active=8 level=3
+[    93 s] [boundary] ln1 logical=8
+[    99 s] [stage] qkv group=7 active=8 level=3
+[    99 s] [boundary] ln1 logical=8
+[   106 s] [stage] qkv group=8 active=8 level=3
+[   106 s] [boundary] ln1 logical=8
+[   112 s] [stage] qkv group=9 active=8 level=3
+[   112 s] [boundary] ln1 logical=8
+[   118 s] [stage] qkv group=10 active=8 level=3
+[   119 s] [boundary] ln1 logical=8
+[   125 s] [stage] qkv group=11 active=8 level=3
+[   125 s] [boundary] ln1 logical=7
+[   131 s] [stage] qkv group=12 active=7 level=3
+[   134 s] [stage] score tile q=0 k=0
+[   135 s] [stage] score tile q=1 k=0
+[   137 s] [stage] score tile q=2 k=0
+[   139 s] [stage] score tile q=3 k=0
+[   141 s] [stage] score tile q=4 k=0
+[   143 s] [stage] score tile q=5 k=0
+[   145 s] [stage] score tile q=6 k=0
+[   147 s] [stage] score tile q=7 k=0
+[   149 s] [stage] score tile q=8 k=0
+[   150 s] [stage] score tile q=9 k=0
+[   152 s] [stage] score tile q=10 k=0
+[   154 s] [stage] score tile q=11 k=0
+[   156 s] [stage] score tile q=12 k=0
+[   158 s] [stage] score tile q=1 k=1
+[   160 s] [stage] score tile q=2 k=1
+[   162 s] [stage] score tile q=3 k=1
+[   164 s] [stage] score tile q=4 k=1
+[   165 s] [stage] score tile q=5 k=1
+[   167 s] [stage] score tile q=6 k=1
+[   169 s] [stage] score tile q=7 k=1
+[   171 s] [stage] score tile q=8 k=1
+[   173 s] [stage] score tile q=9 k=1
+[   175 s] [stage] score tile q=10 k=1
+[   177 s] [stage] score tile q=11 k=1
+[   178 s] [stage] score tile q=12 k=1
+[   180 s] [stage] score tile q=2 k=2
+[   182 s] [stage] score tile q=3 k=2
+[   184 s] [stage] score tile q=4 k=2
+[   186 s] [stage] score tile q=5 k=2
+[   188 s] [stage] score tile q=6 k=2
+[   190 s] [stage] score tile q=7 k=2
+[   192 s] [stage] score tile q=8 k=2
+[   193 s] [stage] score tile q=9 k=2
+[   195 s] [stage] score tile q=10 k=2
+[   197 s] [stage] score tile q=11 k=2
+[   199 s] [stage] score tile q=12 k=2
+[   201 s] [stage] score tile q=3 k=3
+[   203 s] [stage] score tile q=4 k=3
+[   205 s] [stage] score tile q=5 k=3
+[   207 s] [stage] score tile q=6 k=3
+[   208 s] [stage] score tile q=7 k=3
+[   210 s] [stage] score tile q=8 k=3
+[   212 s] [stage] score tile q=9 k=3
+[   214 s] [stage] score tile q=10 k=3
+[   216 s] [stage] score tile q=11 k=3
+[   218 s] [stage] score tile q=12 k=3
+[   220 s] [stage] score tile q=4 k=4
+[   221 s] [stage] score tile q=5 k=4
+[   223 s] [stage] score tile q=6 k=4
+[   225 s] [stage] score tile q=7 k=4
+[   227 s] [stage] score tile q=8 k=4
+[   229 s] [stage] score tile q=9 k=4
+[   231 s] [stage] score tile q=10 k=4
+[   233 s] [stage] score tile q=11 k=4
+[   234 s] [stage] score tile q=12 k=4
+[   236 s] [stage] score tile q=5 k=5
+[   238 s] [stage] score tile q=6 k=5
+[   240 s] [stage] score tile q=7 k=5
+[   242 s] [stage] score tile q=8 k=5
+[   244 s] [stage] score tile q=9 k=5
+[   246 s] [stage] score tile q=10 k=5
+[   248 s] [stage] score tile q=11 k=5
+[   249 s] [stage] score tile q=12 k=5
+[   251 s] [stage] score tile q=6 k=6
+[   253 s] [stage] score tile q=7 k=6
+[   255 s] [stage] score tile q=8 k=6
+[   257 s] [stage] score tile q=9 k=6
+[   259 s] [stage] score tile q=10 k=6
+[   261 s] [stage] score tile q=11 k=6
+[   263 s] [stage] score tile q=12 k=6
+[   264 s] [stage] score tile q=7 k=7
+[   266 s] [stage] score tile q=8 k=7
+[   268 s] [stage] score tile q=9 k=7
+[   270 s] [stage] score tile q=10 k=7
+[   272 s] [stage] score tile q=11 k=7
+[   274 s] [stage] score tile q=12 k=7
+[   276 s] [stage] score tile q=8 k=8
+[   278 s] [stage] score tile q=9 k=8
+[   279 s] [stage] score tile q=10 k=8
+[   281 s] [stage] score tile q=11 k=8
+[   283 s] [stage] score tile q=12 k=8
+[   285 s] [stage] score tile q=9 k=9
+[   287 s] [stage] score tile q=10 k=9
+[   289 s] [stage] score tile q=11 k=9
+[   291 s] [stage] score tile q=12 k=9
+[   293 s] [stage] score tile q=10 k=10
+[   294 s] [stage] score tile q=11 k=10
+[   296 s] [stage] score tile q=12 k=10
+[   298 s] [stage] score tile q=11 k=11
+[   300 s] [stage] score tile q=12 k=11
+[   302 s] [stage] score tile q=12 k=12
+[   393 s] [boundary] ln2 logical=8
+[   412 s] [stage] block output group=0 level=6
+[   412 s] [boundary] ln2 logical=8
+[   426 s] [stage] block output group=1 level=6
+[   426 s] [boundary] ln2 logical=8
+[   440 s] [stage] block output group=2 level=6
+[   441 s] [boundary] ln2 logical=8
+[   454 s] [stage] block output group=3 level=6
+[   454 s] [boundary] ln2 logical=8
+[   468 s] [stage] block output group=4 level=6
+[   468 s] [boundary] ln2 logical=8
+[   482 s] [stage] block output group=5 level=6
+[   482 s] [boundary] ln2 logical=8
+[   496 s] [stage] block output group=6 level=6
+[   496 s] [boundary] ln2 logical=8
+[   509 s] [stage] block output group=7 level=6
+[   510 s] [boundary] ln2 logical=8
+[   523 s] [stage] block output group=8 level=6
+[   523 s] [boundary] ln2 logical=8
+[   537 s] [stage] block output group=9 level=6
+[   537 s] [boundary] ln2 logical=8
+[   550 s] [stage] block output group=10 level=6
+[   550 s] [boundary] ln2 logical=8
+[   565 s] [stage] block output group=11 level=6
+[   565 s] [boundary] ln2 logical=7
+[   580 s] [stage] block output group=12 level=6
+[   580 s] [stage] block=0 evaluation done evaluation_seconds=533.869 packed_output_level=6
+[   580 s] [boundary] refresh block=0->1 begin
+[   582 s] [boundary] refresh block=0->1 done global_rel_inf=4.09028e-09 passed=true
+[   582 s] [stage] block=0 end
+[   583 s] [stage] block=1 begin
+[   586 s] [boundary] ln1 logical=8
+[   595 s] [stage] qkv group=0 active=8 level=3
+[   595 s] [boundary] ln1 logical=8
+[   601 s] [stage] qkv group=1 active=8 level=3
+[   602 s] [boundary] ln1 logical=8
+[   608 s] [stage] qkv group=2 active=8 level=3
+[   608 s] [boundary] ln1 logical=8
+[   615 s] [stage] qkv group=3 active=8 level=3
+[   615 s] [boundary] ln1 logical=8
+[   621 s] [stage] qkv group=4 active=8 level=3
+[   622 s] [boundary] ln1 logical=8
+[   628 s] [stage] qkv group=5 active=8 level=3
+[   628 s] [boundary] ln1 logical=8
+[   634 s] [stage] qkv group=6 active=8 level=3
+[   634 s] [boundary] ln1 logical=8
+[   641 s] [stage] qkv group=7 active=8 level=3
+[   641 s] [boundary] ln1 logical=8
+[   647 s] [stage] qkv group=8 active=8 level=3
+[   647 s] [boundary] ln1 logical=8
+[   654 s] [stage] qkv group=9 active=8 level=3
+[   654 s] [boundary] ln1 logical=8
+[   660 s] [stage] qkv group=10 active=8 level=3
+[   660 s] [boundary] ln1 logical=8
+[   667 s] [stage] qkv group=11 active=8 level=3
+[   667 s] [boundary] ln1 logical=7
+[   673 s] [stage] qkv group=12 active=7 level=3
+[   676 s] [stage] score tile q=0 k=0
+[   678 s] [stage] score tile q=1 k=0
+[   680 s] [stage] score tile q=2 k=0
+[   681 s] [stage] score tile q=3 k=0
+[   683 s] [stage] score tile q=4 k=0
+[   685 s] [stage] score tile q=5 k=0
+[   687 s] [stage] score tile q=6 k=0
+[   689 s] [stage] score tile q=7 k=0
+[   691 s] [stage] score tile q=8 k=0
+[   693 s] [stage] score tile q=9 k=0
+[   695 s] [stage] score tile q=10 k=0
+[   696 s] [stage] score tile q=11 k=0
+[   698 s] [stage] score tile q=12 k=0
+[   700 s] [stage] score tile q=1 k=1
+[   702 s] [stage] score tile q=2 k=1
+[   704 s] [stage] score tile q=3 k=1
+[   706 s] [stage] score tile q=4 k=1
+[   708 s] [stage] score tile q=5 k=1
+[   710 s] [stage] score tile q=6 k=1
+[   712 s] [stage] score tile q=7 k=1
+[   714 s] [stage] score tile q=8 k=1
+[   715 s] [stage] score tile q=9 k=1
+[   717 s] [stage] score tile q=10 k=1
+[   719 s] [stage] score tile q=11 k=1
+[   721 s] [stage] score tile q=12 k=1
+[   723 s] [stage] score tile q=2 k=2
+[   725 s] [stage] score tile q=3 k=2
+[   727 s] [stage] score tile q=4 k=2
+[   729 s] [stage] score tile q=5 k=2
+[   731 s] [stage] score tile q=6 k=2
+[   732 s] [stage] score tile q=7 k=2
+[   734 s] [stage] score tile q=8 k=2
+[   736 s] [stage] score tile q=9 k=2
+[   738 s] [stage] score tile q=10 k=2
+[   740 s] [stage] score tile q=11 k=2
+[   742 s] [stage] score tile q=12 k=2
+[   744 s] [stage] score tile q=3 k=3
+[   746 s] [stage] score tile q=4 k=3
+[   748 s] [stage] score tile q=5 k=3
+[   749 s] [stage] score tile q=6 k=3
+[   751 s] [stage] score tile q=7 k=3
+[   753 s] [stage] score tile q=8 k=3
+[   755 s] [stage] score tile q=9 k=3
+[   757 s] [stage] score tile q=10 k=3
+[   759 s] [stage] score tile q=11 k=3
+[   761 s] [stage] score tile q=12 k=3
+[   763 s] [stage] score tile q=4 k=4
+[   765 s] [stage] score tile q=5 k=4
+[   766 s] [stage] score tile q=6 k=4
+[   768 s] [stage] score tile q=7 k=4
+[   770 s] [stage] score tile q=8 k=4
+[   772 s] [stage] score tile q=9 k=4
+[   774 s] [stage] score tile q=10 k=4
+[   776 s] [stage] score tile q=11 k=4
+[   778 s] [stage] score tile q=12 k=4
+[   780 s] [stage] score tile q=5 k=5
+[   782 s] [stage] score tile q=6 k=5
+[   784 s] [stage] score tile q=7 k=5
+[   785 s] [stage] score tile q=8 k=5
+[   787 s] [stage] score tile q=9 k=5
+[   789 s] [stage] score tile q=10 k=5
+[   791 s] [stage] score tile q=11 k=5
+[   793 s] [stage] score tile q=12 k=5
+[   795 s] [stage] score tile q=6 k=6
+[   797 s] [stage] score tile q=7 k=6
+[   799 s] [stage] score tile q=8 k=6
+[   801 s] [stage] score tile q=9 k=6
+[   803 s] [stage] score tile q=10 k=6
+[   804 s] [stage] score tile q=11 k=6
+[   806 s] [stage] score tile q=12 k=6
+[   808 s] [stage] score tile q=7 k=7
+[   810 s] [stage] score tile q=8 k=7
+[   812 s] [stage] score tile q=9 k=7
+[   814 s] [stage] score tile q=10 k=7
+[   816 s] [stage] score tile q=11 k=7
+[   818 s] [stage] score tile q=12 k=7
+[   820 s] [stage] score tile q=8 k=8
+[   822 s] [stage] score tile q=9 k=8
+[   823 s] [stage] score tile q=10 k=8
+[   825 s] [stage] score tile q=11 k=8
+[   827 s] [stage] score tile q=12 k=8
+[   829 s] [stage] score tile q=9 k=9
+[   831 s] [stage] score tile q=10 k=9
+[   833 s] [stage] score tile q=11 k=9
+[   835 s] [stage] score tile q=12 k=9
+[   837 s] [stage] score tile q=10 k=10
+[   839 s] [stage] score tile q=11 k=10
+[   841 s] [stage] score tile q=12 k=10
+[   843 s] [stage] score tile q=11 k=11
+[   844 s] [stage] score tile q=12 k=11
+[   846 s] [stage] score tile q=12 k=12
+[   938 s] [boundary] ln2 logical=8
+[   957 s] [stage] block output group=0 level=6
+[   957 s] [boundary] ln2 logical=8
+[   972 s] [stage] block output group=1 level=6
+[   972 s] [boundary] ln2 logical=8
+[   987 s] [stage] block output group=2 level=6
+[   987 s] [boundary] ln2 logical=8
+[  1001 s] [stage] block output group=3 level=6
+[  1001 s] [boundary] ln2 logical=8
+[  1016 s] [stage] block output group=4 level=6
+[  1016 s] [boundary] ln2 logical=8
+[  1030 s] [stage] block output group=5 level=6
+[  1030 s] [boundary] ln2 logical=8
+[  1044 s] [stage] block output group=6 level=6
+[  1044 s] [boundary] ln2 logical=8
+[  1060 s] [stage] block output group=7 level=6
+[  1060 s] [boundary] ln2 logical=8
+[  1075 s] [stage] block output group=8 level=6
+[  1075 s] [boundary] ln2 logical=8
+[  1089 s] [stage] block output group=9 level=6
+[  1089 s] [boundary] ln2 logical=8
+[  1103 s] [stage] block output group=10 level=6
+[  1103 s] [boundary] ln2 logical=8
+[  1117 s] [stage] block output group=11 level=6
+[  1117 s] [boundary] ln2 logical=7
+[  1132 s] [stage] block output group=12 level=6
+[  1132 s] [stage] block=1 evaluation done evaluation_seconds=546.066 packed_output_level=6
+[  1132 s] [boundary] refresh block=1->2 begin
+[  1134 s] [boundary] refresh block=1->2 done global_rel_inf=6.96365e-09 passed=true
+[  1134 s] [stage] block=1 end
+[  1135 s] [stage] block=2 begin
+[  1137 s] [boundary] ln1 logical=8
+[  1146 s] [stage] qkv group=0 active=8 level=3
+[  1146 s] [boundary] ln1 logical=8
+[  1152 s] [stage] qkv group=1 active=8 level=3
+[  1152 s] [boundary] ln1 logical=8
+[  1159 s] [stage] qkv group=2 active=8 level=3
+[  1159 s] [boundary] ln1 logical=8
+[  1165 s] [stage] qkv group=3 active=8 level=3
+[  1166 s] [boundary] ln1 logical=8
+[  1172 s] [stage] qkv group=4 active=8 level=3
+[  1172 s] [boundary] ln1 logical=8
+[  1179 s] [stage] qkv group=5 active=8 level=3
+[  1179 s] [boundary] ln1 logical=8
+[  1186 s] [stage] qkv group=6 active=8 level=3
+[  1186 s] [boundary] ln1 logical=8
+[  1192 s] [stage] qkv group=7 active=8 level=3
+[  1192 s] [boundary] ln1 logical=8
+[  1198 s] [stage] qkv group=8 active=8 level=3
+[  1198 s] [boundary] ln1 logical=8
+[  1205 s] [stage] qkv group=9 active=8 level=3
+[  1205 s] [boundary] ln1 logical=8
+[  1211 s] [stage] qkv group=10 active=8 level=3
+[  1211 s] [boundary] ln1 logical=8
+[  1218 s] [stage] qkv group=11 active=8 level=3
+[  1218 s] [boundary] ln1 logical=7
+[  1224 s] [stage] qkv group=12 active=7 level=3
+[  1227 s] [stage] score tile q=0 k=0
+[  1229 s] [stage] score tile q=1 k=0
+[  1231 s] [stage] score tile q=2 k=0
+[  1232 s] [stage] score tile q=3 k=0
+[  1234 s] [stage] score tile q=4 k=0
+[  1236 s] [stage] score tile q=5 k=0
+[  1238 s] [stage] score tile q=6 k=0
+[  1240 s] [stage] score tile q=7 k=0
+[  1242 s] [stage] score tile q=8 k=0
+[  1244 s] [stage] score tile q=9 k=0
+[  1246 s] [stage] score tile q=10 k=0
+[  1248 s] [stage] score tile q=11 k=0
+[  1249 s] [stage] score tile q=12 k=0
+[  1251 s] [stage] score tile q=1 k=1
+[  1253 s] [stage] score tile q=2 k=1
+[  1255 s] [stage] score tile q=3 k=1
+[  1257 s] [stage] score tile q=4 k=1
+[  1259 s] [stage] score tile q=5 k=1
+[  1261 s] [stage] score tile q=6 k=1
+[  1263 s] [stage] score tile q=7 k=1
+[  1265 s] [stage] score tile q=8 k=1
+[  1267 s] [stage] score tile q=9 k=1
+[  1269 s] [stage] score tile q=10 k=1
+[  1271 s] [stage] score tile q=11 k=1
+[  1272 s] [stage] score tile q=12 k=1
+[  1274 s] [stage] score tile q=2 k=2
+[  1276 s] [stage] score tile q=3 k=2
+[  1278 s] [stage] score tile q=4 k=2
+[  1280 s] [stage] score tile q=5 k=2
+[  1282 s] [stage] score tile q=6 k=2
+[  1284 s] [stage] score tile q=7 k=2
+[  1286 s] [stage] score tile q=8 k=2
+[  1288 s] [stage] score tile q=9 k=2
+[  1289 s] [stage] score tile q=10 k=2
+[  1291 s] [stage] score tile q=11 k=2
+[  1293 s] [stage] score tile q=12 k=2
+[  1295 s] [stage] score tile q=3 k=3
+[  1297 s] [stage] score tile q=4 k=3
+[  1299 s] [stage] score tile q=5 k=3
+[  1301 s] [stage] score tile q=6 k=3
+[  1303 s] [stage] score tile q=7 k=3
+[  1305 s] [stage] score tile q=8 k=3
+[  1307 s] [stage] score tile q=9 k=3
+[  1309 s] [stage] score tile q=10 k=3
+[  1310 s] [stage] score tile q=11 k=3
+[  1312 s] [stage] score tile q=12 k=3
+[  1314 s] [stage] score tile q=4 k=4
+[  1316 s] [stage] score tile q=5 k=4
+[  1318 s] [stage] score tile q=6 k=4
+[  1320 s] [stage] score tile q=7 k=4
+[  1322 s] [stage] score tile q=8 k=4
+[  1324 s] [stage] score tile q=9 k=4
+[  1326 s] [stage] score tile q=10 k=4
+[  1328 s] [stage] score tile q=11 k=4
+[  1329 s] [stage] score tile q=12 k=4
+[  1331 s] [stage] score tile q=5 k=5
+[  1333 s] [stage] score tile q=6 k=5
+[  1335 s] [stage] score tile q=7 k=5
+[  1337 s] [stage] score tile q=8 k=5
+[  1339 s] [stage] score tile q=9 k=5
+[  1341 s] [stage] score tile q=10 k=5
+[  1343 s] [stage] score tile q=11 k=5
+[  1345 s] [stage] score tile q=12 k=5
+[  1347 s] [stage] score tile q=6 k=6
+[  1349 s] [stage] score tile q=7 k=6
+[  1351 s] [stage] score tile q=8 k=6
+[  1352 s] [stage] score tile q=9 k=6
+[  1354 s] [stage] score tile q=10 k=6
+[  1356 s] [stage] score tile q=11 k=6
+[  1358 s] [stage] score tile q=12 k=6
+[  1360 s] [stage] score tile q=7 k=7
+[  1362 s] [stage] score tile q=8 k=7
+[  1364 s] [stage] score tile q=9 k=7
+[  1366 s] [stage] score tile q=10 k=7
+[  1368 s] [stage] score tile q=11 k=7
+[  1370 s] [stage] score tile q=12 k=7
+[  1372 s] [stage] score tile q=8 k=8
+[  1373 s] [stage] score tile q=9 k=8
+[  1375 s] [stage] score tile q=10 k=8
+[  1377 s] [stage] score tile q=11 k=8
+[  1379 s] [stage] score tile q=12 k=8
+[  1381 s] [stage] score tile q=9 k=9
+[  1383 s] [stage] score tile q=10 k=9
+[  1385 s] [stage] score tile q=11 k=9
+[  1387 s] [stage] score tile q=12 k=9
+[  1389 s] [stage] score tile q=10 k=10
+[  1391 s] [stage] score tile q=11 k=10
+[  1393 s] [stage] score tile q=12 k=10
+[  1395 s] [stage] score tile q=11 k=11
+[  1397 s] [stage] score tile q=12 k=11
+[  1398 s] [stage] score tile q=12 k=12
+[  1490 s] [boundary] ln2 logical=8
+[  1509 s] [stage] block output group=0 level=6
+[  1509 s] [boundary] ln2 logical=8
+[  1523 s] [stage] block output group=1 level=6
+[  1523 s] [boundary] ln2 logical=8
+[  1538 s] [stage] block output group=2 level=6
+[  1538 s] [boundary] ln2 logical=8
+[  1552 s] [stage] block output group=3 level=6
+[  1552 s] [boundary] ln2 logical=8
+[  1567 s] [stage] block output group=4 level=6
+[  1567 s] [boundary] ln2 logical=8
+[  1581 s] [stage] block output group=5 level=6
+[  1581 s] [boundary] ln2 logical=8
+[  1595 s] [stage] block output group=6 level=6
+[  1595 s] [boundary] ln2 logical=8
+[  1610 s] [stage] block output group=7 level=6
+[  1610 s] [boundary] ln2 logical=8
+[  1625 s] [stage] block output group=8 level=6
+[  1625 s] [boundary] ln2 logical=8
+[  1640 s] [stage] block output group=9 level=6
+[  1640 s] [boundary] ln2 logical=8
+[  1654 s] [stage] block output group=10 level=6
+[  1654 s] [boundary] ln2 logical=8
+[  1668 s] [stage] block output group=11 level=6
+[  1668 s] [boundary] ln2 logical=7
+[  1682 s] [stage] block output group=12 level=6
+[  1682 s] [stage] block=2 evaluation done evaluation_seconds=544.951 packed_output_level=6
+[  1682 s] [boundary] refresh block=2->3 begin
+[  1684 s] [boundary] refresh block=2->3 done global_rel_inf=1.1012e-08 passed=true
+[  1684 s] [stage] block=2 end
+[  1685 s] [stage] block=3 begin
+[  1687 s] [boundary] ln1 logical=8
+[  1695 s] [stage] qkv group=0 active=8 level=3
+[  1696 s] [boundary] ln1 logical=8
+[  1702 s] [stage] qkv group=1 active=8 level=3
+[  1702 s] [boundary] ln1 logical=8
+[  1709 s] [stage] qkv group=2 active=8 level=3
+[  1709 s] [boundary] ln1 logical=8
+[  1715 s] [stage] qkv group=3 active=8 level=3
+[  1715 s] [boundary] ln1 logical=8
+[  1722 s] [stage] qkv group=4 active=8 level=3
+[  1722 s] [boundary] ln1 logical=8
+[  1728 s] [stage] qkv group=5 active=8 level=3
+[  1728 s] [boundary] ln1 logical=8
+[  1735 s] [stage] qkv group=6 active=8 level=3
+[  1735 s] [boundary] ln1 logical=8
+[  1741 s] [stage] qkv group=7 active=8 level=3
+[  1742 s] [boundary] ln1 logical=8
+[  1748 s] [stage] qkv group=8 active=8 level=3
+[  1748 s] [boundary] ln1 logical=8
+[  1755 s] [stage] qkv group=9 active=8 level=3
+[  1755 s] [boundary] ln1 logical=8
+[  1761 s] [stage] qkv group=10 active=8 level=3
+[  1762 s] [boundary] ln1 logical=8
+[  1768 s] [stage] qkv group=11 active=8 level=3
+[  1768 s] [boundary] ln1 logical=7
+[  1775 s] [stage] qkv group=12 active=7 level=3
+[  1777 s] [stage] score tile q=0 k=0
+[  1779 s] [stage] score tile q=1 k=0
+[  1781 s] [stage] score tile q=2 k=0
+[  1783 s] [stage] score tile q=3 k=0
+[  1785 s] [stage] score tile q=4 k=0
+[  1787 s] [stage] score tile q=5 k=0
+[  1788 s] [stage] score tile q=6 k=0
+[  1790 s] [stage] score tile q=7 k=0
+[  1792 s] [stage] score tile q=8 k=0
+[  1794 s] [stage] score tile q=9 k=0
+[  1796 s] [stage] score tile q=10 k=0
+[  1798 s] [stage] score tile q=11 k=0
+[  1800 s] [stage] score tile q=12 k=0
+[  1802 s] [stage] score tile q=1 k=1
+[  1804 s] [stage] score tile q=2 k=1
+[  1806 s] [stage] score tile q=3 k=1
+[  1807 s] [stage] score tile q=4 k=1
+[  1809 s] [stage] score tile q=5 k=1
+[  1811 s] [stage] score tile q=6 k=1
+[  1813 s] [stage] score tile q=7 k=1
+[  1815 s] [stage] score tile q=8 k=1
+[  1817 s] [stage] score tile q=9 k=1
+[  1819 s] [stage] score tile q=10 k=1
+[  1821 s] [stage] score tile q=11 k=1
+[  1822 s] [stage] score tile q=12 k=1
+[  1824 s] [stage] score tile q=2 k=2
+[  1826 s] [stage] score tile q=3 k=2
+[  1828 s] [stage] score tile q=4 k=2
+[  1830 s] [stage] score tile q=5 k=2
+[  1832 s] [stage] score tile q=6 k=2
+[  1834 s] [stage] score tile q=7 k=2
+[  1836 s] [stage] score tile q=8 k=2
+[  1838 s] [stage] score tile q=9 k=2
+[  1840 s] [stage] score tile q=10 k=2
+[  1841 s] [stage] score tile q=11 k=2
+[  1843 s] [stage] score tile q=12 k=2
+[  1845 s] [stage] score tile q=3 k=3
+[  1847 s] [stage] score tile q=4 k=3
+[  1849 s] [stage] score tile q=5 k=3
+[  1851 s] [stage] score tile q=6 k=3
+[  1853 s] [stage] score tile q=7 k=3
+[  1855 s] [stage] score tile q=8 k=3
+[  1857 s] [stage] score tile q=9 k=3
+[  1859 s] [stage] score tile q=10 k=3
+[  1860 s] [stage] score tile q=11 k=3
+[  1862 s] [stage] score tile q=12 k=3
+[  1864 s] [stage] score tile q=4 k=4
+[  1866 s] [stage] score tile q=5 k=4
+[  1868 s] [stage] score tile q=6 k=4
+[  1870 s] [stage] score tile q=7 k=4
+[  1872 s] [stage] score tile q=8 k=4
+[  1874 s] [stage] score tile q=9 k=4
+[  1876 s] [stage] score tile q=10 k=4
+[  1878 s] [stage] score tile q=11 k=4
+[  1880 s] [stage] score tile q=12 k=4
+[  1882 s] [stage] score tile q=5 k=5
+[  1884 s] [stage] score tile q=6 k=5
+[  1885 s] [stage] score tile q=7 k=5
+[  1887 s] [stage] score tile q=8 k=5
+[  1889 s] [stage] score tile q=9 k=5
+[  1891 s] [stage] score tile q=10 k=5
+[  1893 s] [stage] score tile q=11 k=5
+[  1895 s] [stage] score tile q=12 k=5
+[  1897 s] [stage] score tile q=6 k=6
+[  1899 s] [stage] score tile q=7 k=6
+[  1901 s] [stage] score tile q=8 k=6
+[  1903 s] [stage] score tile q=9 k=6
+[  1904 s] [stage] score tile q=10 k=6
+[  1906 s] [stage] score tile q=11 k=6
+[  1908 s] [stage] score tile q=12 k=6
+[  1910 s] [stage] score tile q=7 k=7
+[  1912 s] [stage] score tile q=8 k=7
+[  1914 s] [stage] score tile q=9 k=7
+[  1916 s] [stage] score tile q=10 k=7
+[  1918 s] [stage] score tile q=11 k=7
+[  1920 s] [stage] score tile q=12 k=7
+[  1922 s] [stage] score tile q=8 k=8
+[  1924 s] [stage] score tile q=9 k=8
+[  1925 s] [stage] score tile q=10 k=8
+[  1927 s] [stage] score tile q=11 k=8
+[  1929 s] [stage] score tile q=12 k=8
+[  1931 s] [stage] score tile q=9 k=9
+[  1933 s] [stage] score tile q=10 k=9
+[  1935 s] [stage] score tile q=11 k=9
+[  1937 s] [stage] score tile q=12 k=9
+[  1939 s] [stage] score tile q=10 k=10
+[  1941 s] [stage] score tile q=11 k=10
+[  1943 s] [stage] score tile q=12 k=10
+[  1945 s] [stage] score tile q=11 k=11
+[  1947 s] [stage] score tile q=12 k=11
+[  1948 s] [stage] score tile q=12 k=12
+[  2040 s] [boundary] ln2 logical=8
+[  2059 s] [stage] block output group=0 level=6
+[  2059 s] [boundary] ln2 logical=8
+[  2072 s] [stage] block output group=1 level=6
+[  2072 s] [boundary] ln2 logical=8
+[  2086 s] [stage] block output group=2 level=6
+[  2086 s] [boundary] ln2 logical=8
+[  2101 s] [stage] block output group=3 level=6
+[  2101 s] [boundary] ln2 logical=8
+[  2115 s] [stage] block output group=4 level=6
+[  2115 s] [boundary] ln2 logical=8
+[  2129 s] [stage] block output group=5 level=6
+[  2129 s] [boundary] ln2 logical=8
+[  2143 s] [stage] block output group=6 level=6
+[  2143 s] [boundary] ln2 logical=8
+[  2157 s] [stage] block output group=7 level=6
+[  2157 s] [boundary] ln2 logical=8
+[  2172 s] [stage] block output group=8 level=6
+[  2172 s] [boundary] ln2 logical=8
+[  2186 s] [stage] block output group=9 level=6
+[  2186 s] [boundary] ln2 logical=8
+[  2200 s] [stage] block output group=10 level=6
+[  2201 s] [boundary] ln2 logical=8
+[  2215 s] [stage] block output group=11 level=6
+[  2215 s] [boundary] ln2 logical=7
+[  2229 s] [stage] block output group=12 level=6
+[  2229 s] [stage] block=3 evaluation done evaluation_seconds=541.659 packed_output_level=6
+[  2229 s] [boundary] refresh block=3->4 begin
+[  2230 s] [boundary] refresh block=3->4 done global_rel_inf=6.91991e-09 passed=true
+[  2230 s] [stage] block=3 end
+[  2232 s] [stage] block=4 begin
+[  2234 s] [boundary] ln1 logical=8
+[  2242 s] [stage] qkv group=0 active=8 level=3
+[  2243 s] [boundary] ln1 logical=8
+[  2249 s] [stage] qkv group=1 active=8 level=3
+[  2249 s] [boundary] ln1 logical=8
+[  2255 s] [stage] qkv group=2 active=8 level=3
+[  2255 s] [boundary] ln1 logical=8
+[  2262 s] [stage] qkv group=3 active=8 level=3
+[  2262 s] [boundary] ln1 logical=8
+[  2268 s] [stage] qkv group=4 active=8 level=3
+[  2269 s] [boundary] ln1 logical=8
+[  2275 s] [stage] qkv group=5 active=8 level=3
+[  2275 s] [boundary] ln1 logical=8
+[  2281 s] [stage] qkv group=6 active=8 level=3
+[  2282 s] [boundary] ln1 logical=8
+[  2288 s] [stage] qkv group=7 active=8 level=3
+[  2288 s] [boundary] ln1 logical=8
+[  2294 s] [stage] qkv group=8 active=8 level=3
+[  2295 s] [boundary] ln1 logical=8
+[  2301 s] [stage] qkv group=9 active=8 level=3
+[  2301 s] [boundary] ln1 logical=8
+[  2308 s] [stage] qkv group=10 active=8 level=3
+[  2308 s] [boundary] ln1 logical=8
+[  2314 s] [stage] qkv group=11 active=8 level=3
+[  2314 s] [boundary] ln1 logical=7
+[  2321 s] [stage] qkv group=12 active=7 level=3
+[  2324 s] [stage] score tile q=0 k=0
+[  2326 s] [stage] score tile q=1 k=0
+[  2327 s] [stage] score tile q=2 k=0
+[  2329 s] [stage] score tile q=3 k=0
+[  2331 s] [stage] score tile q=4 k=0
+[  2333 s] [stage] score tile q=5 k=0
+[  2335 s] [stage] score tile q=6 k=0
+[  2337 s] [stage] score tile q=7 k=0
+[  2339 s] [stage] score tile q=8 k=0
+[  2341 s] [stage] score tile q=9 k=0
+[  2343 s] [stage] score tile q=10 k=0
+[  2345 s] [stage] score tile q=11 k=0
+[  2347 s] [stage] score tile q=12 k=0
+[  2349 s] [stage] score tile q=1 k=1
+[  2350 s] [stage] score tile q=2 k=1
+[  2352 s] [stage] score tile q=3 k=1
+[  2354 s] [stage] score tile q=4 k=1
+[  2356 s] [stage] score tile q=5 k=1
+[  2358 s] [stage] score tile q=6 k=1
+[  2360 s] [stage] score tile q=7 k=1
+[  2362 s] [stage] score tile q=8 k=1
+[  2364 s] [stage] score tile q=9 k=1
+[  2366 s] [stage] score tile q=10 k=1
+[  2368 s] [stage] score tile q=11 k=1
+[  2369 s] [stage] score tile q=12 k=1
+[  2371 s] [stage] score tile q=2 k=2
+[  2373 s] [stage] score tile q=3 k=2
+[  2375 s] [stage] score tile q=4 k=2
+[  2377 s] [stage] score tile q=5 k=2
+[  2379 s] [stage] score tile q=6 k=2
+[  2381 s] [stage] score tile q=7 k=2
+[  2383 s] [stage] score tile q=8 k=2
+[  2385 s] [stage] score tile q=9 k=2
+[  2387 s] [stage] score tile q=10 k=2
+[  2389 s] [stage] score tile q=11 k=2
+[  2391 s] [stage] score tile q=12 k=2
+[  2393 s] [stage] score tile q=3 k=3
+[  2394 s] [stage] score tile q=4 k=3
+[  2396 s] [stage] score tile q=5 k=3
+[  2398 s] [stage] score tile q=6 k=3
+[  2400 s] [stage] score tile q=7 k=3
+[  2402 s] [stage] score tile q=8 k=3
+[  2404 s] [stage] score tile q=9 k=3
+[  2406 s] [stage] score tile q=10 k=3
+[  2408 s] [stage] score tile q=11 k=3
+[  2410 s] [stage] score tile q=12 k=3
+[  2412 s] [stage] score tile q=4 k=4
+[  2413 s] [stage] score tile q=5 k=4
+[  2415 s] [stage] score tile q=6 k=4
+[  2417 s] [stage] score tile q=7 k=4
+[  2419 s] [stage] score tile q=8 k=4
+[  2421 s] [stage] score tile q=9 k=4
+[  2423 s] [stage] score tile q=10 k=4
+[  2425 s] [stage] score tile q=11 k=4
+[  2427 s] [stage] score tile q=12 k=4
+[  2429 s] [stage] score tile q=5 k=5
+[  2431 s] [stage] score tile q=6 k=5
+[  2433 s] [stage] score tile q=7 k=5
+[  2435 s] [stage] score tile q=8 k=5
+[  2436 s] [stage] score tile q=9 k=5
+[  2438 s] [stage] score tile q=10 k=5
+[  2440 s] [stage] score tile q=11 k=5
+[  2442 s] [stage] score tile q=12 k=5
+[  2444 s] [stage] score tile q=6 k=6
+[  2446 s] [stage] score tile q=7 k=6
+[  2448 s] [stage] score tile q=8 k=6
+[  2450 s] [stage] score tile q=9 k=6
+[  2452 s] [stage] score tile q=10 k=6
+[  2454 s] [stage] score tile q=11 k=6
+[  2455 s] [stage] score tile q=12 k=6
+[  2457 s] [stage] score tile q=7 k=7
+[  2459 s] [stage] score tile q=8 k=7
+[  2461 s] [stage] score tile q=9 k=7
+[  2463 s] [stage] score tile q=10 k=7
+[  2465 s] [stage] score tile q=11 k=7
+[  2467 s] [stage] score tile q=12 k=7
+[  2469 s] [stage] score tile q=8 k=8
+[  2471 s] [stage] score tile q=9 k=8
+[  2473 s] [stage] score tile q=10 k=8
+[  2475 s] [stage] score tile q=11 k=8
+[  2477 s] [stage] score tile q=12 k=8
+[  2479 s] [stage] score tile q=9 k=9
+[  2480 s] [stage] score tile q=10 k=9
+[  2482 s] [stage] score tile q=11 k=9
+[  2484 s] [stage] score tile q=12 k=9
+[  2486 s] [stage] score tile q=10 k=10
+[  2488 s] [stage] score tile q=11 k=10
+[  2490 s] [stage] score tile q=12 k=10
+[  2492 s] [stage] score tile q=11 k=11
+[  2494 s] [stage] score tile q=12 k=11
+[  2496 s] [stage] score tile q=12 k=12
+[  2588 s] [boundary] ln2 logical=8
+[  2607 s] [stage] block output group=0 level=6
+[  2607 s] [boundary] ln2 logical=8
+[  2621 s] [stage] block output group=1 level=6
+[  2621 s] [boundary] ln2 logical=8
+[  2635 s] [stage] block output group=2 level=6
+[  2635 s] [boundary] ln2 logical=8
+[  2648 s] [stage] block output group=3 level=6
+[  2649 s] [boundary] ln2 logical=8
+[  2663 s] [stage] block output group=4 level=6
+[  2663 s] [boundary] ln2 logical=8
+[  2678 s] [stage] block output group=5 level=6
+[  2678 s] [boundary] ln2 logical=8
+[  2692 s] [stage] block output group=6 level=6
+[  2692 s] [boundary] ln2 logical=8
+[  2706 s] [stage] block output group=7 level=6
+[  2707 s] [boundary] ln2 logical=8
+[  2721 s] [stage] block output group=8 level=6
+[  2721 s] [boundary] ln2 logical=8
+[  2736 s] [stage] block output group=9 level=6
+[  2736 s] [boundary] ln2 logical=8
+[  2751 s] [stage] block output group=10 level=6
+[  2751 s] [boundary] ln2 logical=8
+[  2765 s] [stage] block output group=11 level=6
+[  2765 s] [boundary] ln2 logical=7
+[  2780 s] [stage] block output group=12 level=6
+[  2780 s] [stage] block=4 evaluation done evaluation_seconds=545.815 packed_output_level=6
+[  2780 s] [boundary] refresh block=4->5 begin
+[  2781 s] [boundary] refresh block=4->5 done global_rel_inf=2.3493e-09 passed=true
+[  2781 s] [stage] block=4 end
+[  2783 s] [stage] block=5 begin
+[  2785 s] [boundary] ln1 logical=8
+[  2793 s] [stage] qkv group=0 active=8 level=3
+[  2793 s] [boundary] ln1 logical=8
+[  2800 s] [stage] qkv group=1 active=8 level=3
+[  2800 s] [boundary] ln1 logical=8
+[  2807 s] [stage] qkv group=2 active=8 level=3
+[  2807 s] [boundary] ln1 logical=8
+[  2813 s] [stage] qkv group=3 active=8 level=3
+[  2813 s] [boundary] ln1 logical=8
+[  2820 s] [stage] qkv group=4 active=8 level=3
+[  2820 s] [boundary] ln1 logical=8
+[  2826 s] [stage] qkv group=5 active=8 level=3
+[  2827 s] [boundary] ln1 logical=8
+[  2833 s] [stage] qkv group=6 active=8 level=3
+[  2833 s] [boundary] ln1 logical=8
+[  2840 s] [stage] qkv group=7 active=8 level=3
+[  2840 s] [boundary] ln1 logical=8
+[  2846 s] [stage] qkv group=8 active=8 level=3
+[  2846 s] [boundary] ln1 logical=8
+[  2853 s] [stage] qkv group=9 active=8 level=3
+[  2853 s] [boundary] ln1 logical=8
+[  2859 s] [stage] qkv group=10 active=8 level=3
+[  2859 s] [boundary] ln1 logical=8
+[  2866 s] [stage] qkv group=11 active=8 level=3
+[  2866 s] [boundary] ln1 logical=7
+[  2872 s] [stage] qkv group=12 active=7 level=3
+[  2875 s] [stage] score tile q=0 k=0
+[  2877 s] [stage] score tile q=1 k=0
+[  2879 s] [stage] score tile q=2 k=0
+[  2881 s] [stage] score tile q=3 k=0
+[  2883 s] [stage] score tile q=4 k=0
+[  2885 s] [stage] score tile q=5 k=0
+[  2887 s] [stage] score tile q=6 k=0
+[  2889 s] [stage] score tile q=7 k=0
+[  2890 s] [stage] score tile q=8 k=0
+[  2892 s] [stage] score tile q=9 k=0
+[  2894 s] [stage] score tile q=10 k=0
+[  2896 s] [stage] score tile q=11 k=0
+[  2898 s] [stage] score tile q=12 k=0
+[  2900 s] [stage] score tile q=1 k=1
+[  2902 s] [stage] score tile q=2 k=1
+[  2904 s] [stage] score tile q=3 k=1
+[  2906 s] [stage] score tile q=4 k=1
+[  2908 s] [stage] score tile q=5 k=1
+[  2910 s] [stage] score tile q=6 k=1
+[  2911 s] [stage] score tile q=7 k=1
+[  2913 s] [stage] score tile q=8 k=1
+[  2915 s] [stage] score tile q=9 k=1
+[  2917 s] [stage] score tile q=10 k=1
+[  2919 s] [stage] score tile q=11 k=1
+[  2921 s] [stage] score tile q=12 k=1
+[  2923 s] [stage] score tile q=2 k=2
+[  2925 s] [stage] score tile q=3 k=2
+[  2927 s] [stage] score tile q=4 k=2
+[  2929 s] [stage] score tile q=5 k=2
+[  2931 s] [stage] score tile q=6 k=2
+[  2933 s] [stage] score tile q=7 k=2
+[  2934 s] [stage] score tile q=8 k=2
+[  2936 s] [stage] score tile q=9 k=2
+[  2938 s] [stage] score tile q=10 k=2
+[  2940 s] [stage] score tile q=11 k=2
+[  2942 s] [stage] score tile q=12 k=2
+[  2944 s] [stage] score tile q=3 k=3
+[  2946 s] [stage] score tile q=4 k=3
+[  2948 s] [stage] score tile q=5 k=3
+[  2950 s] [stage] score tile q=6 k=3
+[  2952 s] [stage] score tile q=7 k=3
+[  2953 s] [stage] score tile q=8 k=3
+[  2955 s] [stage] score tile q=9 k=3
+[  2957 s] [stage] score tile q=10 k=3
+[  2959 s] [stage] score tile q=11 k=3
+[  2961 s] [stage] score tile q=12 k=3
+[  2963 s] [stage] score tile q=4 k=4
+[  2965 s] [stage] score tile q=5 k=4
+[  2967 s] [stage] score tile q=6 k=4
+[  2969 s] [stage] score tile q=7 k=4
+[  2971 s] [stage] score tile q=8 k=4
+[  2972 s] [stage] score tile q=9 k=4
+[  2974 s] [stage] score tile q=10 k=4
+[  2976 s] [stage] score tile q=11 k=4
+[  2978 s] [stage] score tile q=12 k=4
+[  2980 s] [stage] score tile q=5 k=5
+[  2982 s] [stage] score tile q=6 k=5
+[  2984 s] [stage] score tile q=7 k=5
+[  2986 s] [stage] score tile q=8 k=5
+[  2988 s] [stage] score tile q=9 k=5
+[  2990 s] [stage] score tile q=10 k=5
+[  2992 s] [stage] score tile q=11 k=5
+[  2994 s] [stage] score tile q=12 k=5
+[  2996 s] [stage] score tile q=6 k=6
+[  2997 s] [stage] score tile q=7 k=6
+[  2999 s] [stage] score tile q=8 k=6
+[  3001 s] [stage] score tile q=9 k=6
+[  3003 s] [stage] score tile q=10 k=6
+[  3005 s] [stage] score tile q=11 k=6
+[  3007 s] [stage] score tile q=12 k=6
+[  3009 s] [stage] score tile q=7 k=7
+[  3011 s] [stage] score tile q=8 k=7
+[  3013 s] [stage] score tile q=9 k=7
+[  3015 s] [stage] score tile q=10 k=7
+[  3016 s] [stage] score tile q=11 k=7
+[  3018 s] [stage] score tile q=12 k=7
+[  3020 s] [stage] score tile q=8 k=8
+[  3022 s] [stage] score tile q=9 k=8
+[  3024 s] [stage] score tile q=10 k=8
+[  3026 s] [stage] score tile q=11 k=8
+[  3028 s] [stage] score tile q=12 k=8
+[  3030 s] [stage] score tile q=9 k=9
+[  3032 s] [stage] score tile q=10 k=9
+[  3034 s] [stage] score tile q=11 k=9
+[  3036 s] [stage] score tile q=12 k=9
+[  3038 s] [stage] score tile q=10 k=10
+[  3040 s] [stage] score tile q=11 k=10
+[  3042 s] [stage] score tile q=12 k=10
+[  3044 s] [stage] score tile q=11 k=11
+[  3045 s] [stage] score tile q=12 k=11
+[  3047 s] [stage] score tile q=12 k=12
+[  3139 s] [boundary] ln2 logical=8
+[  3158 s] [stage] block output group=0 level=6
+[  3158 s] [boundary] ln2 logical=8
+[  3172 s] [stage] block output group=1 level=6
+[  3172 s] [boundary] ln2 logical=8
+[  3187 s] [stage] block output group=2 level=6
+[  3187 s] [boundary] ln2 logical=8
+[  3202 s] [stage] block output group=3 level=6
+[  3202 s] [boundary] ln2 logical=8
+[  3216 s] [stage] block output group=4 level=6
+[  3217 s] [boundary] ln2 logical=8
+[  3231 s] [stage] block output group=5 level=6
+[  3231 s] [boundary] ln2 logical=8
+[  3245 s] [stage] block output group=6 level=6
+[  3246 s] [boundary] ln2 logical=8
+[  3261 s] [stage] block output group=7 level=6
+[  3261 s] [boundary] ln2 logical=8
+[  3276 s] [stage] block output group=8 level=6
+[  3276 s] [boundary] ln2 logical=8
+[  3290 s] [stage] block output group=9 level=6
+[  3290 s] [boundary] ln2 logical=8
+[  3305 s] [stage] block output group=10 level=6
+[  3305 s] [boundary] ln2 logical=8
+[  3319 s] [stage] block output group=11 level=6
+[  3319 s] [boundary] ln2 logical=7
+[  3334 s] [stage] block output group=12 level=6
+[  3334 s] [stage] block=5 evaluation done evaluation_seconds=549.61 packed_output_level=6
+[  3334 s] [boundary] refresh block=5->6 begin
+[  3336 s] [boundary] refresh block=5->6 done global_rel_inf=2.81101e-09 passed=true
+[  3336 s] [stage] block=5 end
+[  3338 s] [stage] block=6 begin
+[  3340 s] [boundary] ln1 logical=8
+[  3348 s] [stage] qkv group=0 active=8 level=3
+[  3348 s] [boundary] ln1 logical=8
+[  3355 s] [stage] qkv group=1 active=8 level=3
+[  3355 s] [boundary] ln1 logical=8
+[  3362 s] [stage] qkv group=2 active=8 level=3
+[  3362 s] [boundary] ln1 logical=8
+[  3368 s] [stage] qkv group=3 active=8 level=3
+[  3369 s] [boundary] ln1 logical=8
+[  3375 s] [stage] qkv group=4 active=8 level=3
+[  3375 s] [boundary] ln1 logical=8
+[  3382 s] [stage] qkv group=5 active=8 level=3
+[  3382 s] [boundary] ln1 logical=8
+[  3388 s] [stage] qkv group=6 active=8 level=3
+[  3389 s] [boundary] ln1 logical=8
+[  3395 s] [stage] qkv group=7 active=8 level=3
+[  3395 s] [boundary] ln1 logical=8
+[  3402 s] [stage] qkv group=8 active=8 level=3
+[  3402 s] [boundary] ln1 logical=8
+[  3408 s] [stage] qkv group=9 active=8 level=3
+[  3408 s] [boundary] ln1 logical=8
+[  3415 s] [stage] qkv group=10 active=8 level=3
+[  3415 s] [boundary] ln1 logical=8
+[  3421 s] [stage] qkv group=11 active=8 level=3
+[  3422 s] [boundary] ln1 logical=7
+[  3428 s] [stage] qkv group=12 active=7 level=3
+[  3430 s] [stage] score tile q=0 k=0
+[  3432 s] [stage] score tile q=1 k=0
+[  3434 s] [stage] score tile q=2 k=0
+[  3436 s] [stage] score tile q=3 k=0
+[  3438 s] [stage] score tile q=4 k=0
+[  3440 s] [stage] score tile q=5 k=0
+[  3442 s] [stage] score tile q=6 k=0
+[  3444 s] [stage] score tile q=7 k=0
+[  3446 s] [stage] score tile q=8 k=0
+[  3448 s] [stage] score tile q=9 k=0
+[  3450 s] [stage] score tile q=10 k=0
+[  3452 s] [stage] score tile q=11 k=0
+[  3453 s] [stage] score tile q=12 k=0
+[  3456 s] [stage] score tile q=1 k=1
+[  3457 s] [stage] score tile q=2 k=1
+[  3459 s] [stage] score tile q=3 k=1
+[  3461 s] [stage] score tile q=4 k=1
+[  3463 s] [stage] score tile q=5 k=1
+[  3465 s] [stage] score tile q=6 k=1
+[  3467 s] [stage] score tile q=7 k=1
+[  3469 s] [stage] score tile q=8 k=1
+[  3471 s] [stage] score tile q=9 k=1
+[  3473 s] [stage] score tile q=10 k=1
+[  3475 s] [stage] score tile q=11 k=1
+[  3476 s] [stage] score tile q=12 k=1
+[  3478 s] [stage] score tile q=2 k=2
+[  3480 s] [stage] score tile q=3 k=2
+[  3482 s] [stage] score tile q=4 k=2
+[  3484 s] [stage] score tile q=5 k=2
+[  3486 s] [stage] score tile q=6 k=2
+[  3488 s] [stage] score tile q=7 k=2
+[  3490 s] [stage] score tile q=8 k=2
+[  3492 s] [stage] score tile q=9 k=2
+[  3494 s] [stage] score tile q=10 k=2
+[  3496 s] [stage] score tile q=11 k=2
+[  3498 s] [stage] score tile q=12 k=2
+[  3500 s] [stage] score tile q=3 k=3
+[  3502 s] [stage] score tile q=4 k=3
+[  3503 s] [stage] score tile q=5 k=3
+[  3505 s] [stage] score tile q=6 k=3
+[  3507 s] [stage] score tile q=7 k=3
+[  3509 s] [stage] score tile q=8 k=3
+[  3511 s] [stage] score tile q=9 k=3
+[  3513 s] [stage] score tile q=10 k=3
+[  3515 s] [stage] score tile q=11 k=3
+[  3517 s] [stage] score tile q=12 k=3
+[  3519 s] [stage] score tile q=4 k=4
+[  3521 s] [stage] score tile q=5 k=4
+[  3523 s] [stage] score tile q=6 k=4
+[  3524 s] [stage] score tile q=7 k=4
+[  3526 s] [stage] score tile q=8 k=4
+[  3528 s] [stage] score tile q=9 k=4
+[  3530 s] [stage] score tile q=10 k=4
+[  3532 s] [stage] score tile q=11 k=4
+[  3534 s] [stage] score tile q=12 k=4
+[  3536 s] [stage] score tile q=5 k=5
+[  3538 s] [stage] score tile q=6 k=5
+[  3540 s] [stage] score tile q=7 k=5
+[  3542 s] [stage] score tile q=8 k=5
+[  3544 s] [stage] score tile q=9 k=5
+[  3546 s] [stage] score tile q=10 k=5
+[  3547 s] [stage] score tile q=11 k=5
+[  3549 s] [stage] score tile q=12 k=5
+[  3551 s] [stage] score tile q=6 k=6
+[  3553 s] [stage] score tile q=7 k=6
+[  3555 s] [stage] score tile q=8 k=6
+[  3557 s] [stage] score tile q=9 k=6
+[  3559 s] [stage] score tile q=10 k=6
+[  3561 s] [stage] score tile q=11 k=6
+[  3563 s] [stage] score tile q=12 k=6
+[  3565 s] [stage] score tile q=7 k=7
+[  3567 s] [stage] score tile q=8 k=7
+[  3569 s] [stage] score tile q=9 k=7
+[  3570 s] [stage] score tile q=10 k=7
+[  3572 s] [stage] score tile q=11 k=7
+[  3574 s] [stage] score tile q=12 k=7
+[  3576 s] [stage] score tile q=8 k=8
+[  3578 s] [stage] score tile q=9 k=8
+[  3580 s] [stage] score tile q=10 k=8
+[  3582 s] [stage] score tile q=11 k=8
+[  3584 s] [stage] score tile q=12 k=8
+[  3586 s] [stage] score tile q=9 k=9
+[  3588 s] [stage] score tile q=10 k=9
+[  3590 s] [stage] score tile q=11 k=9
+[  3592 s] [stage] score tile q=12 k=9
+[  3594 s] [stage] score tile q=10 k=10
+[  3596 s] [stage] score tile q=11 k=10
+[  3598 s] [stage] score tile q=12 k=10
+[  3600 s] [stage] score tile q=11 k=11
+[  3601 s] [stage] score tile q=12 k=11
+[  3603 s] [stage] score tile q=12 k=12
+[  3695 s] [boundary] ln2 logical=8
+[  3714 s] [stage] block output group=0 level=6
+[  3714 s] [boundary] ln2 logical=8
+[  3730 s] [stage] block output group=1 level=6
+[  3730 s] [boundary] ln2 logical=8
+[  3746 s] [stage] block output group=2 level=6
+[  3746 s] [boundary] ln2 logical=8
+[  3761 s] [stage] block output group=3 level=6
+[  3761 s] [boundary] ln2 logical=8
+[  3776 s] [stage] block output group=4 level=6
+[  3776 s] [boundary] ln2 logical=8
+[  3791 s] [stage] block output group=5 level=6
+[  3791 s] [boundary] ln2 logical=8
+[  3807 s] [stage] block output group=6 level=6
+[  3807 s] [boundary] ln2 logical=8
+[  3822 s] [stage] block output group=7 level=6
+[  3822 s] [boundary] ln2 logical=8
+[  3837 s] [stage] block output group=8 level=6
+[  3837 s] [boundary] ln2 logical=8
+[  3852 s] [stage] block output group=9 level=6
+[  3852 s] [boundary] ln2 logical=8
+[  3867 s] [stage] block output group=10 level=6
+[  3867 s] [boundary] ln2 logical=8
+[  3883 s] [stage] block output group=11 level=6
+[  3883 s] [boundary] ln2 logical=7
+[  3899 s] [stage] block output group=12 level=6
+[  3899 s] [stage] block=6 evaluation done evaluation_seconds=558.943 packed_output_level=6
+[  3899 s] [boundary] refresh block=6->7 begin
+[  3900 s] [boundary] refresh block=6->7 done global_rel_inf=3.31422e-09 passed=true
+[  3900 s] [stage] block=6 end
+[  3902 s] [stage] block=7 begin
+[  3903 s] [boundary] ln1 logical=8
+[  3912 s] [stage] qkv group=0 active=8 level=3
+[  3912 s] [boundary] ln1 logical=8
+[  3919 s] [stage] qkv group=1 active=8 level=3
+[  3919 s] [boundary] ln1 logical=8
+[  3925 s] [stage] qkv group=2 active=8 level=3
+[  3926 s] [boundary] ln1 logical=8
+[  3932 s] [stage] qkv group=3 active=8 level=3
+[  3932 s] [boundary] ln1 logical=8
+[  3939 s] [stage] qkv group=4 active=8 level=3
+[  3939 s] [boundary] ln1 logical=8
+[  3946 s] [stage] qkv group=5 active=8 level=3
+[  3946 s] [boundary] ln1 logical=8
+[  3952 s] [stage] qkv group=6 active=8 level=3
+[  3952 s] [boundary] ln1 logical=8
+[  3959 s] [stage] qkv group=7 active=8 level=3
+[  3959 s] [boundary] ln1 logical=8
+[  3966 s] [stage] qkv group=8 active=8 level=3
+[  3966 s] [boundary] ln1 logical=8
+[  3972 s] [stage] qkv group=9 active=8 level=3
+[  3972 s] [boundary] ln1 logical=8
+[  3979 s] [stage] qkv group=10 active=8 level=3
+[  3979 s] [boundary] ln1 logical=8
+[  3985 s] [stage] qkv group=11 active=8 level=3
+[  3985 s] [boundary] ln1 logical=7
+[  3992 s] [stage] qkv group=12 active=7 level=3
+[  3994 s] [stage] score tile q=0 k=0
+[  3996 s] [stage] score tile q=1 k=0
+[  3998 s] [stage] score tile q=2 k=0
+[  4000 s] [stage] score tile q=3 k=0
+[  4002 s] [stage] score tile q=4 k=0
+[  4004 s] [stage] score tile q=5 k=0
+[  4006 s] [stage] score tile q=6 k=0
+[  4008 s] [stage] score tile q=7 k=0
+[  4010 s] [stage] score tile q=8 k=0
+[  4012 s] [stage] score tile q=9 k=0
+[  4013 s] [stage] score tile q=10 k=0
+[  4015 s] [stage] score tile q=11 k=0
+[  4017 s] [stage] score tile q=12 k=0
+[  4019 s] [stage] score tile q=1 k=1
+[  4021 s] [stage] score tile q=2 k=1
+[  4023 s] [stage] score tile q=3 k=1
+[  4025 s] [stage] score tile q=4 k=1
+[  4027 s] [stage] score tile q=5 k=1
+[  4029 s] [stage] score tile q=6 k=1
+[  4031 s] [stage] score tile q=7 k=1
+[  4033 s] [stage] score tile q=8 k=1
+[  4035 s] [stage] score tile q=9 k=1
+[  4037 s] [stage] score tile q=10 k=1
+[  4039 s] [stage] score tile q=11 k=1
+[  4041 s] [stage] score tile q=12 k=1
+[  4043 s] [stage] score tile q=2 k=2
+[  4045 s] [stage] score tile q=3 k=2
+[  4047 s] [stage] score tile q=4 k=2
+[  4048 s] [stage] score tile q=5 k=2
+[  4050 s] [stage] score tile q=6 k=2
+[  4052 s] [stage] score tile q=7 k=2
+[  4054 s] [stage] score tile q=8 k=2
+[  4056 s] [stage] score tile q=9 k=2
+[  4058 s] [stage] score tile q=10 k=2
+[  4060 s] [stage] score tile q=11 k=2
+[  4062 s] [stage] score tile q=12 k=2
+[  4064 s] [stage] score tile q=3 k=3
+[  4066 s] [stage] score tile q=4 k=3
+[  4068 s] [stage] score tile q=5 k=3
+[  4070 s] [stage] score tile q=6 k=3
+[  4072 s] [stage] score tile q=7 k=3
+[  4074 s] [stage] score tile q=8 k=3
+[  4076 s] [stage] score tile q=9 k=3
+[  4077 s] [stage] score tile q=10 k=3
+[  4079 s] [stage] score tile q=11 k=3
+[  4081 s] [stage] score tile q=12 k=3
+[  4083 s] [stage] score tile q=4 k=4
+[  4085 s] [stage] score tile q=5 k=4
+[  4087 s] [stage] score tile q=6 k=4
+[  4089 s] [stage] score tile q=7 k=4
+[  4091 s] [stage] score tile q=8 k=4
+[  4093 s] [stage] score tile q=9 k=4
+[  4095 s] [stage] score tile q=10 k=4
+[  4097 s] [stage] score tile q=11 k=4
+[  4099 s] [stage] score tile q=12 k=4
+[  4101 s] [stage] score tile q=5 k=5
+[  4103 s] [stage] score tile q=6 k=5
+[  4105 s] [stage] score tile q=7 k=5
+[  4107 s] [stage] score tile q=8 k=5
+[  4109 s] [stage] score tile q=9 k=5
+[  4111 s] [stage] score tile q=10 k=5
+[  4112 s] [stage] score tile q=11 k=5
+[  4114 s] [stage] score tile q=12 k=5
+[  4116 s] [stage] score tile q=6 k=6
+[  4118 s] [stage] score tile q=7 k=6
+[  4120 s] [stage] score tile q=8 k=6
+[  4122 s] [stage] score tile q=9 k=6
+[  4124 s] [stage] score tile q=10 k=6
+[  4126 s] [stage] score tile q=11 k=6
+[  4128 s] [stage] score tile q=12 k=6
+[  4130 s] [stage] score tile q=7 k=7
+[  4132 s] [stage] score tile q=8 k=7
+[  4134 s] [stage] score tile q=9 k=7
+[  4136 s] [stage] score tile q=10 k=7
+[  4138 s] [stage] score tile q=11 k=7
+[  4140 s] [stage] score tile q=12 k=7
+[  4142 s] [stage] score tile q=8 k=8
+[  4144 s] [stage] score tile q=9 k=8
+[  4145 s] [stage] score tile q=10 k=8
+[  4147 s] [stage] score tile q=11 k=8
+[  4149 s] [stage] score tile q=12 k=8
+[  4151 s] [stage] score tile q=9 k=9
+[  4153 s] [stage] score tile q=10 k=9
+[  4155 s] [stage] score tile q=11 k=9
+[  4157 s] [stage] score tile q=12 k=9
+[  4159 s] [stage] score tile q=10 k=10
+[  4161 s] [stage] score tile q=11 k=10
+[  4163 s] [stage] score tile q=12 k=10
+[  4165 s] [stage] score tile q=11 k=11
+[  4167 s] [stage] score tile q=12 k=11
+[  4169 s] [stage] score tile q=12 k=12
+[  4262 s] [boundary] ln2 logical=8
+[  4281 s] [stage] block output group=0 level=6
+[  4281 s] [boundary] ln2 logical=8
+[  4295 s] [stage] block output group=1 level=6
+[  4295 s] [boundary] ln2 logical=8
+[  4309 s] [stage] block output group=2 level=6
+[  4309 s] [boundary] ln2 logical=8
+[  4323 s] [stage] block output group=3 level=6
+[  4323 s] [boundary] ln2 logical=8
+[  4337 s] [stage] block output group=4 level=6
+[  4337 s] [boundary] ln2 logical=8
+[  4350 s] [stage] block output group=5 level=6
+[  4350 s] [boundary] ln2 logical=8
+[  4364 s] [stage] block output group=6 level=6
+[  4364 s] [boundary] ln2 logical=8
+[  4379 s] [stage] block output group=7 level=6
+[  4379 s] [boundary] ln2 logical=8
+[  4393 s] [stage] block output group=8 level=6
+[  4393 s] [boundary] ln2 logical=8
+[  4407 s] [stage] block output group=9 level=6
+[  4407 s] [boundary] ln2 logical=8
+[  4421 s] [stage] block output group=10 level=6
+[  4422 s] [boundary] ln2 logical=8
+[  4435 s] [stage] block output group=11 level=6
+[  4435 s] [boundary] ln2 logical=7
+[  4450 s] [stage] block output group=12 level=6
+[  4450 s] [stage] block=7 evaluation done evaluation_seconds=547.074 packed_output_level=6
+[  4450 s] [boundary] refresh block=7->8 begin
+[  4452 s] [boundary] refresh block=7->8 done global_rel_inf=4.89952e-09 passed=true
+[  4452 s] [stage] block=7 end
+[  4453 s] [stage] block=8 begin
+[  4457 s] [boundary] ln1 logical=8
+[  4466 s] [stage] qkv group=0 active=8 level=3
+[  4466 s] [boundary] ln1 logical=8
+[  4473 s] [stage] qkv group=1 active=8 level=3
+[  4473 s] [boundary] ln1 logical=8
+[  4479 s] [stage] qkv group=2 active=8 level=3
+[  4479 s] [boundary] ln1 logical=8
+[  4486 s] [stage] qkv group=3 active=8 level=3
+[  4486 s] [boundary] ln1 logical=8
+[  4492 s] [stage] qkv group=4 active=8 level=3
+[  4493 s] [boundary] ln1 logical=8
+[  4499 s] [stage] qkv group=5 active=8 level=3
+[  4499 s] [boundary] ln1 logical=8
+[  4506 s] [stage] qkv group=6 active=8 level=3
+[  4506 s] [boundary] ln1 logical=8
+[  4512 s] [stage] qkv group=7 active=8 level=3
+[  4512 s] [boundary] ln1 logical=8
+[  4518 s] [stage] qkv group=8 active=8 level=3
+[  4519 s] [boundary] ln1 logical=8
+[  4525 s] [stage] qkv group=9 active=8 level=3
+[  4525 s] [boundary] ln1 logical=8
+[  4532 s] [stage] qkv group=10 active=8 level=3
+[  4532 s] [boundary] ln1 logical=8
+[  4538 s] [stage] qkv group=11 active=8 level=3
+[  4539 s] [boundary] ln1 logical=7
+[  4545 s] [stage] qkv group=12 active=7 level=3
+[  4547 s] [stage] score tile q=0 k=0
+[  4549 s] [stage] score tile q=1 k=0
+[  4551 s] [stage] score tile q=2 k=0
+[  4553 s] [stage] score tile q=3 k=0
+[  4555 s] [stage] score tile q=4 k=0
+[  4557 s] [stage] score tile q=5 k=0
+[  4559 s] [stage] score tile q=6 k=0
+[  4561 s] [stage] score tile q=7 k=0
+[  4563 s] [stage] score tile q=8 k=0
+[  4565 s] [stage] score tile q=9 k=0
+[  4567 s] [stage] score tile q=10 k=0
+[  4569 s] [stage] score tile q=11 k=0
+[  4571 s] [stage] score tile q=12 k=0
+[  4573 s] [stage] score tile q=1 k=1
+[  4575 s] [stage] score tile q=2 k=1
+[  4577 s] [stage] score tile q=3 k=1
+[  4579 s] [stage] score tile q=4 k=1
+[  4581 s] [stage] score tile q=5 k=1
+[  4583 s] [stage] score tile q=6 k=1
+[  4585 s] [stage] score tile q=7 k=1
+[  4587 s] [stage] score tile q=8 k=1
+[  4589 s] [stage] score tile q=9 k=1
+[  4591 s] [stage] score tile q=10 k=1
+[  4593 s] [stage] score tile q=11 k=1
+[  4595 s] [stage] score tile q=12 k=1
+[  4597 s] [stage] score tile q=2 k=2
+[  4599 s] [stage] score tile q=3 k=2
+[  4601 s] [stage] score tile q=4 k=2
+[  4603 s] [stage] score tile q=5 k=2
+[  4605 s] [stage] score tile q=6 k=2
+[  4606 s] [stage] score tile q=7 k=2
+[  4608 s] [stage] score tile q=8 k=2
+[  4610 s] [stage] score tile q=9 k=2
+[  4612 s] [stage] score tile q=10 k=2
+[  4614 s] [stage] score tile q=11 k=2
+[  4616 s] [stage] score tile q=12 k=2
+[  4618 s] [stage] score tile q=3 k=3
+[  4620 s] [stage] score tile q=4 k=3
+[  4622 s] [stage] score tile q=5 k=3
+[  4624 s] [stage] score tile q=6 k=3
+[  4626 s] [stage] score tile q=7 k=3
+[  4628 s] [stage] score tile q=8 k=3
+[  4630 s] [stage] score tile q=9 k=3
+[  4632 s] [stage] score tile q=10 k=3
+[  4634 s] [stage] score tile q=11 k=3
+[  4636 s] [stage] score tile q=12 k=3
+[  4638 s] [stage] score tile q=4 k=4
+[  4640 s] [stage] score tile q=5 k=4
+[  4642 s] [stage] score tile q=6 k=4
+[  4644 s] [stage] score tile q=7 k=4
+[  4646 s] [stage] score tile q=8 k=4
+[  4648 s] [stage] score tile q=9 k=4
+[  4650 s] [stage] score tile q=10 k=4
+[  4652 s] [stage] score tile q=11 k=4
+[  4654 s] [stage] score tile q=12 k=4
+[  4656 s] [stage] score tile q=5 k=5
+[  4658 s] [stage] score tile q=6 k=5
+[  4660 s] [stage] score tile q=7 k=5
+[  4662 s] [stage] score tile q=8 k=5
+[  4664 s] [stage] score tile q=9 k=5
+[  4666 s] [stage] score tile q=10 k=5
+[  4668 s] [stage] score tile q=11 k=5
+[  4670 s] [stage] score tile q=12 k=5
+[  4672 s] [stage] score tile q=6 k=6
+[  4674 s] [stage] score tile q=7 k=6
+[  4676 s] [stage] score tile q=8 k=6
+[  4677 s] [stage] score tile q=9 k=6
+[  4679 s] [stage] score tile q=10 k=6
+[  4681 s] [stage] score tile q=11 k=6
+[  4683 s] [stage] score tile q=12 k=6
+[  4685 s] [stage] score tile q=7 k=7
+[  4687 s] [stage] score tile q=8 k=7
+[  4689 s] [stage] score tile q=9 k=7
+[  4691 s] [stage] score tile q=10 k=7
+[  4693 s] [stage] score tile q=11 k=7
+[  4695 s] [stage] score tile q=12 k=7
+[  4697 s] [stage] score tile q=8 k=8
+[  4699 s] [stage] score tile q=9 k=8
+[  4701 s] [stage] score tile q=10 k=8
+[  4703 s] [stage] score tile q=11 k=8
+[  4705 s] [stage] score tile q=12 k=8
+[  4707 s] [stage] score tile q=9 k=9
+[  4709 s] [stage] score tile q=10 k=9
+[  4711 s] [stage] score tile q=11 k=9
+[  4713 s] [stage] score tile q=12 k=9
+[  4715 s] [stage] score tile q=10 k=10
+[  4717 s] [stage] score tile q=11 k=10
+[  4719 s] [stage] score tile q=12 k=10
+[  4721 s] [stage] score tile q=11 k=11
+[  4723 s] [stage] score tile q=12 k=11
+[  4725 s] [stage] score tile q=12 k=12
+[  4818 s] [boundary] ln2 logical=8
+[  4837 s] [stage] block output group=0 level=6
+[  4837 s] [boundary] ln2 logical=8
+[  4851 s] [stage] block output group=1 level=6
+[  4851 s] [boundary] ln2 logical=8
+[  4865 s] [stage] block output group=2 level=6
+[  4865 s] [boundary] ln2 logical=8
+[  4879 s] [stage] block output group=3 level=6
+[  4879 s] [boundary] ln2 logical=8
+[  4893 s] [stage] block output group=4 level=6
+[  4893 s] [boundary] ln2 logical=8
+[  4908 s] [stage] block output group=5 level=6
+[  4909 s] [boundary] ln2 logical=8
+[  4923 s] [stage] block output group=6 level=6
+[  4923 s] [boundary] ln2 logical=8
+[  4938 s] [stage] block output group=7 level=6
+[  4938 s] [boundary] ln2 logical=8
+[  4952 s] [stage] block output group=8 level=6
+[  4952 s] [boundary] ln2 logical=8
+[  4967 s] [stage] block output group=9 level=6
+[  4967 s] [boundary] ln2 logical=8
+[  4982 s] [stage] block output group=10 level=6
+[  4982 s] [boundary] ln2 logical=8
+[  4997 s] [stage] block output group=11 level=6
+[  4997 s] [boundary] ln2 logical=7
+[  5011 s] [stage] block output group=12 level=6
+[  5011 s] [stage] block=8 evaluation done evaluation_seconds=554.447 packed_output_level=6
+[  5011 s] [boundary] refresh block=8->9 begin
+[  5013 s] [boundary] refresh block=8->9 done global_rel_inf=4.82496e-09 passed=true
+[  5013 s] [stage] block=8 end
+[  5015 s] [stage] block=9 begin
+[  5017 s] [boundary] ln1 logical=8
+[  5025 s] [stage] qkv group=0 active=8 level=3
+[  5026 s] [boundary] ln1 logical=8
+[  5032 s] [stage] qkv group=1 active=8 level=3
+[  5032 s] [boundary] ln1 logical=8
+[  5039 s] [stage] qkv group=2 active=8 level=3
+[  5039 s] [boundary] ln1 logical=8
+[  5046 s] [stage] qkv group=3 active=8 level=3
+[  5046 s] [boundary] ln1 logical=8
+[  5052 s] [stage] qkv group=4 active=8 level=3
+[  5052 s] [boundary] ln1 logical=8
+[  5059 s] [stage] qkv group=5 active=8 level=3
+[  5059 s] [boundary] ln1 logical=8
+[  5066 s] [stage] qkv group=6 active=8 level=3
+[  5066 s] [boundary] ln1 logical=8
+[  5072 s] [stage] qkv group=7 active=8 level=3
+[  5072 s] [boundary] ln1 logical=8
+[  5079 s] [stage] qkv group=8 active=8 level=3
+[  5079 s] [boundary] ln1 logical=8
+[  5085 s] [stage] qkv group=9 active=8 level=3
+[  5086 s] [boundary] ln1 logical=8
+[  5092 s] [stage] qkv group=10 active=8 level=3
+[  5092 s] [boundary] ln1 logical=8
+[  5099 s] [stage] qkv group=11 active=8 level=3
+[  5099 s] [boundary] ln1 logical=7
+[  5105 s] [stage] qkv group=12 active=7 level=3
+[  5108 s] [stage] score tile q=0 k=0
+[  5110 s] [stage] score tile q=1 k=0
+[  5112 s] [stage] score tile q=2 k=0
+[  5114 s] [stage] score tile q=3 k=0
+[  5115 s] [stage] score tile q=4 k=0
+[  5117 s] [stage] score tile q=5 k=0
+[  5119 s] [stage] score tile q=6 k=0
+[  5121 s] [stage] score tile q=7 k=0
+[  5123 s] [stage] score tile q=8 k=0
+[  5125 s] [stage] score tile q=9 k=0
+[  5127 s] [stage] score tile q=10 k=0
+[  5129 s] [stage] score tile q=11 k=0
+[  5131 s] [stage] score tile q=12 k=0
+[  5133 s] [stage] score tile q=1 k=1
+[  5134 s] [stage] score tile q=2 k=1
+[  5136 s] [stage] score tile q=3 k=1
+[  5138 s] [stage] score tile q=4 k=1
+[  5140 s] [stage] score tile q=5 k=1
+[  5142 s] [stage] score tile q=6 k=1
+[  5144 s] [stage] score tile q=7 k=1
+[  5146 s] [stage] score tile q=8 k=1
+[  5148 s] [stage] score tile q=9 k=1
+[  5150 s] [stage] score tile q=10 k=1
+[  5151 s] [stage] score tile q=11 k=1
+[  5153 s] [stage] score tile q=12 k=1
+[  5155 s] [stage] score tile q=2 k=2
+[  5157 s] [stage] score tile q=3 k=2
+[  5159 s] [stage] score tile q=4 k=2
+[  5161 s] [stage] score tile q=5 k=2
+[  5163 s] [stage] score tile q=6 k=2
+[  5165 s] [stage] score tile q=7 k=2
+[  5167 s] [stage] score tile q=8 k=2
+[  5169 s] [stage] score tile q=9 k=2
+[  5170 s] [stage] score tile q=10 k=2
+[  5172 s] [stage] score tile q=11 k=2
+[  5174 s] [stage] score tile q=12 k=2
+[  5176 s] [stage] score tile q=3 k=3
+[  5178 s] [stage] score tile q=4 k=3
+[  5180 s] [stage] score tile q=5 k=3
+[  5182 s] [stage] score tile q=6 k=3
+[  5184 s] [stage] score tile q=7 k=3
+[  5186 s] [stage] score tile q=8 k=3
+[  5188 s] [stage] score tile q=9 k=3
+[  5190 s] [stage] score tile q=10 k=3
+[  5191 s] [stage] score tile q=11 k=3
+[  5193 s] [stage] score tile q=12 k=3
+[  5195 s] [stage] score tile q=4 k=4
+[  5197 s] [stage] score tile q=5 k=4
+[  5199 s] [stage] score tile q=6 k=4
+[  5201 s] [stage] score tile q=7 k=4
+[  5203 s] [stage] score tile q=8 k=4
+[  5205 s] [stage] score tile q=9 k=4
+[  5207 s] [stage] score tile q=10 k=4
+[  5208 s] [stage] score tile q=11 k=4
+[  5210 s] [stage] score tile q=12 k=4
+[  5212 s] [stage] score tile q=5 k=5
+[  5214 s] [stage] score tile q=6 k=5
+[  5216 s] [stage] score tile q=7 k=5
+[  5218 s] [stage] score tile q=8 k=5
+[  5220 s] [stage] score tile q=9 k=5
+[  5222 s] [stage] score tile q=10 k=5
+[  5224 s] [stage] score tile q=11 k=5
+[  5226 s] [stage] score tile q=12 k=5
+[  5228 s] [stage] score tile q=6 k=6
+[  5229 s] [stage] score tile q=7 k=6
+[  5231 s] [stage] score tile q=8 k=6
+[  5233 s] [stage] score tile q=9 k=6
+[  5235 s] [stage] score tile q=10 k=6
+[  5237 s] [stage] score tile q=11 k=6
+[  5239 s] [stage] score tile q=12 k=6
+[  5241 s] [stage] score tile q=7 k=7
+[  5243 s] [stage] score tile q=8 k=7
+[  5245 s] [stage] score tile q=9 k=7
+[  5246 s] [stage] score tile q=10 k=7
+[  5248 s] [stage] score tile q=11 k=7
+[  5250 s] [stage] score tile q=12 k=7
+[  5252 s] [stage] score tile q=8 k=8
+[  5254 s] [stage] score tile q=9 k=8
+[  5256 s] [stage] score tile q=10 k=8
+[  5258 s] [stage] score tile q=11 k=8
+[  5260 s] [stage] score tile q=12 k=8
+[  5262 s] [stage] score tile q=9 k=9
+[  5264 s] [stage] score tile q=10 k=9
+[  5266 s] [stage] score tile q=11 k=9
+[  5267 s] [stage] score tile q=12 k=9
+[  5269 s] [stage] score tile q=10 k=10
+[  5271 s] [stage] score tile q=11 k=10
+[  5273 s] [stage] score tile q=12 k=10
+[  5275 s] [stage] score tile q=11 k=11
+[  5277 s] [stage] score tile q=12 k=11
+[  5279 s] [stage] score tile q=12 k=12
+[  5371 s] [boundary] ln2 logical=8
+[  5389 s] [stage] block output group=0 level=6
+[  5390 s] [boundary] ln2 logical=8
+[  5403 s] [stage] block output group=1 level=6
+[  5403 s] [boundary] ln2 logical=8
+[  5417 s] [stage] block output group=2 level=6
+[  5417 s] [boundary] ln2 logical=8
+[  5431 s] [stage] block output group=3 level=6
+[  5431 s] [boundary] ln2 logical=8
+[  5445 s] [stage] block output group=4 level=6
+[  5445 s] [boundary] ln2 logical=8
+[  5460 s] [stage] block output group=5 level=6
+[  5460 s] [boundary] ln2 logical=8
+[  5474 s] [stage] block output group=6 level=6
+[  5474 s] [boundary] ln2 logical=8
+[  5488 s] [stage] block output group=7 level=6
+[  5488 s] [boundary] ln2 logical=8
+[  5502 s] [stage] block output group=8 level=6
+[  5502 s] [boundary] ln2 logical=8
+[  5517 s] [stage] block output group=9 level=6
+[  5517 s] [boundary] ln2 logical=8
+[  5531 s] [stage] block output group=10 level=6
+[  5531 s] [boundary] ln2 logical=8
+[  5545 s] [stage] block output group=11 level=6
+[  5545 s] [boundary] ln2 logical=7
+[  5559 s] [stage] block output group=12 level=6
+[  5559 s] [stage] block=9 evaluation done evaluation_seconds=542.723 packed_output_level=6
+[  5559 s] [boundary] refresh block=9->10 begin
+[  5561 s] [boundary] refresh block=9->10 done global_rel_inf=5.94091e-09 passed=true
+[  5561 s] [stage] block=9 end
+[  5562 s] [stage] block=10 begin
+[  5564 s] [boundary] ln1 logical=8
+[  5573 s] [stage] qkv group=0 active=8 level=3
+[  5573 s] [boundary] ln1 logical=8
+[  5580 s] [stage] qkv group=1 active=8 level=3
+[  5580 s] [boundary] ln1 logical=8
+[  5586 s] [stage] qkv group=2 active=8 level=3
+[  5586 s] [boundary] ln1 logical=8
+[  5593 s] [stage] qkv group=3 active=8 level=3
+[  5593 s] [boundary] ln1 logical=8
+[  5599 s] [stage] qkv group=4 active=8 level=3
+[  5600 s] [boundary] ln1 logical=8
+[  5606 s] [stage] qkv group=5 active=8 level=3
+[  5606 s] [boundary] ln1 logical=8
+[  5613 s] [stage] qkv group=6 active=8 level=3
+[  5613 s] [boundary] ln1 logical=8
+[  5619 s] [stage] qkv group=7 active=8 level=3
+[  5619 s] [boundary] ln1 logical=8
+[  5626 s] [stage] qkv group=8 active=8 level=3
+[  5626 s] [boundary] ln1 logical=8
+[  5632 s] [stage] qkv group=9 active=8 level=3
+[  5632 s] [boundary] ln1 logical=8
+[  5639 s] [stage] qkv group=10 active=8 level=3
+[  5639 s] [boundary] ln1 logical=8
+[  5646 s] [stage] qkv group=11 active=8 level=3
+[  5646 s] [boundary] ln1 logical=7
+[  5652 s] [stage] qkv group=12 active=7 level=3
+[  5655 s] [stage] score tile q=0 k=0
+[  5657 s] [stage] score tile q=1 k=0
+[  5659 s] [stage] score tile q=2 k=0
+[  5661 s] [stage] score tile q=3 k=0
+[  5663 s] [stage] score tile q=4 k=0
+[  5665 s] [stage] score tile q=5 k=0
+[  5666 s] [stage] score tile q=6 k=0
+[  5668 s] [stage] score tile q=7 k=0
+[  5670 s] [stage] score tile q=8 k=0
+[  5672 s] [stage] score tile q=9 k=0
+[  5674 s] [stage] score tile q=10 k=0
+[  5676 s] [stage] score tile q=11 k=0
+[  5678 s] [stage] score tile q=12 k=0
+[  5680 s] [stage] score tile q=1 k=1
+[  5682 s] [stage] score tile q=2 k=1
+[  5684 s] [stage] score tile q=3 k=1
+[  5686 s] [stage] score tile q=4 k=1
+[  5688 s] [stage] score tile q=5 k=1
+[  5690 s] [stage] score tile q=6 k=1
+[  5692 s] [stage] score tile q=7 k=1
+[  5694 s] [stage] score tile q=8 k=1
+[  5695 s] [stage] score tile q=9 k=1
+[  5697 s] [stage] score tile q=10 k=1
+[  5699 s] [stage] score tile q=11 k=1
+[  5701 s] [stage] score tile q=12 k=1
+[  5703 s] [stage] score tile q=2 k=2
+[  5705 s] [stage] score tile q=3 k=2
+[  5707 s] [stage] score tile q=4 k=2
+[  5709 s] [stage] score tile q=5 k=2
+[  5711 s] [stage] score tile q=6 k=2
+[  5713 s] [stage] score tile q=7 k=2
+[  5715 s] [stage] score tile q=8 k=2
+[  5717 s] [stage] score tile q=9 k=2
+[  5719 s] [stage] score tile q=10 k=2
+[  5720 s] [stage] score tile q=11 k=2
+[  5722 s] [stage] score tile q=12 k=2
+[  5724 s] [stage] score tile q=3 k=3
+[  5726 s] [stage] score tile q=4 k=3
+[  5728 s] [stage] score tile q=5 k=3
+[  5730 s] [stage] score tile q=6 k=3
+[  5732 s] [stage] score tile q=7 k=3
+[  5734 s] [stage] score tile q=8 k=3
+[  5736 s] [stage] score tile q=9 k=3
+[  5738 s] [stage] score tile q=10 k=3
+[  5740 s] [stage] score tile q=11 k=3
+[  5742 s] [stage] score tile q=12 k=3
+[  5744 s] [stage] score tile q=4 k=4
+[  5746 s] [stage] score tile q=5 k=4
+[  5748 s] [stage] score tile q=6 k=4
+[  5750 s] [stage] score tile q=7 k=4
+[  5752 s] [stage] score tile q=8 k=4
+[  5753 s] [stage] score tile q=9 k=4
+[  5755 s] [stage] score tile q=10 k=4
+[  5757 s] [stage] score tile q=11 k=4
+[  5759 s] [stage] score tile q=12 k=4
+[  5761 s] [stage] score tile q=5 k=5
+[  5763 s] [stage] score tile q=6 k=5
+[  5765 s] [stage] score tile q=7 k=5
+[  5767 s] [stage] score tile q=8 k=5
+[  5769 s] [stage] score tile q=9 k=5
+[  5771 s] [stage] score tile q=10 k=5
+[  5773 s] [stage] score tile q=11 k=5
+[  5775 s] [stage] score tile q=12 k=5
+[  5777 s] [stage] score tile q=6 k=6
+[  5779 s] [stage] score tile q=7 k=6
+[  5781 s] [stage] score tile q=8 k=6
+[  5782 s] [stage] score tile q=9 k=6
+[  5784 s] [stage] score tile q=10 k=6
+[  5786 s] [stage] score tile q=11 k=6
+[  5788 s] [stage] score tile q=12 k=6
+[  5790 s] [stage] score tile q=7 k=7
+[  5792 s] [stage] score tile q=8 k=7
+[  5794 s] [stage] score tile q=9 k=7
+[  5796 s] [stage] score tile q=10 k=7
+[  5798 s] [stage] score tile q=11 k=7
+[  5800 s] [stage] score tile q=12 k=7
+[  5802 s] [stage] score tile q=8 k=8
+[  5804 s] [stage] score tile q=9 k=8
+[  5806 s] [stage] score tile q=10 k=8
+[  5808 s] [stage] score tile q=11 k=8
+[  5810 s] [stage] score tile q=12 k=8
+[  5812 s] [stage] score tile q=9 k=9
+[  5814 s] [stage] score tile q=10 k=9
+[  5816 s] [stage] score tile q=11 k=9
+[  5817 s] [stage] score tile q=12 k=9
+[  5819 s] [stage] score tile q=10 k=10
+[  5821 s] [stage] score tile q=11 k=10
+[  5823 s] [stage] score tile q=12 k=10
+[  5825 s] [stage] score tile q=11 k=11
+[  5827 s] [stage] score tile q=12 k=11
+[  5829 s] [stage] score tile q=12 k=12
+[  5921 s] [boundary] ln2 logical=8
+[  5940 s] [stage] block output group=0 level=6
+[  5940 s] [boundary] ln2 logical=8
+[  5954 s] [stage] block output group=1 level=6
+[  5954 s] [boundary] ln2 logical=8
+[  5968 s] [stage] block output group=2 level=6
+[  5968 s] [boundary] ln2 logical=8
+[  5983 s] [stage] block output group=3 level=6
+[  5983 s] [boundary] ln2 logical=8
+[  5998 s] [stage] block output group=4 level=6
+[  5998 s] [boundary] ln2 logical=8
+[  6012 s] [stage] block output group=5 level=6
+[  6012 s] [boundary] ln2 logical=8
+[  6027 s] [stage] block output group=6 level=6
+[  6027 s] [boundary] ln2 logical=8
+[  6041 s] [stage] block output group=7 level=6
+[  6041 s] [boundary] ln2 logical=8
+[  6057 s] [stage] block output group=8 level=6
+[  6057 s] [boundary] ln2 logical=8
+[  6072 s] [stage] block output group=9 level=6
+[  6072 s] [boundary] ln2 logical=8
+[  6086 s] [stage] block output group=10 level=6
+[  6086 s] [boundary] ln2 logical=8
+[  6101 s] [stage] block output group=11 level=6
+[  6101 s] [boundary] ln2 logical=7
+[  6115 s] [stage] block output group=12 level=6
+[  6115 s] [stage] block=10 evaluation done evaluation_seconds=550.857 packed_output_level=6
+[  6115 s] [boundary] refresh block=10->11 begin
+[  6117 s] [boundary] refresh block=10->11 done global_rel_inf=8.32137e-09 passed=true
+[  6117 s] [stage] block=10 end
+[  6118 s] [stage] block=11 begin
+[  6120 s] [boundary] ln1 logical=8
+[  6128 s] [stage] qkv group=0 active=8 level=3
+[  6128 s] [boundary] ln1 logical=8
+[  6135 s] [stage] qkv group=1 active=8 level=3
+[  6135 s] [boundary] ln1 logical=8
+[  6141 s] [stage] qkv group=2 active=8 level=3
+[  6142 s] [boundary] ln1 logical=8
+[  6148 s] [stage] qkv group=3 active=8 level=3
+[  6148 s] [boundary] ln1 logical=8
+[  6155 s] [stage] qkv group=4 active=8 level=3
+[  6155 s] [boundary] ln1 logical=8
+[  6162 s] [stage] qkv group=5 active=8 level=3
+[  6162 s] [boundary] ln1 logical=8
+[  6168 s] [stage] qkv group=6 active=8 level=3
+[  6168 s] [boundary] ln1 logical=8
+[  6175 s] [stage] qkv group=7 active=8 level=3
+[  6175 s] [boundary] ln1 logical=8
+[  6182 s] [stage] qkv group=8 active=8 level=3
+[  6182 s] [boundary] ln1 logical=8
+[  6189 s] [stage] qkv group=9 active=8 level=3
+[  6189 s] [boundary] ln1 logical=8
+[  6195 s] [stage] qkv group=10 active=8 level=3
+[  6195 s] [boundary] ln1 logical=8
+[  6202 s] [stage] qkv group=11 active=8 level=3
+[  6202 s] [boundary] ln1 logical=7
+[  6208 s] [stage] qkv group=12 active=7 level=3
+[  6211 s] [stage] score tile q=0 k=0
+[  6213 s] [stage] score tile q=1 k=0
+[  6215 s] [stage] score tile q=2 k=0
+[  6217 s] [stage] score tile q=3 k=0
+[  6219 s] [stage] score tile q=4 k=0
+[  6221 s] [stage] score tile q=5 k=0
+[  6223 s] [stage] score tile q=6 k=0
+[  6224 s] [stage] score tile q=7 k=0
+[  6226 s] [stage] score tile q=8 k=0
+[  6228 s] [stage] score tile q=9 k=0
+[  6230 s] [stage] score tile q=10 k=0
+[  6232 s] [stage] score tile q=11 k=0
+[  6234 s] [stage] score tile q=12 k=0
+[  6236 s] [stage] score tile q=1 k=1
+[  6238 s] [stage] score tile q=2 k=1
+[  6240 s] [stage] score tile q=3 k=1
+[  6242 s] [stage] score tile q=4 k=1
+[  6244 s] [stage] score tile q=5 k=1
+[  6246 s] [stage] score tile q=6 k=1
+[  6248 s] [stage] score tile q=7 k=1
+[  6249 s] [stage] score tile q=8 k=1
+[  6251 s] [stage] score tile q=9 k=1
+[  6253 s] [stage] score tile q=10 k=1
+[  6255 s] [stage] score tile q=11 k=1
+[  6257 s] [stage] score tile q=12 k=1
+[  6259 s] [stage] score tile q=2 k=2
+[  6261 s] [stage] score tile q=3 k=2
+[  6263 s] [stage] score tile q=4 k=2
+[  6265 s] [stage] score tile q=5 k=2
+[  6267 s] [stage] score tile q=6 k=2
+[  6269 s] [stage] score tile q=7 k=2
+[  6271 s] [stage] score tile q=8 k=2
+[  6273 s] [stage] score tile q=9 k=2
+[  6274 s] [stage] score tile q=10 k=2
+[  6276 s] [stage] score tile q=11 k=2
+[  6278 s] [stage] score tile q=12 k=2
+[  6280 s] [stage] score tile q=3 k=3
+[  6282 s] [stage] score tile q=4 k=3
+[  6284 s] [stage] score tile q=5 k=3
+[  6286 s] [stage] score tile q=6 k=3
+[  6288 s] [stage] score tile q=7 k=3
+[  6290 s] [stage] score tile q=8 k=3
+[  6292 s] [stage] score tile q=9 k=3
+[  6294 s] [stage] score tile q=10 k=3
+[  6295 s] [stage] score tile q=11 k=3
+[  6297 s] [stage] score tile q=12 k=3
+[  6299 s] [stage] score tile q=4 k=4
+[  6301 s] [stage] score tile q=5 k=4
+[  6303 s] [stage] score tile q=6 k=4
+[  6305 s] [stage] score tile q=7 k=4
+[  6307 s] [stage] score tile q=8 k=4
+[  6309 s] [stage] score tile q=9 k=4
+[  6311 s] [stage] score tile q=10 k=4
+[  6313 s] [stage] score tile q=11 k=4
+[  6315 s] [stage] score tile q=12 k=4
+[  6317 s] [stage] score tile q=5 k=5
+[  6319 s] [stage] score tile q=6 k=5
+[  6321 s] [stage] score tile q=7 k=5
+[  6322 s] [stage] score tile q=8 k=5
+[  6324 s] [stage] score tile q=9 k=5
+[  6326 s] [stage] score tile q=10 k=5
+[  6328 s] [stage] score tile q=11 k=5
+[  6330 s] [stage] score tile q=12 k=5
+[  6332 s] [stage] score tile q=6 k=6
+[  6334 s] [stage] score tile q=7 k=6
+[  6336 s] [stage] score tile q=8 k=6
+[  6338 s] [stage] score tile q=9 k=6
+[  6340 s] [stage] score tile q=10 k=6
+[  6342 s] [stage] score tile q=11 k=6
+[  6344 s] [stage] score tile q=12 k=6
+[  6346 s] [stage] score tile q=7 k=7
+[  6348 s] [stage] score tile q=8 k=7
+[  6349 s] [stage] score tile q=9 k=7
+[  6351 s] [stage] score tile q=10 k=7
+[  6353 s] [stage] score tile q=11 k=7
+[  6355 s] [stage] score tile q=12 k=7
+[  6357 s] [stage] score tile q=8 k=8
+[  6359 s] [stage] score tile q=9 k=8
+[  6361 s] [stage] score tile q=10 k=8
+[  6363 s] [stage] score tile q=11 k=8
+[  6365 s] [stage] score tile q=12 k=8
+[  6367 s] [stage] score tile q=9 k=9
+[  6369 s] [stage] score tile q=10 k=9
+[  6371 s] [stage] score tile q=11 k=9
+[  6373 s] [stage] score tile q=12 k=9
+[  6375 s] [stage] score tile q=10 k=10
+[  6377 s] [stage] score tile q=11 k=10
+[  6379 s] [stage] score tile q=12 k=10
+[  6381 s] [stage] score tile q=11 k=11
+[  6382 s] [stage] score tile q=12 k=11
+[  6384 s] [stage] score tile q=12 k=12
+[  6476 s] [boundary] ln2 logical=8
+[  6495 s] [stage] block output group=0 level=6
+[  6495 s] [boundary] ln2 logical=8
+[  6509 s] [stage] block output group=1 level=6
+[  6509 s] [boundary] ln2 logical=8
+[  6523 s] [stage] block output group=2 level=6
+[  6523 s] [boundary] ln2 logical=8
+[  6538 s] [stage] block output group=3 level=6
+[  6538 s] [boundary] ln2 logical=8
+[  6553 s] [stage] block output group=4 level=6
+[  6553 s] [boundary] ln2 logical=8
+[  6567 s] [stage] block output group=5 level=6
+[  6567 s] [boundary] ln2 logical=8
+[  6582 s] [stage] block output group=6 level=6
+[  6582 s] [boundary] ln2 logical=8
+[  6596 s] [stage] block output group=7 level=6
+[  6596 s] [boundary] ln2 logical=8
+[  6610 s] [stage] block output group=8 level=6
+[  6610 s] [boundary] ln2 logical=8
+[  6626 s] [stage] block output group=9 level=6
+[  6626 s] [boundary] ln2 logical=8
+[  6641 s] [stage] block output group=10 level=6
+[  6641 s] [boundary] ln2 logical=8
+[  6655 s] [stage] block output group=11 level=6
+[  6655 s] [boundary] ln2 logical=7
+[  6670 s] [stage] block output group=12 level=6
+[  6670 s] [stage] block=11 evaluation done evaluation_seconds=549.978 packed_output_level=6
+[  6670 s] [boundary] head-input refresh begin
+[  6670 s] [boundary] head-input refresh done global_rel_inf=2.0656e-08 passed=true
+[  6670 s] [stage] block=11 end
+[  6672 s] [stage] head begin
+[  6672 s] [boundary] head_final_ln logical=1
+[  6672 s] [stage] head final_ln level=2
+[  6680 s] [stage] head head_linear level=3
+[  6680 s] [stage] head head_silu level=0
+[  6681 s] [boundary] head_ln logical=1
+[  6681 s] [stage] head head_ln level=2
+[  6681 s] [stage] head margin_n_minus_a level=3
+[  6681 s] [stage] head end evaluation_seconds=9.0459
+[  6681 s] [stage] final decrypt done decrypted_margin_n_minus_a=12.2666
+[  6681 s] {
+[  6681 s]   "schema_version": 1,
+[  6681 s]   "task": "Released-weight DNAGPT complete 12-block backbone plus encrypted GSR N-minus-A head, Scheme B Token-SIMD B=8, T=103 (full prompt), T123_V3 per-block lever (CPU-side diagonal-vector cache + Tier1 encode-once encoded-Plaintext templates with per-use clone + Tier2/3 OMP-parallel batched encode + post-LoadContext free of CPU-side OpenFHE key maps)",
+[  6681 s]   "implementation_version": "t103-scheme-b-token-simd-all-12-blocks-head-cpudiagcache-t123-v3-v1",
+[  6681 s]   "scheme": "B (hybrid client-assisted CKKS)",
+[  6681 s]   "measured_at_utc": "2026-08-12T11:21:29Z",
+[  6681 s]   "gate": "all_blocks_head_t103_cpudiagcache_t123_v3",
+[  6681 s]   "backend": "FIDESlib CKKS/CUDA",
+[  6681 s]   "backend_commit": "786c7600fb2f16b724e0acf73df367b27b8afed6",
+[  6681 s]   "container_image": "native-fideslib-786c7600-cuda12.8-gcc13.2",
+[  6681 s]   "environment": "TACC Lonestar6 gpu-a100 node c315-016 A100 [gpu] (visible=all-visible, job=3359783) [native FIDESlib, CUDA 12.8]",
+[  6681 s]   "gpu": 0,
+[  6681 s]   "security": "HEStd_128_classic",
+[  6681 s]   "source_sha256": "f04ee41093089a9c44f77259cc98480af42e0355b93f2a4a84a4f193e576fbfc",
+[  6681 s]   "cpudiagcache_t123_v3_parent_source_sha256": "cbba5b6c2b13e0a9fbe9a6ca1db724782bbf0af0b4651fa17f1586fa6b03534b",
+[  6681 s]   "cpudiagcache_driver_parent_source_sha256": "588fde54d38bf17b34b676e683e4434589a0d837f59f63a55effcb9a0ee54b2e",
+[  6681 s]   "two_block_refresh_design_parent_source_sha256": "5cb82f81dc46efe2f4bfd7a1c9e9c1bf90cea3d629432b027b42e5df89093767",
+[  6681 s]   "fixture_manifest_sha256": "2b39c40c56af8bdd596a903405c052a40a59c1258937a442f15f5d53697d787a",
+[  6681 s]   "fixture_contract_sha256": "21256363bd81e142f8564517c4c4e3e8c424def5551baf51e8f59d4ca407b16c",
+[  6681 s]   "config": {
+[  6681 s]     "model": "dna_gpt0.1b_m classification checkpoint, all 12 released blocks and GSR head",
+[  6681 s]     "blocks": 12,
+[  6681 s]     "D": 768,
+[  6681 s]     "T": 103,
+[  6681 s]     "token_batch": 8,
+[  6681 s]     "token_groups": 13,
+[  6681 s]     "batch_slots": 32768,
+[  6681 s]     "ring_dim": 65536,
+[  6681 s]     "multiplicative_depth": 13,
+[  6681 s]     "rotation_keys": 80,
+[  6681 s]     "bootstraps": 0,
+[  6681 s]     "block_matrix_products": 1872,
+[  6681 s]     "head_matrix_products": 1,
+[  6681 s]     "operation_counts": {
+[  6681 s]       "explicit_ciphertext_ciphertext_multiplications": 18076,
+[  6681 s]       "explicit_ciphertext_plaintext_multiplications": 2133839
+[  6681 s]     }
+[  6681 s]   },
+[  6681 s]   "composition": {
+[  6681 s]     "same_crypto_context_and_key_lineage": true,
+[  6681 s]     "inter_block_full_hidden_refreshes": 11,
+[  6681 s]     "block11_to_head_last_token_refreshes": 1,
+[  6681 s]     "last_token_index": 102,
+[  6681 s]     "last_token_group": 12,
+[  6681 s]     "last_token_lane": 6,
+[  6681 s]     "fresh_input_level": 0
+[  6681 s]   },
+[  6681 s]   "blocks": [
+[  6681 s]     {
+[  6681 s]       "block": 0,
+[  6681 s]       "packed_output_level": 6,
+[  6681 s]       "matrix_products": 156,
+[  6681 s]       "refresh_metrics": {
+[  6681 s]         "global_rel_inf": 4.0902778041291448e-09,
+[  6681 s]         "worst_token_rel_inf": 4.3904647006649043e-09,
+[  6681 s]         "max_abs_error": 6.5581750974263997e-08,
+[  6681 s]         "all_finite": true,
+[  6681 s]         "passed": true
+[  6681 s]       },
+[  6681 s]       "evaluation_seconds": 533.86924265100004,
+[  6681 s]       "refresh_seconds": 1.767932174
+[  6681 s]     },
+[  6681 s]     {
+[  6681 s]       "block": 1,
+[  6681 s]       "packed_output_level": 6,
+[  6681 s]       "matrix_products": 156,
+[  6681 s]       "refresh_metrics": {
+[  6681 s]         "global_rel_inf": 6.9636506186233228e-09,
+[  6681 s]         "worst_token_rel_inf": 1.045930936105483e-08,
+[  6681 s]         "max_abs_error": 1.8359290487879321e-07,
+[  6681 s]         "all_finite": true,
+[  6681 s]         "passed": true
+[  6681 s]       },
+[  6681 s]       "evaluation_seconds": 546.06615652100004,
+[  6681 s]       "refresh_seconds": 1.8011895280000001
+[  6681 s]     },
+[  6681 s]     {
+[  6681 s]       "block": 2,
+[  6681 s]       "packed_output_level": 6,
+[  6681 s]       "matrix_products": 156,
+[  6681 s]       "refresh_metrics": {
+[  6681 s]         "global_rel_inf": 1.1012026212541656e-08,
+[  6681 s]         "worst_token_rel_inf": 2.0173617120110737e-08,
+[  6681 s]         "max_abs_error": 4.2756010287803292e-07,
+[  6681 s]         "all_finite": true,
+[  6681 s]         "passed": true
+[  6681 s]       },
+[  6681 s]       "evaluation_seconds": 544.95121968599994,
+[  6681 s]       "refresh_seconds": 1.7816582379999999
+[  6681 s]     },
+[  6681 s]     {
+[  6681 s]       "block": 3,
+[  6681 s]       "packed_output_level": 6,
+[  6681 s]       "matrix_products": 156,
+[  6681 s]       "refresh_metrics": {
+[  6681 s]         "global_rel_inf": 6.9199079906581552e-09,
+[  6681 s]         "worst_token_rel_inf": 3.6320837192759978e-08,
+[  6681 s]         "max_abs_error": 7.5965264256794285e-07,
+[  6681 s]         "all_finite": true,
+[  6681 s]         "passed": true
+[  6681 s]       },
+[  6681 s]       "evaluation_seconds": 541.65947094600006,
+[  6681 s]       "refresh_seconds": 1.7075155209999999
+[  6681 s]     },
+[  6681 s]     {
+[  6681 s]       "block": 4,
+[  6681 s]       "packed_output_level": 6,
+[  6681 s]       "matrix_products": 156,
+[  6681 s]       "refresh_metrics": {
+[  6681 s]         "global_rel_inf": 2.349302393730871e-09,
+[  6681 s]         "worst_token_rel_inf": 6.3495670316456455e-08,
+[  6681 s]         "max_abs_error": 9.2933656370419726e-07,
+[  6681 s]         "all_finite": true,
+[  6681 s]         "passed": true
+[  6681 s]       },
+[  6681 s]       "evaluation_seconds": 545.81456189100004,
+[  6681 s]       "refresh_seconds": 1.741360182
+[  6681 s]     },
+[  6681 s]     {
+[  6681 s]       "block": 5,
+[  6681 s]       "packed_output_level": 6,
+[  6681 s]       "matrix_products": 156,
+[  6681 s]       "refresh_metrics": {
+[  6681 s]         "global_rel_inf": 2.8110059481257052e-09,
+[  6681 s]         "worst_token_rel_inf": 1.0575529970940888e-07,
+[  6681 s]         "max_abs_error": 1.1204401442199696e-06,
+[  6681 s]         "all_finite": true,
+[  6681 s]         "passed": true
+[  6681 s]       },
+[  6681 s]       "evaluation_seconds": 549.60969490299999,
+[  6681 s]       "refresh_seconds": 1.7917589629999999
+[  6681 s]     },
+[  6681 s]     {
+[  6681 s]       "block": 6,
+[  6681 s]       "packed_output_level": 6,
+[  6681 s]       "matrix_products": 156,
+[  6681 s]       "refresh_metrics": {
+[  6681 s]         "global_rel_inf": 3.3142200983339e-09,
+[  6681 s]         "worst_token_rel_inf": 1.5438178695621799e-07,
+[  6681 s]         "max_abs_error": 1.3333657875591598e-06,
+[  6681 s]         "all_finite": true,
+[  6681 s]         "passed": true
+[  6681 s]       },
+[  6681 s]       "evaluation_seconds": 558.94330988700005,
+[  6681 s]       "refresh_seconds": 1.7089372899999999
+[  6681 s]     },
+[  6681 s]     {
+[  6681 s]       "block": 7,
+[  6681 s]       "packed_output_level": 6,
+[  6681 s]       "matrix_products": 156,
+[  6681 s]       "refresh_metrics": {
+[  6681 s]         "global_rel_inf": 4.8995199685161907e-09,
+[  6681 s]         "worst_token_rel_inf": 6.8616860459018688e-08,
+[  6681 s]         "max_abs_error": 1.9798125242553866e-06,
+[  6681 s]         "all_finite": true,
+[  6681 s]         "passed": true
+[  6681 s]       },
+[  6681 s]       "evaluation_seconds": 547.07354614600001,
+[  6681 s]       "refresh_seconds": 1.66850589
+[  6681 s]     },
+[  6681 s]     {
+[  6681 s]       "block": 8,
+[  6681 s]       "packed_output_level": 6,
+[  6681 s]       "matrix_products": 156,
+[  6681 s]       "refresh_metrics": {
+[  6681 s]         "global_rel_inf": 4.8249565344973569e-09,
+[  6681 s]         "worst_token_rel_inf": 5.601198031968184e-08,
+[  6681 s]         "max_abs_error": 1.9524767435330492e-06,
+[  6681 s]         "all_finite": true,
+[  6681 s]         "passed": true
+[  6681 s]       },
+[  6681 s]       "evaluation_seconds": 554.44724627100004,
+[  6681 s]       "refresh_seconds": 1.7451823209999999
+[  6681 s]     },
+[  6681 s]     {
+[  6681 s]       "block": 9,
+[  6681 s]       "packed_output_level": 6,
+[  6681 s]       "matrix_products": 156,
+[  6681 s]       "refresh_metrics": {
+[  6681 s]         "global_rel_inf": 5.9409076721579588e-09,
+[  6681 s]         "worst_token_rel_inf": 5.8492593658714606e-08,
+[  6681 s]         "max_abs_error": 2.3898821904233536e-06,
+[  6681 s]         "all_finite": true,
+[  6681 s]         "passed": true
+[  6681 s]       },
+[  6681 s]       "evaluation_seconds": 542.72321968200004,
+[  6681 s]       "refresh_seconds": 1.6944932589999999
+[  6681 s]     },
+[  6681 s]     {
+[  6681 s]       "block": 10,
+[  6681 s]       "packed_output_level": 6,
+[  6681 s]       "matrix_products": 156,
+[  6681 s]       "refresh_metrics": {
+[  6681 s]         "global_rel_inf": 8.3213733742346958e-09,
+[  6681 s]         "worst_token_rel_inf": 1.0339087793117939e-07,
+[  6681 s]         "max_abs_error": 3.2936323972609927e-06,
+[  6681 s]         "all_finite": true,
+[  6681 s]         "passed": true
+[  6681 s]       },
+[  6681 s]       "evaluation_seconds": 550.85736766299999,
+[  6681 s]       "refresh_seconds": 1.7381014340000001
+[  6681 s]     },
+[  6681 s]     {
+[  6681 s]       "block": 11,
+[  6681 s]       "packed_output_level": 6,
+[  6681 s]       "matrix_products": 156,
+[  6681 s]       "refresh_metrics": {
+[  6681 s]         "global_rel_inf": 2.0656009090123795e-08,
+[  6681 s]         "worst_token_rel_inf": 1.4300610805943275e-07,
+[  6681 s]         "max_abs_error": 7.9725049317858065e-06,
+[  6681 s]         "all_finite": true,
+[  6681 s]         "passed": true
+[  6681 s]       },
+[  6681 s]       "evaluation_seconds": 549.97789880000005,
+[  6681 s]       "refresh_seconds": 0.56301802700000003
+[  6681 s]     }
+[  6681 s]   ],
+[  6681 s]   "head": {
+[  6681 s]     "encrypted_readout": "last token -> final LN -> head linear -> SiLU -> head LN -> dot(N-A)",
+[  6681 s]     "decrypted_margin_n_minus_a": 12.266581857561365,
+[  6681 s]     "direct_dot_oracle_margin_n_minus_a": 12.266581962540492,
+[  6681 s]     "margin_abs_error": 1.049791276130918e-07,
+[  6681 s]     "margin_rel_error": 8.5581401513213305e-09,
+[  6681 s]     "label": "N",
+[  6681 s]     "label_matches": true,
+[  6681 s]     "silu_round_trips": 1,
+[  6681 s]     "level_trace": {
+[  6681 s]       "final_ln": {"min": 2, "max": 2},
+[  6681 s]       "head_linear": {"min": 3, "max": 3},
+[  6681 s]       "head_ln": {"min": 2, "max": 2},
+[  6681 s]       "head_silu": {"min": 0, "max": 0},
+[  6681 s]       "margin_n_minus_a": {"min": 3, "max": 3}
+[  6681 s]     }
+[  6681 s]   },
+[  6681 s]   "protocol": {
+[  6681 s]     "round_trips": 10299,
+[  6681 s]     "nonlinearity_round_trips": 10286,
+[  6681 s]     "full_hidden_state_refresh_round_trips": 11,
+[  6681 s]     "last_token_refresh_round_trips": 1,
+[  6681 s]     "head_silu_round_trips": 1,
+[  6681 s]     "logical_boundary_instances": 1551081,
+[  6681 s]     "boundary_seconds_total": 956.18700772400064
+[  6681 s]   },
+[  6681 s]   "timings_seconds": {
+[  6681 s]     "load_verified_fixture": 23.494043551999997,
+[  6681 s]     "context_keygen_load": 3.9446968309999999,
+[  6681 s]     "encrypt_embedded_inputs": 1.2648516860000001,
+[  6681 s]     "blocks_encrypted_evaluation": 6565.9929350470011,
+[  6681 s]     "head_encrypted_evaluation": 9.045895324,
+[  6681 s]     "refreshes": 19.709652826999999,
+[  6681 s]     "encrypted_evaluation": 6594.7484831980018,
+[  6681 s]     "client_boundary_seconds_total": 956.18700772400064,
+[  6681 s]     "server_linear_algebra_seconds": 5638.5614754740009,
+[  6681 s]     "final_decrypt": 0.043833214000000002
+[  6681 s]   },
+[  6681 s]   "all_finite": true,
+[  6681 s]   "tol": 0.040000000000000001,
+[  6681 s]   "passed": true,
+[  6681 s]   "input_boundary": "token plus position embeddings encrypted by client",
+[  6681 s]   "intermediate_decrypt_attempts": 0,
+[  6681 s]   "declared_client_boundary_crossings": 10299,
+[  6681 s]   "declared_logical_boundary_instances": 1551081,
+[  6681 s]   "final_decrypt_calls": 1,
+[  6681 s]   "evaluator_has_private_key": false
+[  6681 s] }
+[  6681 s] REAL_DNAGPT_FIDES_SCHEME_B_ALL_BLOCKS_HEAD_T103_CPUDIAGCACHE_T123_V3_PASS
