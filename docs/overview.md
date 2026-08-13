@@ -43,38 +43,43 @@ See [shared/architecture_options.md](shared/architecture_options.md) and
 
 ## Strongest current encrypted result
 
-- `[V]` One complete released-weight transformer block passes at the full 103-token GSR prompt length.
+- `[V]` **The complete released-weight model (all 12 transformer blocks plus the encrypted GSR head)
+  passes at the full 103-token GSR prompt length** (TACC Lonestar6, 2026-08-12; see
+  [hybrid/tasks.md](hybrid/tasks.md)). Wall clock `6683 s` (~1.86 h) on a telemetry-confirmed clean
+  single A100. Per-block relative-infinity error stays in the `2.3e-9`-`2.1e-8` band across all 12
+  blocks and 11 inter-block client refreshes; the final decrypted head margin matches the frozen Phase-A
+  plaintext oracle (label `N`) to a relative error of `8.6e-9`. Zero intermediate decrypts; the
+  evaluator never holds the secret key.
 - `[V]` Eight-token SIMD packing reduces dense products from 1,236 serial-equivalent products to 156.
 - `[V]` The minimum demonstrated depth for the retained graph is 13.
-- `[V]` Relative-infinity error is approximately `4e-9`, far inside the `4e-2` gate.
-- `[V]` Target-process peak GPU memory is approximately `9.8 GiB`.
-- `[V]` Two released blocks compose correctly at two tokens using a client full-state refresh.
+- `[V]` Target-process peak GPU memory is approximately `9.8 GiB` per block; target-process peak host
+  RAM across the complete 12-block run is `49.7 GiB` and does not accumulate block-over-block (each
+  block's evaluator is freshly constructed).
 - `[V]` A two-GPU Q/K/V substage passes; one unrepeated sample observed about `1.65x` substage
   improvement. It is not integrated into the full block.
-- `[U]` The built 12-block plus released GSR-head driver has not run at 103 tokens.
-- `[U]` Existing long timings are contaminated by host load. Completed task-length block samples range
-  from roughly 50 minutes to 3.8 hours for materially identical computation.
+- `[U]` The 2026-08-12 result is one clean sample, not yet reproduced a second time on an independent
+  node -- repeat/variance confirmation is still open.
 - `[U]` No production network, transport, authentication, key-custody, or side-channel evaluation has
-  been performed.
+  been performed. All boundary crossings measured so far are in-process function calls, not networked
+  round trips.
 
-Correctness is therefore established for a task-length block, not for the complete classifier.
-Practical latency remains unestablished.
+Correctness is therefore now established for the complete classifier, not only a task-length block.
+`1.86 h` for one encrypted example on a single A100 is a real, measured latency figure; whether that
+counts as "practical" is a separate, deliberately unaddressed judgment call, not tuned toward either
+answer.
 
 ## Current decision
 
-A dedicated host is required but does not by itself close the performance question. Before treating
-the 12-block driver as a final latency experiment, the project will:
+The complete-model correctness question is closed for one clean sample. What remains before any
+practicality claim:
 
-1. obtain a clean one-block baseline and current T=103 CPU/CUDA profile;
-2. evaluate copy-fused dense projections, complete client-boundary LayerNorm, attention reduction and
-   packing changes, wider layouts, and true encoded-plaintext reuse;
-3. integrate only changes that preserve the oracle and improve a measured cost;
-4. run the resulting 12-block plus head graph on a dedicated host; and
-5. measure a real client/server transport separately.
+1. reproduce the 12-block result at least once more on an independent clean node to bound variance;
+2. evaluate further exact-model optimization gates (packing/layout/reuse changes) only where they
+   preserve the oracle and improve a measured cost;
+3. measure a real client/server transport separately -- every crossing measured so far is an in-process
+   function call, not a networked RPC.
 
-The current driver may still be run immediately for arithmetic correctness closure, but that run is
-a baseline feasibility result rather than an optimized end-to-end benchmark. The ordered gates are in
-[hybrid/roadmap.md](hybrid/roadmap.md).
+The ordered gates are in [hybrid/roadmap.md](hybrid/roadmap.md).
 
 ## Environment
 

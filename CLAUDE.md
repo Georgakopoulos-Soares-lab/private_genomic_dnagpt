@@ -42,10 +42,13 @@ architecture with active/planned work.
 
 `[V]` The active implementation closes one complete real-weight block at the 103-token GSR prompt
 length with eight-token SIMD packing and depth 13. `[V]` Two released blocks compose at two tokens
-through a declared client refresh. `[U]` The built 12-block plus GSR-head driver has not run at 103
-tokens, and existing long timings are contaminated by shared-host load. Performance work therefore
-starts with a dedicated current-block profile and the exact-model optimization gates in
-`docs/hybrid/roadmap.md`, not with an unprofiled multi-day run.
+through a declared client refresh. `[V]` The complete 12-block plus GSR-head driver has now run and
+passed at 103 tokens (2026-08-12, TACC Lonestar6): `6683 s` (~1.86 h) wall clock on a telemetry-confirmed
+clean single A100, final label matching the frozen Phase-A oracle — see `docs/hybrid/tasks.md`. This is
+one clean sample, not yet reproduced a second time; earlier long timings on other (non-T123-optimized or
+contended) runs remain contaminated/superseded as documented there. Remaining performance work is
+reproducing this result for variance, further exact-model optimization gates in `docs/hybrid/roadmap.md`,
+and a real networked client/server transport measurement — not an unprofiled multi-day run.
 
 Two alternatives were evaluated and are **not** the default; full justification in
 `docs/shared/architecture_options.md`:

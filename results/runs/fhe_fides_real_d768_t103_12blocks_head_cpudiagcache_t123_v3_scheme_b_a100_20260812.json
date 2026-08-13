@@ -1,0 +1,265 @@
+{
+  "schema_version": 1,
+  "task": "Released-weight DNAGPT complete 12-block backbone plus encrypted GSR N-minus-A head, Scheme B Token-SIMD B=8, T=103 (full prompt), T123_V3 per-block lever (CPU-side diagonal-vector cache + Tier1 encode-once encoded-Plaintext templates with per-use clone + Tier2/3 OMP-parallel batched encode + post-LoadContext free of CPU-side OpenFHE key maps)",
+  "implementation_version": "t103-scheme-b-token-simd-all-12-blocks-head-cpudiagcache-t123-v3-v1",
+  "scheme": "B (hybrid client-assisted CKKS)",
+  "measured_at_utc": "2026-08-12T11:21:29Z",
+  "gate": "all_blocks_head_t103_cpudiagcache_t123_v3",
+  "backend": "FIDESlib CKKS/CUDA",
+  "backend_commit": "786c7600fb2f16b724e0acf73df367b27b8afed6",
+  "container_image": "native-fideslib-786c7600-cuda12.8-gcc13.2",
+  "environment": "TACC Lonestar6 gpu-a100 node c315-016 A100 [gpu] (visible=all-visible, job=3359783) [native FIDESlib, CUDA 12.8]",
+  "gpu": 0,
+  "security": "HEStd_128_classic",
+  "source_sha256": "f04ee41093089a9c44f77259cc98480af42e0355b93f2a4a84a4f193e576fbfc",
+  "cpudiagcache_t123_v3_parent_source_sha256": "cbba5b6c2b13e0a9fbe9a6ca1db724782bbf0af0b4651fa17f1586fa6b03534b",
+  "cpudiagcache_driver_parent_source_sha256": "588fde54d38bf17b34b676e683e4434589a0d837f59f63a55effcb9a0ee54b2e",
+  "two_block_refresh_design_parent_source_sha256": "5cb82f81dc46efe2f4bfd7a1c9e9c1bf90cea3d629432b027b42e5df89093767",
+  "fixture_manifest_sha256": "2b39c40c56af8bdd596a903405c052a40a59c1258937a442f15f5d53697d787a",
+  "fixture_contract_sha256": "21256363bd81e142f8564517c4c4e3e8c424def5551baf51e8f59d4ca407b16c",
+  "config": {
+    "model": "dna_gpt0.1b_m classification checkpoint, all 12 released blocks and GSR head",
+    "blocks": 12,
+    "D": 768,
+    "T": 103,
+    "token_batch": 8,
+    "token_groups": 13,
+    "batch_slots": 32768,
+    "ring_dim": 65536,
+    "multiplicative_depth": 13,
+    "rotation_keys": 80,
+    "bootstraps": 0,
+    "block_matrix_products": 1872,
+    "head_matrix_products": 1,
+    "operation_counts": {
+      "explicit_ciphertext_ciphertext_multiplications": 18076,
+      "explicit_ciphertext_plaintext_multiplications": 2133839
+    }
+  },
+  "composition": {
+    "same_crypto_context_and_key_lineage": true,
+    "inter_block_full_hidden_refreshes": 11,
+    "block11_to_head_last_token_refreshes": 1,
+    "last_token_index": 102,
+    "last_token_group": 12,
+    "last_token_lane": 6,
+    "fresh_input_level": 0
+  },
+  "blocks": [
+    {
+      "block": 0,
+      "packed_output_level": 6,
+      "matrix_products": 156,
+      "refresh_metrics": {
+        "global_rel_inf": 4.0902778041291448e-09,
+        "worst_token_rel_inf": 4.3904647006649043e-09,
+        "max_abs_error": 6.5581750974263997e-08,
+        "all_finite": true,
+        "passed": true
+      },
+      "evaluation_seconds": 533.86924265100004,
+      "refresh_seconds": 1.767932174
+    },
+    {
+      "block": 1,
+      "packed_output_level": 6,
+      "matrix_products": 156,
+      "refresh_metrics": {
+        "global_rel_inf": 6.9636506186233228e-09,
+        "worst_token_rel_inf": 1.045930936105483e-08,
+        "max_abs_error": 1.8359290487879321e-07,
+        "all_finite": true,
+        "passed": true
+      },
+      "evaluation_seconds": 546.06615652100004,
+      "refresh_seconds": 1.8011895280000001
+    },
+    {
+      "block": 2,
+      "packed_output_level": 6,
+      "matrix_products": 156,
+      "refresh_metrics": {
+        "global_rel_inf": 1.1012026212541656e-08,
+        "worst_token_rel_inf": 2.0173617120110737e-08,
+        "max_abs_error": 4.2756010287803292e-07,
+        "all_finite": true,
+        "passed": true
+      },
+      "evaluation_seconds": 544.95121968599994,
+      "refresh_seconds": 1.7816582379999999
+    },
+    {
+      "block": 3,
+      "packed_output_level": 6,
+      "matrix_products": 156,
+      "refresh_metrics": {
+        "global_rel_inf": 6.9199079906581552e-09,
+        "worst_token_rel_inf": 3.6320837192759978e-08,
+        "max_abs_error": 7.5965264256794285e-07,
+        "all_finite": true,
+        "passed": true
+      },
+      "evaluation_seconds": 541.65947094600006,
+      "refresh_seconds": 1.7075155209999999
+    },
+    {
+      "block": 4,
+      "packed_output_level": 6,
+      "matrix_products": 156,
+      "refresh_metrics": {
+        "global_rel_inf": 2.349302393730871e-09,
+        "worst_token_rel_inf": 6.3495670316456455e-08,
+        "max_abs_error": 9.2933656370419726e-07,
+        "all_finite": true,
+        "passed": true
+      },
+      "evaluation_seconds": 545.81456189100004,
+      "refresh_seconds": 1.741360182
+    },
+    {
+      "block": 5,
+      "packed_output_level": 6,
+      "matrix_products": 156,
+      "refresh_metrics": {
+        "global_rel_inf": 2.8110059481257052e-09,
+        "worst_token_rel_inf": 1.0575529970940888e-07,
+        "max_abs_error": 1.1204401442199696e-06,
+        "all_finite": true,
+        "passed": true
+      },
+      "evaluation_seconds": 549.60969490299999,
+      "refresh_seconds": 1.7917589629999999
+    },
+    {
+      "block": 6,
+      "packed_output_level": 6,
+      "matrix_products": 156,
+      "refresh_metrics": {
+        "global_rel_inf": 3.3142200983339e-09,
+        "worst_token_rel_inf": 1.5438178695621799e-07,
+        "max_abs_error": 1.3333657875591598e-06,
+        "all_finite": true,
+        "passed": true
+      },
+      "evaluation_seconds": 558.94330988700005,
+      "refresh_seconds": 1.7089372899999999
+    },
+    {
+      "block": 7,
+      "packed_output_level": 6,
+      "matrix_products": 156,
+      "refresh_metrics": {
+        "global_rel_inf": 4.8995199685161907e-09,
+        "worst_token_rel_inf": 6.8616860459018688e-08,
+        "max_abs_error": 1.9798125242553866e-06,
+        "all_finite": true,
+        "passed": true
+      },
+      "evaluation_seconds": 547.07354614600001,
+      "refresh_seconds": 1.66850589
+    },
+    {
+      "block": 8,
+      "packed_output_level": 6,
+      "matrix_products": 156,
+      "refresh_metrics": {
+        "global_rel_inf": 4.8249565344973569e-09,
+        "worst_token_rel_inf": 5.601198031968184e-08,
+        "max_abs_error": 1.9524767435330492e-06,
+        "all_finite": true,
+        "passed": true
+      },
+      "evaluation_seconds": 554.44724627100004,
+      "refresh_seconds": 1.7451823209999999
+    },
+    {
+      "block": 9,
+      "packed_output_level": 6,
+      "matrix_products": 156,
+      "refresh_metrics": {
+        "global_rel_inf": 5.9409076721579588e-09,
+        "worst_token_rel_inf": 5.8492593658714606e-08,
+        "max_abs_error": 2.3898821904233536e-06,
+        "all_finite": true,
+        "passed": true
+      },
+      "evaluation_seconds": 542.72321968200004,
+      "refresh_seconds": 1.6944932589999999
+    },
+    {
+      "block": 10,
+      "packed_output_level": 6,
+      "matrix_products": 156,
+      "refresh_metrics": {
+        "global_rel_inf": 8.3213733742346958e-09,
+        "worst_token_rel_inf": 1.0339087793117939e-07,
+        "max_abs_error": 3.2936323972609927e-06,
+        "all_finite": true,
+        "passed": true
+      },
+      "evaluation_seconds": 550.85736766299999,
+      "refresh_seconds": 1.7381014340000001
+    },
+    {
+      "block": 11,
+      "packed_output_level": 6,
+      "matrix_products": 156,
+      "refresh_metrics": {
+        "global_rel_inf": 2.0656009090123795e-08,
+        "worst_token_rel_inf": 1.4300610805943275e-07,
+        "max_abs_error": 7.9725049317858065e-06,
+        "all_finite": true,
+        "passed": true
+      },
+      "evaluation_seconds": 549.97789880000005,
+      "refresh_seconds": 0.56301802700000003
+    }
+  ],
+  "head": {
+    "encrypted_readout": "last token -> final LN -> head linear -> SiLU -> head LN -> dot(N-A)",
+    "decrypted_margin_n_minus_a": 12.266581857561365,
+    "direct_dot_oracle_margin_n_minus_a": 12.266581962540492,
+    "margin_abs_error": 1.049791276130918e-07,
+    "margin_rel_error": 8.5581401513213305e-09,
+    "label": "N",
+    "label_matches": true,
+    "silu_round_trips": 1,
+    "level_trace": {
+      "final_ln": {"min": 2, "max": 2},
+      "head_linear": {"min": 3, "max": 3},
+      "head_ln": {"min": 2, "max": 2},
+      "head_silu": {"min": 0, "max": 0},
+      "margin_n_minus_a": {"min": 3, "max": 3}
+    }
+  },
+  "protocol": {
+    "round_trips": 10299,
+    "nonlinearity_round_trips": 10286,
+    "full_hidden_state_refresh_round_trips": 11,
+    "last_token_refresh_round_trips": 1,
+    "head_silu_round_trips": 1,
+    "logical_boundary_instances": 1551081,
+    "boundary_seconds_total": 956.18700772400064
+  },
+  "timings_seconds": {
+    "load_verified_fixture": 23.494043551999997,
+    "context_keygen_load": 3.9446968309999999,
+    "encrypt_embedded_inputs": 1.2648516860000001,
+    "blocks_encrypted_evaluation": 6565.9929350470011,
+    "head_encrypted_evaluation": 9.045895324,
+    "refreshes": 19.709652826999999,
+    "encrypted_evaluation": 6594.7484831980018,
+    "client_boundary_seconds_total": 956.18700772400064,
+    "server_linear_algebra_seconds": 5638.5614754740009,
+    "final_decrypt": 0.043833214000000002
+  },
+  "all_finite": true,
+  "tol": 0.040000000000000001,
+  "passed": true,
+  "input_boundary": "token plus position embeddings encrypted by client",
+  "intermediate_decrypt_attempts": 0,
+  "declared_client_boundary_crossings": 10299,
+  "declared_logical_boundary_instances": 1551081,
+  "final_decrypt_calls": 1,
+  "evaluator_has_private_key": false
+}

@@ -670,6 +670,46 @@ set_target_properties(
     CUDA_SEPARABLE_COMPILATION ON
     POSITION_INDEPENDENT_CODE ON)
 
+# Config-3 "all-optimizations" END-TO-END, T123_V3 per-block lever: the same
+# complete 12-block backbone + GSR head as the target above, but composing
+# the T123_V3 per-block source (..._cpudiagcache_t123_v3.cpp, included) --
+# encode-once encoded-Plaintext template cache (Tier1) + OMP-parallel batched
+# encode (Tier2/3) + post-LoadContext free of the CPU-side OpenFHE
+# EvalMult/rotation key maps (v3) -- instead of the plain cpudiagcache
+# per-block source. Composition logic is byte-for-byte the config-3
+# cpudiagcache e2e driver's, plus one addition mirrored from T123_V3's own
+# main(): this driver's own context setup also frees the CPU-side key maps
+# once, right after its own LoadContext. Additive; touches no other target.
+# Needs the raw OpenFHE headers directly (same already-solved reason as the
+# standalone T123_V3 single-block target above): fideslib::fideslib does not
+# propagate OpenFHE's include dirs transitively.
+add_executable(
+    real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head_cpudiagcache_t123_v3
+    src/real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head_cpudiagcache_t123_v3.cpp)
+set_source_files_properties(
+    src/real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head_cpudiagcache_t123_v3.cpp
+    PROPERTIES LANGUAGE CUDA)
+target_link_libraries(
+    real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head_cpudiagcache_t123_v3 PRIVATE
+    fideslib::fideslib
+    OpenMP::OpenMP_CXX)
+target_include_directories(
+    real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head_cpudiagcache_t123_v3 PRIVATE
+    "${OpenFHE_INCLUDE}"
+    "${OpenFHE_INCLUDE}/core"
+    "${OpenFHE_INCLUDE}/pke"
+    "${OpenFHE_INCLUDE}/binfhe")
+target_compile_options(
+    real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head_cpudiagcache_t123_v3 PRIVATE
+    $<$<COMPILE_LANGUAGE:CXX>:-Wall;-Wextra;-Wpedantic>
+    $<$<COMPILE_LANGUAGE:CUDA>:-Xcompiler=-Wall,-Wextra,-Wpedantic,-fopenmp>)
+set_target_properties(
+    real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head_cpudiagcache_t123_v3
+    PROPERTIES
+    CUDA_RESOLVE_DEVICE_SYMBOLS ON
+    CUDA_SEPARABLE_COMPILATION ON
+    POSITION_INDEPENDENT_CODE ON)
+
 # Historical negative prototype for process-separated MLP down-projection
 # sharding. The pinned FIDESlib has no Ciphertext serialization API, so these
 # targets are intentionally excluded from default builds. They remain

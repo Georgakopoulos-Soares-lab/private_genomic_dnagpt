@@ -1,12 +1,53 @@
 // Complete released DNAGPT graph under Scheme B Token-SIMD (B=8) packing at
-// T=103: encrypted embeddings -> 12 transformer blocks -> encrypted
-// N-minus-A GSR classifier margin. T=103 is the COMPLETE tokenized GSR
-// prompt for this record (not a truncated prefix like the T=2 driver), so
-// this is a real-task-semantics correctness/composition gate, not only a
-// graph gate.
+// T=103, CONFIG-3 "all-optimizations" variant, T123_V3 per-block lever:
+// encrypted embeddings -> 12 transformer blocks -> encrypted N-minus-A GSR
+// classifier margin, composing the T123_V3 per-block source (CPU-side
+// diagonal-vector cache + Tier1 encode-once encoded-Plaintext templates with
+// per-use clone + Tier2/3 OMP-parallel batched encode + v3's post-LoadContext
+// free of the CPU-side OpenFHE EvalMult/rotation key maps) instead of the
+// plain cpudiagcache block. T=103 is the COMPLETE tokenized GSR prompt for
+// this record (not a truncated prefix like the T=2 driver), so this is a
+// real-task-semantics correctness/composition gate, not only a graph gate.
+//
+// This file is an ADDITIVE fork of the config-3 "all-optimizations" e2e
+// driver real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head_cpudiagcache.cpp
+// (pinned SHA-256 below, design/composition parent, NOT included). Its
+// composition logic -- one crypto context/key lineage, 12 blocks, eleven
+// full-hidden-state inter-block refreshes, one block-11->head last-token
+// refresh, and the GSR N-minus-A head -- is BYTE-FOR-BYTE identical to that
+// parent. The ONLY differences are (1) which per-block source it #includes
+// (T123_V3 instead of plain cpudiagcache) and (2) one addition in this file's
+// own main(): the same post-LoadContext ClearEvalMultKeys()/
+// ClearEvalAutomorphismKeys() call T123_V3 makes in its own (unused) main(),
+// mirrored here because this driver's main() duplicates its own context
+// setup rather than calling the included file's. T123_V3's per-block class
+// is a strict superset of the plain cpudiagcache block -- same
+// EncryptedEvaluator/Client/Fixture/EvaluationResult/evaluate() symbol
+// surface, same op counts and boundary counts -- differing only by an
+// internal, class-private encoded-Plaintext template cache (flushed at each
+// stage boundary WITHIN evaluate(), and implicitly flushed between blocks
+// because this driver -- like its parent -- constructs a brand-new
+// EncryptedEvaluator instance per block iteration; see
+// "T123 tier composition across blocks" below), so the #include-swap changes
+// nothing about the composed encrypted graph or its crypto-op schedule.
+//
+// T123 tier composition across blocks (why this is safe): T123's Tier-1/2/3
+// encoded-Plaintext cache (diagonal_plain_cache_) is a private member of
+// EncryptedEvaluator, flushed at the QKV->attention-projection and
+// attention-projection->MLP stage boundaries inside evaluate() (see
+// flush_diagonal_plains() in the included per-block source). The 12-block
+// loop below (copied verbatim from the parent driver) constructs a FRESH
+// EncryptedEvaluator instance for every block iteration and lets it go out
+// of scope at the end of that iteration, so diagonal_plain_cache_ is
+// destroyed (and its memory released) at every block boundary regardless of
+// the intra-block flushes. No cache state, and
+// no other T123/v3-introduced state, crosses a block or a client-refresh
+// boundary; the free-host-keys call in main() runs exactly once, at global
+// context setup, before any block executes. This composes safely with the
+// declared client refresh protocol.
 //
 // Fork discipline:
-//   - includes the frozen depth-13/digits-3/ring-65536 Token-SIMD B=8 T=103
+//   - includes the T123_V3 depth-13/digits-3/ring-65536 Token-SIMD B=8 T=103
 //     single-block source unchanged (pinned SHA-256 below) and reuses its
 //     EncryptedEvaluator/Client/Fixture/free-function per-block logic
 //     exactly as-is, 12 times, one instantiation per released block;
@@ -40,9 +81,14 @@
 //     adds one standalone SiLU boundary function instead of editing the
 //     frozen Client class.
 //
-// Parent pins (both frozen, neither edited):
-//   depth-13 per-block source SHA-256:
-//     6e8cd08efad1567d2f9001f69d10e302e45f4e634f3bd37e2245382d215fbe5e
+// Parent pins (all frozen, none edited):
+//   config-3 12blocks_head_cpudiagcache e2e driver SHA-256 (this file's
+//   fork/composition parent; composition logic copied verbatim, per-block
+//   #include swapped, one main()-local ClearEvalMultKeys/
+//   ClearEvalAutomorphismKeys addition):
+//     588fde54d38bf17b34b676e683e4434589a0d837f59f63a55effcb9a0ee54b2e
+//   T123_V3 per-block source SHA-256 (included here, unchanged):
+//     cbba5b6c2b13e0a9fbe9a6ca1db724782bbf0af0b4651fa17f1586fa6b03534b
 //   T=2 two-block-refresh source SHA-256 (design adapted from, not
 //   included):
 //     5cb82f81dc46efe2f4bfd7a1c9e9c1bf90cea3d629432b027b42e5df89093767
@@ -51,8 +97,8 @@
 // take many hours: [stage] progress is logged after every block and every
 // refresh/head boundary so a partial failure is diagnosable, not silent.
 
-#define main real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_main_unused
-#include "real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536.cpp"
+#define main real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_t123_v3_main_unused
+#include "real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_t123_v3.cpp"
 #undef main
 
 // Not pulled in by the frozen depth-13 source's own include list (it uses
@@ -107,16 +153,24 @@ static_assert(LAST_TOKEN_LANE < 7);  // final group only has 7 active lanes
 #define KIMON_PIN_STRINGIFY2(x) #x
 #define KIMON_PIN_STRINGIFY(x) KIMON_PIN_STRINGIFY2(x)
 #endif
-// kimon: this pin hashes the plain per-block depth13 parent, which the
-// platform build edits additively (see the cpudiagcache sibling's own
-// PINNED_PARENT_* override) -- make it overridable the same way so this
-// driver's parent check accepts the in-tree, platform-edited depth13.cpp.
-#ifdef KIMON_PIN_CPUDIAG_PARENT
-constexpr std::string_view PINNED_DEPTH13_SOURCE_SHA256 = KIMON_PIN_STRINGIFY(KIMON_PIN_CPUDIAG_PARENT);
+// kimon: this pin hashes the whole per-block T123_V3.cpp parent, which the
+// platform build edits additively the same way it edits cpudiagcache.cpp
+// (see that file's own PINNED_PARENT_* override) -- make it overridable the
+// same way so this driver's parent check accepts the in-tree, platform-
+// edited T123_V3.cpp.
+#ifdef KIMON_PIN_CPUDIAGCACHE_T123_V3_FULL
+constexpr std::string_view PINNED_CPUDIAGCACHE_T123_V3_SOURCE_SHA256 = KIMON_PIN_STRINGIFY(KIMON_PIN_CPUDIAGCACHE_T123_V3_FULL);
 #else
-constexpr std::string_view PINNED_DEPTH13_SOURCE_SHA256 =
-    "6e8cd08efad1567d2f9001f69d10e302e45f4e634f3bd37e2245382d215fbe5e";
+constexpr std::string_view PINNED_CPUDIAGCACHE_T123_V3_SOURCE_SHA256 =
+    "cbba5b6c2b13e0a9fbe9a6ca1db724782bbf0af0b4651fa17f1586fa6b03534b";
 #endif
+// Composition/design parent (the config-3 all-optimizations e2e driver this
+// file forks its block-loop/refresh/head structure from, verbatim, adapted
+// only to swap the per-block #include and add the free-host-keys call).
+// Frozen, no platform override needed: this pin identifies a file that is
+// NOT included and never compiled here, only design-attested.
+constexpr std::string_view PINNED_CPUDIAGCACHE_DRIVER_PARENT_SOURCE_SHA256 =
+    "588fde54d38bf17b34b676e683e4434589a0d837f59f63a55effcb9a0ee54b2e";
 constexpr std::string_view PINNED_TWO_BLOCK_REFRESH_SOURCE_SHA256 =
     "5cb82f81dc46efe2f4bfd7a1c9e9c1bf90cea3d629432b027b42e5df89093767";
 #ifdef KIMON_PIN_AB_MANIFEST
@@ -137,7 +191,8 @@ struct AllBlocksOptions {
     std::filesystem::path fixture_dir;
     std::filesystem::path output;
     std::string backend_commit = std::string(PINNED_FIDES_COMMIT);
-    std::string depth13_source_sha256;
+    std::string cpudiagcache_t123_v3_source_sha256;
+    std::string cpudiagcache_driver_parent_source_sha256;
     std::string two_block_refresh_source_sha256;
     std::string fixture_manifest_sha256;
     std::string fixture_contract_sha256;
@@ -149,9 +204,12 @@ struct AllBlocksOptions {
 [[noreturn]] void all_blocks_usage_error(const std::string& message) {
     throw std::invalid_argument(
         message +
-        "\nusage: real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head "
+        "\nusage: "
+        "real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head_cpudiagcache_t123_v3 "
         "--gpu N --fixture-dir PATH --output PATH "
-        "--depth13-source-sha256 SHA --two-block-refresh-source-sha256 SHA "
+        "--cpudiagcache-t123-v3-source-sha256 SHA "
+        "--cpudiagcache-driver-parent-source-sha256 SHA "
+        "--two-block-refresh-source-sha256 SHA "
         "--fixture-manifest-sha256 SHA --fixture-contract-sha256 SHA "
         "--source-sha256 SHA [--backend-commit SHA] "
         "[--container-image NAME] [--environment TEXT]");
@@ -175,8 +233,10 @@ AllBlocksOptions parse_all_blocks_options(int argc, char** argv) {
             options.output = next();
         } else if (arg == "--backend-commit") {
             options.backend_commit = next();
-        } else if (arg == "--depth13-source-sha256") {
-            options.depth13_source_sha256 = next();
+        } else if (arg == "--cpudiagcache-t123-v3-source-sha256") {
+            options.cpudiagcache_t123_v3_source_sha256 = next();
+        } else if (arg == "--cpudiagcache-driver-parent-source-sha256") {
+            options.cpudiagcache_driver_parent_source_sha256 = next();
         } else if (arg == "--two-block-refresh-source-sha256") {
             options.two_block_refresh_source_sha256 = next();
         } else if (arg == "--fixture-manifest-sha256") {
@@ -192,14 +252,18 @@ AllBlocksOptions parse_all_blocks_options(int argc, char** argv) {
         } else if (arg == "--help" || arg == "-h") {
             std::cout
                 << "usage: "
-                   "real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head "
+                   "real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head_"
+                   "cpudiagcache_t123_v3 "
                    "--gpu N --fixture-dir PATH --output PATH "
-                   "--depth13-source-sha256 SHA "
+                   "--cpudiagcache-t123-v3-source-sha256 SHA "
+                   "--cpudiagcache-driver-parent-source-sha256 SHA "
                    "--two-block-refresh-source-sha256 SHA "
                    "--fixture-manifest-sha256 SHA "
                    "--fixture-contract-sha256 SHA --source-sha256 SHA\n"
                    "Complete 12-block DNAGPT backbone plus GSR classifier "
-                   "head, Scheme B Token-SIMD B=8, T=103 (full prompt).\n";
+                   "head, Scheme B Token-SIMD B=8, T=103 (full prompt), "
+                   "T123_V3 CPU-side diagonal-vector-cache + encode-once "
+                   "template cache + free-host-keys per-block lever.\n";
             std::exit(0);
         } else {
             all_blocks_usage_error("unknown argument " + arg);
@@ -213,10 +277,17 @@ AllBlocksOptions parse_all_blocks_options(int argc, char** argv) {
         all_blocks_usage_error("refusing unpinned FIDESlib commit " +
                                 options.backend_commit);
     }
-    if (options.depth13_source_sha256 != PINNED_DEPTH13_SOURCE_SHA256) {
+    if (options.cpudiagcache_t123_v3_source_sha256 !=
+        PINNED_CPUDIAGCACHE_T123_V3_SOURCE_SHA256) {
         all_blocks_usage_error(
-            "refusing changed depth-13 per-block parent source " +
-            options.depth13_source_sha256);
+            "refusing changed T123_V3 per-block parent source " +
+            options.cpudiagcache_t123_v3_source_sha256);
+    }
+    if (options.cpudiagcache_driver_parent_source_sha256 !=
+        PINNED_CPUDIAGCACHE_DRIVER_PARENT_SOURCE_SHA256) {
+        all_blocks_usage_error(
+            "refusing changed cpudiagcache driver composition-parent source " +
+            options.cpudiagcache_driver_parent_source_sha256);
     }
     if (options.two_block_refresh_source_sha256 !=
         PINNED_TWO_BLOCK_REFRESH_SOURCE_SHA256) {
@@ -763,12 +834,16 @@ std::string make_all_blocks_json(
         << "  \"schema_version\": 1,\n"
         << "  \"task\": \"Released-weight DNAGPT complete 12-block backbone "
            "plus encrypted GSR N-minus-A head, Scheme B Token-SIMD B=8, "
-           "T=103 (full prompt)\",\n"
+           "T=103 (full prompt), T123_V3 per-block lever (CPU-side "
+           "diagonal-vector cache + Tier1 encode-once encoded-Plaintext "
+           "templates with per-use clone + Tier2/3 OMP-parallel batched "
+           "encode + post-LoadContext free of CPU-side OpenFHE key maps)\",\n"
         << "  \"implementation_version\": "
-           "\"t103-scheme-b-token-simd-all-12-blocks-head-v1\",\n"
+           "\"t103-scheme-b-token-simd-all-12-blocks-head-cpudiagcache-t123-v3-"
+           "v1\",\n"
         << "  \"scheme\": \"B (hybrid client-assisted CKKS)\",\n"
         << "  \"measured_at_utc\": \"" << utc_now() << "\",\n"
-        << "  \"gate\": \"all_blocks_head_t103_simd\",\n"
+        << "  \"gate\": \"all_blocks_head_t103_cpudiagcache_t123_v3\",\n"
         << "  \"backend\": \"FIDESlib CKKS/CUDA\",\n"
         << "  \"backend_commit\": \"" << json_escape(options.backend_commit) << "\",\n"
         << "  \"container_image\": \"" << json_escape(options.container_image)
@@ -777,8 +852,10 @@ std::string make_all_blocks_json(
         << "  \"gpu\": " << options.gpu << ",\n"
         << "  \"security\": \"HEStd_128_classic\",\n"
         << "  \"source_sha256\": \"" << json_escape(options.source_sha256) << "\",\n"
-        << "  \"depth13_parent_source_sha256\": \""
-        << json_escape(options.depth13_source_sha256) << "\",\n"
+        << "  \"cpudiagcache_t123_v3_parent_source_sha256\": \""
+        << json_escape(options.cpudiagcache_t123_v3_source_sha256) << "\",\n"
+        << "  \"cpudiagcache_driver_parent_source_sha256\": \""
+        << json_escape(options.cpudiagcache_driver_parent_source_sha256) << "\",\n"
         << "  \"two_block_refresh_design_parent_source_sha256\": \""
         << json_escape(options.two_block_refresh_source_sha256) << "\",\n"
         << "  \"fixture_manifest_sha256\": \""
@@ -939,6 +1016,17 @@ int main(int argc, char** argv) {
                   << rotation_keys.size() << '\n';
         cc->LoadContext(keys.publicKey);
         cc->Synchronize();
+        // T123_V3: mirrors the included per-block source's own (unused, this
+        // driver has its own main() and its own context setup above) free-
+        // host-keys addition. LoadContext already copied the relin key + all
+        // rotation keys to the GPU; the CPU-side (OpenFHE) copies in the
+        // static eval-mult-key/rotation-key maps are dead weight for the
+        // rest of this process (one crypto context, no later CPU-side
+        // consumer -- see the T123_V3 per-block source's own comment at its
+        // call site). Called exactly ONCE here, before any block executes,
+        // not once per block.
+        lbcrypto::CryptoContextImpl<lbcrypto::DCRTPoly>::ClearEvalMultKeys();
+        lbcrypto::CryptoContextImpl<lbcrypto::DCRTPoly>::ClearEvalAutomorphismKeys();
         const double setup_seconds = elapsed_seconds(setup_start);
         const std::uint32_t ring = cc->GetRingDimension();
         if (ring < 2 * SLOTS) {
@@ -1117,8 +1205,8 @@ int main(int argc, char** argv) {
             passed);
         write_exclusive(options.output, evidence);
         std::cout << evidence;
-        std::cout << (passed ? "REAL_DNAGPT_FIDES_SCHEME_B_ALL_BLOCKS_HEAD_T103_SIMD_PASS"
-                             : "REAL_DNAGPT_FIDES_SCHEME_B_ALL_BLOCKS_HEAD_T103_SIMD_FAIL")
+        std::cout << (passed ? "REAL_DNAGPT_FIDES_SCHEME_B_ALL_BLOCKS_HEAD_T103_CPUDIAGCACHE_T123_V3_PASS"
+                             : "REAL_DNAGPT_FIDES_SCHEME_B_ALL_BLOCKS_HEAD_T103_CPUDIAGCACHE_T123_V3_FAIL")
                   << '\n';
         return passed ? 0 : 5;
     } catch (const std::exception& error) {

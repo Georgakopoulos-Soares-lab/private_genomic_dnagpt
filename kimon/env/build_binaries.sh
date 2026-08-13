@@ -27,6 +27,7 @@ DEFAULT_TARGETS=(
   real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_t123_v3
   real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head
   real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head_cpudiagcache
+  real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head_cpudiagcache_t123_v3
   real_dnagpt_fides_scheme_b_simd_shard_writer_t103_depth13
   real_dnagpt_fides_scheme_b_simd_shard_reader_t103_depth13
   real_dnagpt_fides_scheme_b_simd_shard_reader_cpudiagcache_t103_depth13
@@ -71,7 +72,21 @@ build_native() {
       local depth13_src="${REPO}/fhe/gpu_real_scheme_b/src/real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536.cpp"
       local depth13_sha; depth13_sha="$(sha256sum "${depth13_src}" | cut -d' ' -f1)"
       cuda_extra+=" -DKIMON_PIN_CPUDIAG_PARENT=${depth13_sha}"
-      echo "[platform-pins] injecting ls6 fixture-identity pins + cpudiag parent=${depth13_sha:0:12} into the CUDA build"
+      # The 12-block+head drivers each pin their per-block parent source as a
+      # whole. The cpudiagcache per-block source is itself additively edited
+      # by the platform build (same reason as depth13_sha above), so its
+      # driver's pin drifts too unless overridden the same way.
+      local cpudiagcache_src="${REPO}/fhe/gpu_real_scheme_b/src/real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache.cpp"
+      local cpudiagcache_sha; cpudiagcache_sha="$(sha256sum "${cpudiagcache_src}" | cut -d' ' -f1)"
+      cuda_extra+=" -DKIMON_PIN_CPUDIAGCACHE_FULL=${cpudiagcache_sha}"
+      # The T123_V3 12-block+head driver pins its per-block parent (the
+      # T123_V3 single-block source) the same way; that source is itself
+      # additively edited by the platform build (same reason as above), so
+      # its driver's pin drifts too unless overridden the same way.
+      local cpudiagcache_t123_v3_src="${REPO}/fhe/gpu_real_scheme_b/src/real_dnagpt_fides_scheme_b_simd_full_t103_depth13_digits3_ring65536_cpudiagcache_t123_v3.cpp"
+      local cpudiagcache_t123_v3_sha; cpudiagcache_t123_v3_sha="$(sha256sum "${cpudiagcache_t123_v3_src}" | cut -d' ' -f1)"
+      cuda_extra+=" -DKIMON_PIN_CPUDIAGCACHE_T123_V3_FULL=${cpudiagcache_t123_v3_sha}"
+      echo "[platform-pins] injecting ls6 fixture-identity pins + cpudiag parent=${depth13_sha:0:12} + cpudiagcache full=${cpudiagcache_sha:0:12} + cpudiagcache t123_v3 full=${cpudiagcache_t123_v3_sha:0:12} into the CUDA build"
     else
       echo "[warn] ${envf} missing; building with frozen fixture pins (runs will reject regenerated fixtures)" >&2
     fi

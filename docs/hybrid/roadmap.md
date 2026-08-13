@@ -9,6 +9,20 @@ worked, failed, or remain open is
 
 ## Decision
 
+`[V]` **2026-08-12 update: the complete 12-block + GSR-head driver has now run and passed** on TACC
+Lonestar6 (`results/runs/fhe_fides_real_d768_t103_12blocks_head_cpudiagcache_t123_v3_scheme_b_a100_20260812.json`,
+detailed in `tasks.md`) -- `6683 s` (~1.86 h) wall clock on a telemetry-confirmed clean single-GPU node,
+using the already-accepted T123_V3 per-block lever composed 12x, not the plain-cpudiagcache driver this
+decision originally scoped around. Correctness is therefore established for the complete classifier, not
+only a single block. The paragraphs below are kept as the historical decision record; what they
+correctly anticipated is that a dedicated host is necessary for defensible timing, and that a dedicated
+arithmetic run still does not measure networked end-to-end latency -- both remain true. What has changed
+is that "run the current driver only for arithmetic correctness, not performance" no longer applies to
+the T123_V3-composed driver specifically: its per-block cost matches the independently-validated
+single-block campaign figures closely enough (533.9-558.9s here vs. 592-663s single-block) to trust as a
+real, if single-sample, performance measurement -- see `tasks.md` for the full accounting and what still
+is *not* closed (repeat/variance confirmation, networked transport).
+
 The current implementation is correct at the single-block task length, but it is not
 optimization-complete. A dedicated host is necessary for defensible timing; it is not sufficient to
 justify running the existing 12-block driver as the final performance experiment.
@@ -30,10 +44,12 @@ justify running the existing 12-block driver as the final performance experiment
 | Minimum demonstrated depth | `[V]` 13 at the retained scale, digit count, ring, and packing |
 | Process peak GPU memory | `[V]` approximately `9.8 GiB` for the retained task-length block |
 | Short composition | `[V]` blocks 0 and 1 pass at two tokens through a full-state client refresh |
-| Full task-length driver | `[V]` builds and passes local contracts; `[U]` never run on a GPU |
-| Clean block latency | `[U]` samples span roughly 2,986–13,658 seconds under different host load |
+| Full task-length driver | `[V]` builds, passes local contracts, **and now passes on real GPU hardware** (T123_V3-composed variant, 2026-08-12) |
+| Complete 12-block + head forward pass, T=103 | `[V]` PASS, `6683 s` (~1.86 h) wall clock, clean single-GPU node, global_rel_inf `2.3e-9`-`2.1e-8` across all 12 blocks, head label matches the Phase-A oracle -- see `tasks.md` 2026-08-12 entry |
+| Clean block latency | `[V]` T123_V3 per-block cost is now well characterized: `533.9-558.9 s` across 12 consecutive blocks in one clean run (2026-08-12), consistent with the single-block campaign's `592-663 s`. The plain (non-T123) driver's `[U]` `2,986-13,658 s` spread under contention is superseded for any run that uses the T123_V3 lever. |
 | Integrated multi-GPU block | `[U]` only Q/K/V process sharding has run; its outputs cannot feed the full process with the current backend |
 | Networked protocol latency | `[U]` not implemented; current crossings are in-process cryptographic boundaries, not RPCs |
+| Repeated/clean-variance confirmation of the full 12-block run | `[U]` one clean sample (2026-08-12); not yet reproduced a second time on an independent node |
 
 The older two-token synchronized profile found dense multiplication dominant. It does not prove where
 time goes in the current graph, whose attention schedule and operation mix are substantially different.

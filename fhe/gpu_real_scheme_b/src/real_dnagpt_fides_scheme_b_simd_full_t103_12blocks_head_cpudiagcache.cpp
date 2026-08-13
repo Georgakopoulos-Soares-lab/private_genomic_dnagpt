@@ -117,10 +117,6 @@ constexpr std::size_t LAST_TOKEN_LANE = LAST_TOKEN % TOKEN_BATCH;   // 6
 static_assert(LAST_TOKEN_GROUP == TOKEN_GROUPS - 1);
 static_assert(LAST_TOKEN_LANE < 7);  // final group only has 7 active lanes
 
-constexpr std::string_view PINNED_CPUDIAGCACHE_SOURCE_SHA256 =
-    "686c8b766436fde0fd4422f6a29f80361f8c8a2565768577857e9264b2976fd5";
-constexpr std::string_view PINNED_TWO_BLOCK_REFRESH_SOURCE_SHA256 =
-    "5cb82f81dc46efe2f4bfd7a1c9e9c1bf90cea3d629432b027b42e5df89093767";
 // kimon: optional compile-time override of the fixture-identity pins for a
 // platform-tagged (e.g. TACC ls6) build; frozen value is the default. Pass a
 // bare-hex -D (no quotes); stringify makes it a literal. See kimon/env/.
@@ -128,6 +124,18 @@ constexpr std::string_view PINNED_TWO_BLOCK_REFRESH_SOURCE_SHA256 =
 #define KIMON_PIN_STRINGIFY2(x) #x
 #define KIMON_PIN_STRINGIFY(x) KIMON_PIN_STRINGIFY2(x)
 #endif
+// kimon: this pin hashes the whole per-block cpudiagcache.cpp parent, which
+// the platform build edits additively (see that file's own PINNED_PARENT_*
+// override) -- make it overridable the same way so this driver's parent
+// check accepts the in-tree, platform-edited cpudiagcache.cpp.
+#ifdef KIMON_PIN_CPUDIAGCACHE_FULL
+constexpr std::string_view PINNED_CPUDIAGCACHE_SOURCE_SHA256 = KIMON_PIN_STRINGIFY(KIMON_PIN_CPUDIAGCACHE_FULL);
+#else
+constexpr std::string_view PINNED_CPUDIAGCACHE_SOURCE_SHA256 =
+    "686c8b766436fde0fd4422f6a29f80361f8c8a2565768577857e9264b2976fd5";
+#endif
+constexpr std::string_view PINNED_TWO_BLOCK_REFRESH_SOURCE_SHA256 =
+    "5cb82f81dc46efe2f4bfd7a1c9e9c1bf90cea3d629432b027b42e5df89093767";
 #ifdef KIMON_PIN_AB_MANIFEST
 constexpr std::string_view PINNED_ALL_BLOCKS_FIXTURE_MANIFEST_SHA256 = KIMON_PIN_STRINGIFY(KIMON_PIN_AB_MANIFEST);
 #else

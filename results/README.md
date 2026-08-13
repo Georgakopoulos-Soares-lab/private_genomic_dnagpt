@@ -45,8 +45,11 @@ table because such tables become stale and compete with the immutable index.
   with eight-token SIMD packing, depth 13, approximately `4e-9` relative error, and approximately
   `9.8 GiB` target-process peak GPU memory.
 - `[V]` Short client-assisted composition: two released blocks pass at two tokens.
-- `[U]` The complete 12-block plus task-head run, clean latency, and a networked protocol measurement
-  remain open.
+- `[V]` **Complete 12-block plus GSR-head run at T=103: PASS** (2026-08-12, TACC Lonestar6), `6683 s`
+  (~1.86 h) wall clock on a clean single A100, label matches the frozen Phase-A oracle. See
+  `hybrid/manifest.yaml` and `../docs/hybrid/tasks.md`.
+- `[U]` Repeated/clean-variance confirmation of that run and a networked protocol measurement remain
+  open.
 
 Current interpretation and execution order live in:
 

@@ -2003,3 +2003,111 @@ runs:
       distinct, genuinely clean physical GPU. Timing is informational
       only (see the querykey entry above for the host-contention caveat
       that applies equally here); no speedup claim is made.
+
+  - id: fhe_fides_real_d768_t103_12blocks_head_cpudiagcache_t123_v3_scheme_b_a100_20260812
+    task: "Complete released-weight DNAGPT backbone (all 12 blocks) plus the encrypted GSR N-minus-A head, Scheme B client-assisted CKKS, Token-SIMD B=8, T=103 (full GSR prompt length) -- first full task-length, task-complete encrypted forward pass in this project"
+    status: "[V] PASS"
+    backend: "FIDESlib CKKS/CUDA, commit 786c7600fb2f16b724e0acf73df367b27b8afed6, HEStd_128_classic, native build (CUDA 12.8, not the pinned CUDA 13.0 docker image)"
+    environment: "TACC Lonestar6 gpu-a100 (single-GPU/node partition, not the shared gpu-a100-dev), node c315-016, A100-PCIE-40GB, native FIDESlib. Telemetry-confirmed clean: host_load1 avg 9.9 / peak 29.1 over 653 samples, gpu0_mem_peak 9839 MiB, other_gpu_mem_peak 850 MiB (a different job on a different GPU on the same node; did not share GPU0)."
+    config:
+      dimension: 768
+      sequence_length: 103
+      blocks: 12
+      token_batch: 8
+      token_groups: 13
+      batch_slots: 32768
+      ring_dim: 65536
+      multiplicative_depth: 13
+      rotation_keys: 80
+      bootstraps: 0
+      block_matrix_products: 1872
+      head_matrix_products: 1
+      explicit_ciphertext_ciphertext_multiplications: 18076
+      explicit_ciphertext_plaintext_multiplications: 2133839
+      per_block_lever: "CPU-side diagonal-vector cache + Tier1 encode-once encoded-Plaintext templates with per-use clone + Tier2/3 OMP-parallel batched encode + post-LoadContext free of CPU-side OpenFHE key maps (T123_V3, same lever accepted as v3_free_host_keys/v1_affinity_only in the optimization campaign)"
+      omp_num_threads: 32
+      omp_proc_bind: "close"
+      omp_places: "cores"
+    metrics:
+      global_rel_inf_per_block_range: [2.349302393730871e-09, 2.0656009090123795e-08]
+      worst_token_rel_inf_per_block_range: [4.390464700664904e-09, 1.5438178695621799e-07]
+      tolerance: 0.04
+      head_label: "N"
+      head_label_matches_oracle: true
+      head_margin_rel_error: 8.55814015132133e-09
+      all_finite: true
+      intermediate_decrypt_attempts: 0
+      evaluator_has_private_key: false
+      declared_client_boundary_crossings: 10299
+      declared_logical_boundary_instances: 1551081
+      wall_clock_seconds_sbatch: 6683
+      encrypted_evaluation_seconds: 6594.748483198002
+      blocks_encrypted_evaluation_seconds: 6565.992935047001
+      head_encrypted_evaluation_seconds: 9.045895324
+      refreshes_seconds: 19.709652827
+      per_block_evaluation_seconds_mean: 547.1660779205834
+      per_block_evaluation_seconds_range: [533.869242651, 558.943309887]
+      server_linear_algebra_seconds: 5638.561475474001
+      client_boundary_seconds_total: 956.1870077240006
+      server_share_pct: 85.5
+      client_share_pct: 14.5
+      context_keygen_load_seconds: 3.944696831
+      encrypt_embedded_inputs_seconds: 1.264851686
+      final_decrypt_seconds: 0.043833214
+      target_process_rss_peak_gib: 49.7
+      target_process_vmhwm_peak_gib: 49.7
+      gpu0_mem_peak_mib: 9839
+    provenance:
+      result_sha256: "78b6c1f499f25ddef38b88976f4aa5792f2cc1467a136beb1f0448866c704d19"
+      source_sha256: "f04ee41093089a9c44f77259cc98480af42e0355b93f2a4a84a4f193e576fbfc"
+      cpudiagcache_t123_v3_parent_source_sha256: "cbba5b6c2b13e0a9fbe9a6ca1db724782bbf0af0b4651fa17f1586fa6b03534b"
+      cpudiagcache_driver_parent_source_sha256: "588fde54d38bf17b34b676e683e4434589a0d837f59f63a55effcb9a0ee54b2e"
+      two_block_refresh_design_parent_source_sha256: "5cb82f81dc46efe2f4bfd7a1c9e9c1bf90cea3d629432b027b42e5df89093767"
+      fixture_manifest_sha256: "2b39c40c56af8bdd596a903405c052a40a59c1258937a442f15f5d53697d787a"
+      fixture_contract_sha256: "21256363bd81e142f8564517c4c4e3e8c424def5551baf51e8f59d4ca407b16c"
+      telemetry_csv: "results/runs/fhe_fides_real_d768_t103_12blocks_head_cpudiagcache_t123_v3_scheme_b_a100_20260812_telemetry.csv"
+    verdict: >
+      [V] PASS -- the first complete, task-length encrypted DNAGPT forward
+      pass in this project: all 12 released transformer blocks plus the
+      encrypted GSR N-minus-A head, at the real T=103 GSR prompt length,
+      client-assisted CKKS, on real GPU hardware. Per-block accuracy is
+      tight and consistent (global_rel_inf 2.3e-9 to 2.1e-8 across all 12
+      blocks, no degradation trend across the 11 inter-block full-state
+      refreshes), and the final decrypted head margin
+      (12.2665818... vs the direct-oracle 12.2665819...) matches the
+      frozen Phase-A plaintext prediction bit-for-bit at the reported
+      precision (label "N", label_matches=true) -- both many orders of
+      magnitude inside the 4e-2 gate. Zero intermediate decrypts; the
+      evaluator never holds the private key.
+      Wall clock 6683s (~1.86h) on a genuinely clean, telemetry-confirmed
+      single-GPU node (gpu-a100 partition, not the shared gpu-a100-dev;
+      host_load1 averaged 9.9, peaked at 29.1 across 653 samples) --
+      the cleanest full-scale measurement in this project's history.
+      Per-block cost is tight (533.9-558.9s, ~4.5% spread across all 12
+      blocks) and matches the T123_V3 single-block campaign figure
+      (592-663s, jobs 3345272/3347729), confirming the encode-once
+      diagonal-cache lever composes correctly and without per-block
+      degradation across a full 12-block, 11-refresh, real client-boundary
+      run -- not just the 4-block partial sample from the same-day A0
+      calibration (job 3355234) or the 2-block short composition from
+      2026-07-25/26.
+      This supersedes two prior open items: (1) docs/hybrid/roadmap.md's
+      "[U] complete task-length encrypted inference... remain unmeasured"
+      and (2) the same day's own A0 calibration finding that the
+      NON-T123 cpudiagcache-only driver projects to ~5.1h/12 blocks --
+      the T123_V3-composed driver is both faster (~1.86h vs ~5.1h
+      projected) and, unlike the A0 probe, actually ran to completion.
+      Host RSS peaked at 49.7 GiB target-process (VmHWM), essentially
+      unchanged from the single-block T123_V3 campaign figures
+      (44.5-49.0 GiB) -- confirms the earlier finding that each block's
+      EncryptedEvaluator is destroyed and freshly constructed per
+      iteration, so memory does not accumulate across the 12 blocks.
+      Server/client split: 85.5% server-GPU / 14.5% client-CPU-boundary
+      of encrypted_evaluation time -- consistent with the single-block
+      campaign's ~85-88%/12-15% split.
+      Remaining open items this result does NOT close: clean-vs-repeated
+      variance (this is one sample, not yet repeated on a second clean
+      node); a real networked client/server transport (all 10299
+      boundary crossings here are in-process function calls, not WAN
+      RPCs); and encrypted token-index embedding lookup (still out of
+      scope, unchanged).

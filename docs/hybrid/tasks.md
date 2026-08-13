@@ -2805,3 +2805,129 @@ concurrent Stage-2 MLP workstream's own in-flight `CMakeLists.txt`/
 preserved (idempotent single-round-trip patch applied on top of whatever was
 live there, rather than a blind overwrite, after an earlier overwrite/
 clobber collision was caught and corrected).
+
+### Complete 12-block + GSR-head encrypted forward pass at T=103: first PASS (2026-08-12, TACC Lonestar6)
+
+`[V]` **This closes the open item this file and `docs/hybrid/roadmap.md` have both carried since
+2026-07-31: "the built 12-block plus GSR-head driver has not run at 103 tokens."** All twelve released
+DNAGPT blocks plus the encrypted GSR N-minus-A head now pass, end to end, at the real T=103 GSR prompt
+length, on real GPU hardware, against the unchanged `4e-2` oracle gate. Evidence:
+`results/runs/fhe_fides_real_d768_t103_12blocks_head_cpudiagcache_t123_v3_scheme_b_a100_20260812.json`
+(+ paired `..._telemetry.csv`), manifest row in `results/hybrid/manifest.yaml`.
+
+This work happened on a new execution environment: **TACC Lonestar6** (`gpu-a100`/`gpu-a100-dev`
+partitions, native FIDESlib build against CUDA 12.8 -- the pinned docker image is CUDA 13.0 and cannot
+launch kernels on this driver). The `kimon/` harness (`kimon/env/`, `kimon/configs/`) wraps the existing
+`fhe/gpu_real_scheme_b/` sources/launchers for this environment; see `kimon/README.md`. Historical Brev
+evidence above this entry is unaffected and still reproduces on Brev.
+
+**Two real bugs found and fixed en route, both process/tooling issues, neither a correctness or crypto
+bug:**
+
+1. **Stale compile-time source pins on both 12-block drivers.** Both
+   `real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head.cpp` and its `_cpudiagcache` sibling pin a
+   sha256 of their per-block parent source as a drift guard. An earlier platform-build commit
+   (2026-08-07) added `#ifdef`-guarded pin-override support to the per-block sources themselves but never
+   added the matching override to these two drivers' own hardcoded literals -- so a live rebuild computed
+   the parent's current hash, the driver's baked-in pin didn't match, and the driver correctly refused to
+   run (`[FATAL] refusing changed cpudiagcache per-block parent source ...`) rather than silently running
+   against an unverified source. Not a false alarm: the guard did its job. Fixed by adding the same
+   `KIMON_PIN_STRINGIFY`-based override (`KIMON_PIN_CPUDIAGCACHE_FULL` / reusing `KIMON_PIN_CPUDIAG_PARENT`)
+   to both drivers and wiring `kimon/env/build_binaries.sh` to inject the live hash, exactly mirroring the
+   pattern the 2026-08-07 commit already used elsewhere. A same-day calibration run (A0, job 3354720) had
+   silently misread this crash's usage-string as "1 block completed in 4s" via an overly loose log-grep,
+   producing a nonsense `VERDICT = GO` -- caught by reading the raw log directly rather than trusting the
+   verdict script's own arithmetic; not corrected in the script itself, since the direct-log-count below
+   made it moot for this decision, but worth fixing before the next calibration run.
+2. **`stdbuf` cannot wrap a bash function.** The monitored e2e sbatch wrapper piped `run_scheme_b` (a
+   bash function defined in `kimon/env/common.sh`, not an executable) through `stdbuf -oL -eL` to get
+   line-buffered, timestamped output -- `stdbuf` only wraps real executables, so this failed closed with
+   `stdbuf: failed to run command 'run_scheme_b': No such file or directory` (rc=127) before the actual
+   binary ever ran. Fixed by removing the wrapper from the producer side; the existing
+   `| stdbuf -oL awk ...` on the consumer side already gives per-line flushing where it matters.
+
+**Recalibration (A0, job 3355234, `gpu-a100-dev`) after the pin fix, before committing GPU time to the
+full run:** produced a real (non-crashed) partial result -- but its own `blocks_seen` counter was also
+wrong, independently of bug 1. The verdict script's log-grep matches two lines per completed block (the
+`evaluation done` line and the `refresh ... done` line), so it reported "8 blocks in 6279s" when the raw
+log showed only **4 real completed blocks** (0-3, `1511-1558s` each, tight ~3% spread) plus one partial
+5th block in progress at timeout. This is a second, distinct counting bug in `a0_calibration.sbatch`,
+not yet fixed in the script itself -- flagged here so a future calibration run doesn't repeat it; always
+cross-check `blocks_seen` against the raw stamped log before trusting the derived per-block cost.
+Corrected math (4 clean blocks x ~1520s/block extrapolated to 12) projected **~5.1h** for the plain
+(non-T123) `cpudiagcache` 12-block driver -- itself already a large downward revision from this file's
+earlier `15.5-45.5h` naive extrapolation (which was based on either the non-diagcache driver or
+heavily-contaminated single-block samples).
+
+**The actual full-optimization driver.** Rather than spend a ~5h slot on the plain-cpudiagcache driver,
+a new sibling driver,
+`fhe/gpu_real_scheme_b/src/real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head_cpudiagcache_t123_v3.cpp`,
+composes the already-accepted **T123_V3** per-block lever (CPU-side diagonal-vector cache, Tier-1
+encode-once encoded-Plaintext templates with per-use clone, Tier-2/3 OMP-parallel batched encode, and the
+post-`LoadContext` free of CPU-side OpenFHE key maps -- see the 2026-07-27/28/31 and 2026-08-01 entries
+above for how each of these was independently validated) twelve times instead of the plain diagonal-cache
+logic. Composition safety was verified by reading the code before writing any new source: the existing
+12-block driver constructs a **fresh** `EncryptedEvaluator` every block iteration, so the T123 cache
+(a private member of that object) cannot leak state across a block or client-refresh boundary regardless
+of its intra-block flush behavior. Local static/structural contract test
+(`test_all_blocks_head_t103_cpudiagcache_t123_v3_source_contract.py`, 26 tests): parent-source hashes
+pinned, per-block T123_V3 logic included exactly once with `main` renamed out of the way, `t123_v2` (the
+abandoned/unsafe concurrent-boundary variant) never referenced, free-host-keys called exactly once
+outside the block loop (not per-block), fresh-`EncryptedEvaluator`-per-block invariant, and the unchanged
+`EXPECTED_TOTAL_CROSSINGS == 10299` / `EXPECTED_TOTAL_LOGICAL_INSTANCES == 1551081` static asserts --
+all pass, no GPU needed. Wired into `CMakeLists.txt` / `build_binaries.sh` (new
+`KIMON_PIN_CPUDIAGCACHE_T123_V3_FULL` pin override, same pattern as above) and a new runner
+(`run_scheme_b_all_blocks_head_t103_cpudiagcache_t123_v3.sh`) and sbatch launcher
+(`kimon/configs/config3_all_opts/e2e_t123_v3_monitored.sbatch`, telemetry sampler + timestamped log for
+the entire run, not just calibration).
+
+**Result** (`results/runs/fhe_fides_real_d768_t103_12blocks_head_cpudiagcache_t123_v3_scheme_b_a100_20260812.json`):
+
+| Quantity | Value |
+|---|---:|
+| Wall clock (sbatch) | `6683 s` (~1.86 h) |
+| `encrypted_evaluation` | `6594.75 s` |
+| `blocks_encrypted_evaluation` (all 12) | `6565.99 s` |
+| `head_encrypted_evaluation` | `9.05 s` |
+| `refreshes` (11 inter-block + 1 last-token) | `19.71 s` |
+| per-block `evaluation_seconds` | `533.9-558.9 s` (mean `547.2 s`, ~4.5% spread across all 12) |
+| `server_linear_algebra_seconds` | `5638.56 s` (85.5%) |
+| `client_boundary_seconds_total` | `956.19 s` (14.5%) |
+| `context_keygen_load` + `encrypt_embedded_inputs` | `3.94 s` + `1.26 s` (one-time) |
+| global_rel_inf across the 12 blocks | `2.35e-9` to `2.07e-8` |
+| worst-token rel_inf across the 12 blocks | `4.39e-9` to `1.54e-7` |
+| head margin (decrypted vs. direct-plaintext oracle) | `12.266581858` vs `12.266581963` (rel. error `8.56e-9`) |
+| final label | `N`, `label_matches_oracle = true` |
+| target-process peak RSS (`VmHWM`) | `49.7 GiB` |
+| GPU0 peak memory | `9839 MiB` |
+| host telemetry (653 samples @ 10s) | `load1` avg `9.9`, peak `29.1` -- the cleanest full-scale sample in this project's history |
+| intermediate decrypts / private-key exposure | `0` / evaluator never holds the secret key |
+
+All figures many orders of magnitude inside the `4e-2` gate. Every block's error stays flat across the
+11 refreshes (no accumulating-drift trend), and per-block timing is tight enough (533.9-558.9s) to treat
+as one consistent measurement rather than 12 independent noisy samples. Per-block cost matches the
+single-block T123_V3 campaign figures (`592-663s`, jobs 3345272/3347729) closely, confirming the lever
+composes across a full 12-block run with real client refreshes without per-block degradation -- not just
+across the earlier 4-block partial sample or the 2-token short composition. Target-process RSS (`49.7
+GiB`) stayed essentially flat versus the single-block campaign's own `44.5-49.0 GiB`, confirming memory
+does not accumulate across blocks (each block's evaluator is destroyed and freshly built every
+iteration).
+
+**Reproduction** (from a TACC Lonestar6 login node, native FIDESlib already built):
+
+```bash
+sbatch kimon/configs/build_binaries.sbatch        # builds real_dnagpt_fides_scheme_b_simd_full_t103_12blocks_head_cpudiagcache_t123_v3
+mkdir -p kimon/logs/config3_all_opts
+sbatch kimon/configs/config3_all_opts/e2e_t123_v3_monitored.sbatch
+```
+
+**Verdict: `[V]` PASS.** This is the first complete, task-length, task-complete encrypted DNAGPT forward
+pass in this project -- correctness is now established for the full classifier, not just a task-length
+block or a short composition, closing that half of the gap `docs/overview.md` and
+`docs/hybrid/roadmap.md` both flagged as open. It does **not** close: repeated/clean-variance confirmation
+(this is one clean sample, not yet reproduced a second time); a real networked client/server transport
+(all `10299` boundary crossings here are in-process function calls, timed as such, not WAN RPCs); or
+encrypted token-index embedding lookup (unchanged, out of scope). "Practical" remains a separate,
+unaddressed question from "correct and measured" per this project's own rule -- `1.86h` for one encrypted
+example on a single A100 is a large, real number, reported as measured, not tuned toward a verdict either
+way.
