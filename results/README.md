@@ -43,10 +43,11 @@ table because such tables become stale and compete with the immutable index.
   root-caused GPU memory boundary.
 - `[V]` Client-assisted CKKS: one complete real-weight block passes at the 103-token GSR prompt length
   with eight-token SIMD packing, depth 13, approximately `4e-9` relative error, and approximately
-  `9.8 GiB` target-process peak GPU memory.
+  `9.8 GiB` peak device-wide GPU memory used during the run.
 - `[V]` Short client-assisted composition: two released blocks pass at two tokens.
 - `[V]` **Complete 12-block plus GSR-head run at T=103: PASS** (2026-08-12, TACC Lonestar6), `6683 s`
-  (~1.86 h) wall clock on a clean single A100, label matches the frozen Phase-A oracle. See
+  (~1.86 h) wall clock on a whole-node allocation with no contention detected in recorded
+  telemetry, label matches the frozen Phase-A oracle. See
   `hybrid/manifest.yaml` and `../docs/hybrid/tasks.md`.
 - `[U]` Repeated/clean-variance confirmation of that run and a networked protocol measurement remain
   open.

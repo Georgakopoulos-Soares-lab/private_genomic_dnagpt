@@ -64,17 +64,17 @@ model. Section~\ref{sec:protocol} evaluates both designs and reports where each 
 \subsection{Evaluated software backends}
 We separate correctness semantics from the performance path. OpenFHE provides CKKS context and
 security-parameter construction, encoding, rotations, polynomial evaluation, and approximate
-bootstrapping \cite{openfhe}. It supplies the reference behavior used to validate local encrypted
+bootstrapping~\cite{openfhe}. It supplies the reference behavior used to validate local encrypted
 operators and the non-interactive design. The evaluated GPU backend interoperates with those
 representations and provides CUDA implementations of the server-side CKKS operations; all reported
 accelerator measurements use that path. Python, NumPy, and PyTorch construct and validate the frozen
 plaintext reference, but they do not participate in encrypted performance measurements.
 
-We also evaluated a Boolean/integer-oriented backend whose transformer protocol places
-nonlinearities at the client. Its available GPU acceleration and ciphertext expansion were less
-suitable for this matrix-heavy graph than the already validated CKKS
-path~\cite{concreteml,tfhers}. A
-separate CKKS wrapper was not selected because its public interface lacked the refresh and general
+We also evaluated the Boolean/integer-oriented TFHE-rs path and Concrete ML's client/server
+workflow~\cite{concreteml,tfhers}. In this project's backend comparison, their available GPU
+acceleration and ciphertext expansion were less suitable for this matrix-heavy graph than the
+already validated CKKS path. A separate CKKS wrapper was not selected because its public interface
+lacked the refresh and general
 nonlinear-function support required by the non-interactive baseline. These decisions select among
 the software paths tested in this project. They do not establish that CKKS is the only scheme able
 to express encrypted transformer inference.

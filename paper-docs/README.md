@@ -102,16 +102,18 @@ and is reported as one.
 
 ## Status
 
-Last updated 2026-08-13. **The paper is a complete, compiling draft reporting a measured complete
-encrypted inference.** All four lint checks are clean and every figure is generated from the ledger
-and placed in the text.
+Last updated 2026-08-14. **The paper is a revised, compiling draft reporting a measured complete
+encrypted inference.** All four lint checks are clean; seven retained figures are generated from
+the ledger and placed in the text.
 
 ### What the paper now reports
 
 The complete model — all twelve released blocks and the released task head — was executed at the
-103-token task prompt on 2026-08-12 on an uncontended A100 node. It reproduces the frozen plaintext
-label with `8.56e-09` relative margin error against the unchanged `4e-2` tolerance, in `6683 s`
-(1.86 h), with no homomorphic bootstrap and GPU memory flat at 9839 MiB across all twelve blocks.
+103-token task prompt on 2026-08-12 on a whole-node A100 allocation with no contention detected in
+recorded telemetry. It reproduces the frozen plaintext label with `8.56e-09` relative margin error
+against the unchanged `4e-2` tolerance, in `6683 s` (1.86 h), with no homomorphic bootstrap.
+Device-wide GPU memory used during the run reaches 9839 MiB after about 400 s and remains flat for
+the final 94% of the execution.
 That run is banked in `evidence/measurements.yaml` under `complete_model`, with its contention
 check in `evidence/telemetry.yaml` under `complete_model_contention`.
 
@@ -142,10 +144,21 @@ Weakening them requires new measurements, not new wording.
   shared-partition block time and have been removed.
 - **Two `[U]` rows remain:** `client.share_latest` and `open.mask_plaintext_encoding`.
 
-### Left to do
+### Author inputs before submission
 
-1. Corresponding-author address in `sections/00_frontmatter.tex`.
-2. Biographical note and acknowledgements in `sections/10_conclusion.tex`. These are the only
-   `TODO` markers in the manuscript.
-3. Repository reuse license, referenced by the code-availability statement.
-4. A read-through of the built PDF for float placement and caption fit.
+1. Add the corresponding-author email address or addresses; the draft currently names the
+   correspondents without inventing contact details.
+2. Add biographies or acknowledgements only if the target venue requires them. Empty placeholders
+   and `TODO` markers have been removed from the manuscript.
+3. Select and record a repository reuse license. The code-availability statement currently says,
+   accurately, that no repository-level license has been assigned.
+
+### Completed local checks
+
+- The complete PDF has been rebuilt and all 25 pages visually inspected.
+- All seven retained figures fit at manuscript size; the misleading cross-study baseline chart was
+  removed.
+- Algorithms 1--4 appear before the references, all fonts are embedded, and no clipping, overlap,
+  missing glyph, or unresolved-reference marker was found.
+- Terminology, number, citation, and structure lint all pass. Independent evidence and source
+  closure checks also pass.

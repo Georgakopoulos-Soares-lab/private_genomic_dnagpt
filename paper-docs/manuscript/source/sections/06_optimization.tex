@@ -13,18 +13,13 @@
 \section{Host-side systems work at fixed circuit}
 \label{sec:optimization}
 
-The encrypted circuit is not where this section's result lies. The arithmetic of
-Section~\ref{sec:protocol} was already correct at one block before any of the work described here
-was done, and none of that work changes it. What the work established is that the obvious host-side
-economy --- encode each distinct weight diagonal once instead of once per use --- is not usable in
-its obvious form. An implementation that retained every encoded template was killed by the operating
-system at $61{,}863$~MiB resident, with an allocation failure at the moment the MLP stage began
-building templates on top of everything cached by earlier stages. Bounding the cache to one live
-stage is therefore an enabling result rather than a refinement: it is what turns a fatal cache into
-a beneficial one, and it is why peak host memory is set by the largest single stage instead of by
-every encoded weight in the block. The rest of this section reports the same class of work ---
-when host data are prepared, how long they stay resident, and where CPU work executes --- under one
-discipline, stated next.
+Encoding each distinct weight diagonal once removes redundant host work but creates a memory
+lifetime problem. An implementation that retained every encoded template was terminated by the
+operating system at $61{,}863$~MiB resident, when the MLP began building templates on top of those
+cached by earlier stages. Bounding the cache to one live stage makes reuse executable within the
+tested host-memory envelope. Peak host memory is then determined by the largest stage, not by every
+encoded weight in the block. The remaining changes govern when host data are prepared, how long
+they remain resident, and where CPU work executes.
 
 Every change in this section holds the encrypted circuit fixed. The retained implementation
 executes the same $156$ dense products, $177{,}734$ ciphertext--plaintext multiplications,
@@ -34,14 +29,11 @@ frozen plaintext reference are also unchanged. These properties are enforced at 
 implementation compares the observed schedule and boundary counts with their expected values,
 checks the remaining depth before the MLP, and aborts on any deviation.
 
-That invariant is what makes the changes attributable to systems work rather than to a cheaper
-circuit, and it is asserted rather than argued. None of the retained changes removes a dense
-transform, reduces the number of attention tiles, moves linear algebra to the client, or relaxes
-the acceptance criterion. This section consequently reports verified changes in executed work and
-in memory, and no elapsed-time comparison: no dedicated-node measurement of the pre-optimization
-configuration exists, and a speedup quoted against a contended baseline would not be a measurement
-of these changes. The complete-model timings in Section~\ref{sec:results} come from the retained
-implementation only.
+None of the retained changes removes a dense transform, reduces the number of attention tiles,
+moves linear algebra to the client, or relaxes the acceptance criterion. The section consequently
+reports verified changes in executed work and memory, but no elapsed-time comparison. No
+dedicated-node measurement of the pre-optimization configuration exists, so the complete-model
+timings in Section~\ref{sec:results} describe only the retained implementation.
 
 \subsection{Host-side encoding redundancy}
 The baseline rebuilt and encoded every packed diagonal for every dense product. Its $156$ products
@@ -82,10 +74,10 @@ matrix at the same level. The cache therefore stores reusable encoded data, not 
 mutable GPU object, and leaves homomorphic multiplication itself unchanged.
 
 \subsection{Bounding host memory}
-Removing repeated encoding exchanges computation for host memory, and that is the trade named at
-the start of this section: an early cache retained templates from every completed stage and the
-process did not survive the MLP. Two exact changes bound the cache. First, a template is encoded directly at its multiplicative
-level of use, so it carries only the limbs needed by the receiving ciphertext. This changes no
+Removing repeated encoding exchanges computation for host memory. An early cache retained
+templates from every completed stage, and the process did not survive the MLP. Two exact changes
+bound the cache. First, a template is encoded directly at its multiplicative level of use, so it
+carries only the limbs needed by the receiving ciphertext. This changes no
 arithmetic because the backend would otherwise drop a level-$0$ plaintext to the same level before
 multiplication. Second, the implementation flushes the cache after query/key/value projection and
 after the attention projection. No weight matrix recurs across either boundary, so retaining those
@@ -105,7 +97,9 @@ encoded weight in the block, determines peak host memory.
 
 \begin{figure}[tb]\centering
   \includegraphics[width=0.86\textwidth]{fig_memory.pdf}
-  \caption{Flushing the encoded-plaintext cache between stages bounds peak host memory to the largest single stage rather than the whole block. Without the flush the cache grew until the operating system killed the process.}
+  \caption{The bars are stage RSS measurements from one 103-token block with bounded caching.
+  Flushing limits the live cache to the largest stage. The red line records a separate
+  unbounded-cache attempt that the operating system killed at 61{,}863~MiB.}
   \label{fig:memory}
 \end{figure}
 
@@ -165,7 +159,8 @@ approximately $53{,}248$; the total ciphertext--plaintext count falls by roughly
 and copy-repair overhead. This is a derived projection for an unimplemented layout, and it requires
 an exact reconstruction proof before implementation.
 
-Client work has a separate opportunity. Softmax accounts for $99.5\%$ of the values crossing the
-boundary, and each tile's cryptographic work is independent. Concurrent client boundaries were
-unsafe under the evaluated shared crypto context, so the retained implementation executes them
-sequentially. A thread-safe context would expose this independent work to concurrency.
+Client work has a separate opportunity. Attention accounts for $818$ of the $857$ client calls
+and $818$ of the $896$ boundary ciphertext objects per block. Each attention tile's cryptographic
+work is independent. Concurrent client boundaries were unsafe under the evaluated shared crypto
+context, so the retained implementation executes them sequentially. A thread-safe context would
+expose this independent work to concurrency.

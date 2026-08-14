@@ -15,20 +15,23 @@ and become the frozen plaintext reference against which encrypted outputs are ac
 
 The plaintext harness imports the upstream model implementation and preserves its classification
 and regression forward paths. It adds batching, metric computation, and result recording without
-changing model arithmetic. Evaluation uses the canonical test split for each task, and each run
-records both its configuration and the per-example outputs needed downstream. Agreement with a
-published aggregate metric is evidence that the intended model behavior survived local
-reproduction; the recorded output for the selected encrypted input is the stricter numerical
-contract used by the cryptographic evaluation.
+changing model arithmetic. The promoter, splice-site, and abundance tasks use their documented
+evaluation splits. Genomic-signal recognition is evaluated on the full balanced source corpus,
+including examples used to train the released head, so its aggregate metric is release and pipeline
+fidelity evidence rather than held-out performance. Each run records the per-example outputs needed
+downstream.
 
-The reference is not trusted merely because it is written in NumPy. Released checkpoint weights
-are evaluated through the upstream PyTorch block and, independently, through a float64 NumPy
-re-derivation. For every one of the $12$ transformer blocks, the two outputs are asserted equal at
-relative and absolute tolerance $2\times10^{-5}$; the classifier head is checked by the same
-procedure. Generation aborts on any divergence. Only after this upstream-to-reference comparison
-passes are the weights and reference output supplied to the encrypted circuit. This creates two
-independent checks: the plaintext re-derivation must reproduce the released model, and the
-encrypted computation must reproduce that validated re-derivation.
+The reference is not trusted merely because it is written in NumPy. The numerical chain has three
+explicit links. First, the released model's default float32 path is recorded as a diagnostic
+lineage. Second, a deep-copied float64 PyTorch shadow is compared with an independent NumPy float64
+re-derivation for every one of the $12$ blocks and the classifier head; generation aborts unless
+relative and absolute differences satisfy $2\times10^{-5}$. Their largest per-block absolute
+difference is $5.22\times10^{-6}$. Third, encrypted execution is compared with the accepted NumPy
+float64 reference. The released float32 path is not subject to the float64-shadow tolerance: its
+largest recorded absolute block drift from the NumPy lineage is $7.997\times10^{-4}$. For the
+selected full prompt, the released float32, manual float64, and encrypted lineages nevertheless all
+produce label N; the encrypted margin differs from the released float32 margin by
+$1.61\times10^{-6}$ in relative terms.
 
 \begin{table}[t]\centering\small
 \caption{Released DNAGPT reproduced locally on three genomic task families, against published
@@ -59,14 +62,8 @@ $0.1$B variant, while the reference is reported for the mammal-pretrained varian
 backbones differ.}
 \end{table}
 
-\begin{figure}[tb]\centering
-  \includegraphics[width=\textwidth]{fig_baseline.pdf}
-  \caption{The released model reproduced locally against published references. Signal recognition and abundance regression use the released fine-tuned heads; the promoter and splice-site rows use a locally fine-tuned head, as none was released. The abundance task is outside the encrypted scope and appears as model-fidelity evidence only.}
-  \label{fig:baseline}
-\end{figure}
-
 Table~\ref{tab:baseline} shows that the target carries useful signal across classification and
-regression tasks. On the complete polyadenylation-signal test set of $22{,}604$ examples, the
+regression tasks. On the full polyadenylation-signal source corpus of $22{,}604$ examples, the
 released classifier reaches $0.9124$ accuracy and $0.916$ F1, against the $0.9151$ accuracy
 \citet{dnagpt2023} report for this model class on a held-out quarter of that set. The locally
 fine-tuned understanding-benchmark heads reach MCC $0.680$, $0.897$, and $0.831$ on core-promoter,
@@ -75,7 +72,9 @@ report for DNABERT-2 itself on the same splits; other models in that benchmark s
 of the three. The released abundance-regression head reaches $r^2=0.562$
 and Pearson $r=0.753$, against the $0.62$ \citet{dnagpt2023} report over the \citet{xpresso}
 regression baseline. These results establish model fidelity; encrypted evaluation is still
-required to establish cryptographic feasibility.
+required to establish cryptographic feasibility. The genomic-signal aggregate is not presented as
+an independent generalization result because the full source corpus includes head-training
+examples.
 
 Two dataset qualifications belong with these baseline results. DNAGPT does not release a head for
 the understanding benchmark, so we trained a linear head and evaluated the three human promoter

@@ -11,13 +11,13 @@
 # host names, scheduler job numbers. Those are development bookkeeping, not scientific content.
 
 meta:
-  updated: 2026-08-13
+  updated: 2026-08-14
   encrypted_scope: >
     The complete DNAGPT classifier -- all 12 released transformer blocks and the released task
     head -- evaluated on encrypted activations at the full 103-token genomic-signal prompt
-    length. Measured once, on a dedicated node, 2026-08-12. Encrypted token-index lookup is
-    still outside the scope, and the two parties are roles in one process rather than across a
-    network.
+    length. Measured once, on a whole-node allocation with no contention detected in the
+    recorded telemetry, 2026-08-12. Encrypted token-index lookup is still outside the scope,
+    and the two parties are roles in one process rather than across a network.
   hardware: >
     One NVIDIA A100 (40 GB) on a whole-node allocation, using 32 CPU threads. The node's
     total core count is not recorded in any committed artifact; 32 is the thread request.
@@ -46,7 +46,9 @@ block_timing:
     value: 531.933
     unit: s
     tag: "[V]"
-    scope: "Server-side encrypted linear algebra on GPU; 80.2% of wall clock"
+    scope: >
+      Residual provider-side encrypted-evaluation bucket: GPU-backend work plus its host
+      preparation, synchronization, and evaluator overhead; 80.2% of wall clock
     source: "docs/hybrid/t123_walkthrough.md §8"
   - id: block.client_boundaries
     value: 120.612
@@ -106,7 +108,8 @@ cost_shares:
     source: "derived from block.client_boundaries and ops.client_crossings_physical"
     notes: >
       An earlier shared-host estimate gave approximately 0.161 s per crossing. Quote the
-      derived value from the dedicated-node measurement, not the older estimate.
+      derived value only when discussing this historical block artifact; it is not a
+      complete-model timing and does not enter the manuscript.
 
 # What the data owner actually has to provide. This is the deployment claim, and it is the
 # number a reader will check the scenario against.
@@ -185,9 +188,11 @@ memory:
     value: 9.6
     unit: GiB
     tag: "[V]"
-    scope: "Peak GPU memory used by the evaluating process"
+    scope: "Peak device-wide GPU memory-used sample during the evaluating run"
     source: "docs/hybrid/t123_walkthrough.md §8"
-    notes: "9,839 MiB. Process footprint, not device-wide occupancy."
+    notes: >
+      9,839 MiB. The device was empty at allocation and the sample is attributable to the run,
+      but the sampler records device memory.used rather than a per-process counter.
   - id: mem.stage_qkv
     value: 25530
     unit: MiB
@@ -275,11 +280,12 @@ ops:
     source: "docs/hybrid/t123_walkthrough.md"
   - id: ops.client_instances_logical
     value: 129162
-    unit: "nonlinear values"
+    unit: "heterogeneous logical-instance counter"
     tag: "[V]"
     scope: >
-      Individual nonlinear values evaluated exactly by the client. One physical crossing
-      batches many logical instances; never conflate the two counts.
+      Implementation-declared schedule counter. LayerNorm increments it by active tokens,
+      GELU by active token-copies, and attention by head/query/key scalars. These units are not
+      homogeneous, so the total is not a scalar-work, traffic, or cost count.
     source: "docs/hybrid/t123_walkthrough.md"
   - id: ops.score_tile_decryptions
     value: 91
@@ -294,34 +300,61 @@ ops:
     scope: "Attention weight tiles re-encrypted by the client"
     source: "docs/hybrid/t123_walkthrough.md"
 
-# Where the boundary traffic actually is. Softmax dominates; LayerNorm and GELU are rounding
-# error by comparison. Derived from the per-boundary counters in the driver.
+# Counter decomposition and homogeneous boundary-schedule measures. The three instance counters
+# use different units and must not be divided into shares. Call and ciphertext-object shares are
+# homogeneous and support the statement that attention dominates the boundary schedule.
 boundary_decomposition:
   - id: boundary.layernorm_instances
     value: 206
     tag: "[A]"
-    scope: "Inverse-square-root values crossing at both LayerNorm sites (103 each)"
+    scope: >
+      LayerNorm contribution to the heterogeneous counter: active tokens at both LayerNorm sites
+      (103 each). The server computes mean, centered square, variance, normalization
+      multiplication, and scale; only the inverse square root is client-evaluated.
     source: "derived from the boundary counters; verified in context/08_implementation_ground_truth.md"
   - id: boundary.gelu_instances
     value: 412
     tag: "[A]"
-    scope: "GELU values crossing, equal to T x COPIES"
+    scope: "GELU contribution to the heterogeneous counter: active tokens times packed copies"
     source: "derived; t123 driver gelu_boundary accumulates active x COPIES per group"
   - id: boundary.softmax_instances
     value: 128544
     tag: "[A]"
     scope: >
-      Attention values crossing: 64,272 scores decrypted plus 64,272 weights re-encrypted,
-      each equal to HEADS x T(T+1)/2.
+      Attention contribution to the heterogeneous counter: 64,272 score scalars consumed plus
+      64,272 weight scalars emitted, each equal to HEADS x T(T+1)/2.
     source: "derived; verified against the driver's counters"
-  - id: boundary.softmax_share_pct
-    value: 99.5
+  - id: boundary.attention_client_calls
+    value: 818
+    unit: "client calls"
+    tag: "[A]"
+    scope: "91 score-tile decryptions plus 727 attention-weight encryptions"
+    source: "derived from ops.score_tile_decryptions and ops.weight_tile_encryptions"
+  - id: boundary.attention_call_share_pct
+    value: 95.4
     unit: "%"
     tag: "[A]"
     scope: >
-      Softmax share of all logical values crossing the boundary. The attention nonlinearity is
-      the boundary cost; LayerNorm and GELU together are under one percent.
-    source: "derived from the three rows above and ops.client_instances_logical"
+      Attention-related share of the 857 homogeneous per-block client-call count: 818 / 857.
+    source: "derived from boundary.attention_client_calls and ops.client_crossings_physical"
+  - id: boundary.block_ciphertext_objects
+    value: 896
+    unit: "ciphertext objects"
+    tag: "[A]"
+    scope: "All server-to-client and client-to-server boundary ciphertext objects for one block"
+    source: "derived from communication block-direction rows"
+  - id: boundary.attention_ciphertext_objects
+    value: 818
+    unit: "ciphertext objects"
+    tag: "[A]"
+    scope: "91 score ciphertexts sent to the client plus 727 weight ciphertexts returned"
+    source: "derived from the checked attention boundary schedule"
+  - id: boundary.attention_ciphertext_share_pct
+    value: 91.3
+    unit: "%"
+    tag: "[A]"
+    scope: "Attention-related share of the 896 per-block boundary ciphertext objects: 818 / 896"
+    source: "derived from the preceding two rows"
 
 ct_ct_decomposition:
   - id: ctct.layernorm_centered_sq
@@ -364,9 +397,78 @@ oracle_chain:
     tag: "[V]"
     scope: >
       Tolerance at which the independent NumPy float64 block reference is asserted equal to the
-      upstream PyTorch block, per block, for all twelve blocks, and for the classifier head.
-      The export aborts on divergence.
+      float64-cast shadow of the upstream PyTorch block, per block, for all twelve blocks, and
+      for the classifier head. The export aborts on divergence. This is not a direct comparison
+      with the released model's default float32 forward path.
     source: "fhe/multiblock/export_fixture_t103.py:175-198, 224-240"
+  - id: oracle.numpy_vs_float64_shadow_max_block_abs
+    value: 5.22e-6
+    unit: "absolute"
+    tag: "[V]"
+    scope: >
+      Largest per-block absolute difference between the independent NumPy float64 lineage and
+      the float64-cast PyTorch shadow in the frozen 103-token reference.
+    source: >
+      results/runs/fhe_multiblock_t103_precision_contract_20260814.json:
+      oracle_gate.max_block_abs_error_numpy_vs_float64_shadow
+  - id: oracle.numpy_vs_released_float32_max_block_abs
+    value: 7.997e-4
+    unit: "absolute"
+    tag: "[V]"
+    scope: >
+      Largest observed absolute activation difference between the independent NumPy float64
+      lineage and the released model's default float32 lineage across the twelve 103-token
+      blocks. This diagnostic drift exceeds the float64-shadow all-close tolerance but does not
+      change the evaluated class label.
+    source: >
+      results/runs/fhe_multiblock_t103_precision_contract_20260814.json:
+      oracle_gate.max_block_abs_error_numpy_vs_released_float32; recorded by
+      fhe/multiblock/export_fixture_t103.py:183-211
+  - id: oracle.released_float32_margin
+    value: 12.2666015625
+    tag: "[V]"
+    scope: "Released float32 model's full-prompt classification margin"
+    source: >
+      results/runs/fhe_multiblock_t103_precision_contract_20260814.json and
+      results/runs/fhe_multiblock_plaintext_contract_20260724.json
+  - id: oracle.released_float32_label
+    value: "N"
+    tag: "[V]"
+    scope: "Released float32 model's full-prompt class label"
+    source: "results/runs/fhe_multiblock_t103_precision_contract_20260814.json: classification"
+  - id: full.margin_rel_error_vs_released_float32
+    value: 1.61e-6
+    unit: "relative"
+    tag: "[A]"
+    scope: >
+      Relative difference between the decrypted encrypted margin and the released model's
+      default float32 full-prompt margin. Both the float32 and float64 reference lineages assign
+      label N to the evaluated prompt.
+    source: >
+      derived from the encrypted run head margin and
+      results/runs/fhe_multiblock_t103_precision_contract_20260814.json
+  - id: input.gsr_record_index
+    value: 0
+    tag: "[V]"
+    scope: "Zero-based record index selected by the 103-token exporter"
+    source: "fhe/multiblock/export_fixture_t103.py:139-150"
+  - id: input.gsr_selection_rule
+    value: "first record in the verified positive GSR FASTA input"
+    tag: "[V]"
+    scope: >
+      Deterministic input-selection rule used by the 103-token exporter. This is one deliberately
+      selected positive-file record, not a random or margin-stratified sample.
+    source: "fhe/multiblock/export_fixture_t103.py:142-150"
+  - id: input.gsr_class
+    value: "positive / real GSR"
+    tag: "[V]"
+    scope: "Source-corpus class of the single prompt selected for encrypted evaluation"
+    source: "results/runs/fhe_multiblock_t103_precision_contract_20260814.json: classification"
+  - id: boundary.layernorm_client_function
+    value: "inverse square root only"
+    tag: "[V]"
+    scope: "The only LayerNorm function evaluated at the client boundary"
+    source: "context/08_implementation_ground_truth.md Algorithm 2"
   - id: oracle.released_model_has_no_biases
     value: true
     tag: "[V]"
@@ -540,7 +642,9 @@ plaintext_baseline:
   - id: base.gsr_n
     value: 22604
     tag: "[V]"
-    scope: "Canonical test split size"
+    scope: >
+      Full balanced 22,604-example corpus evaluated locally, including examples used to train
+      the released head; not an independent held-out test split
     source: "docs/tasks.md"
   - id: base.gue_prom_core_mcc
     value: 0.680
@@ -625,16 +729,18 @@ composition:
     tag: "[V]"
     scope: >
       All twelve released blocks and the released task head evaluated at the 103-token task
-      prompt in one encrypted lineage. Completed 2026-08-12; see the complete_model section
-      below for the measured values.
+      prompt in one key lineage with eleven full-hidden-state client refreshes and one last-token
+      refresh into the head. Completed 2026-08-12; see the complete_model section below for the
+      measured values.
     source: "results/runs/fhe_fides_real_d768_t103_12blocks_head_cpudiagcache_t123_v3_scheme_b_a100_20260812.json"
 
 # ---------------------------------------------------------------------------
 # 8. Complete model: twelve blocks and the released task head at task length
 #
-# One clean dedicated-node sample, 2026-08-12, on one A100 GPU node using 32 CPU threads.
-# The node was empty at allocation and no co-tenant appeared during the run; see
-# telemetry.yaml for the contention check that supports the dedicated-node claim.
+# One whole-node sample with no contention detected in recorded telemetry, 2026-08-12, on one
+# A100 GPU node using 32 CPU threads.
+# The node was empty at allocation and the retained telemetry detects no competing activity;
+# see telemetry.yaml for the precise evidence and scheduler caveat.
 #
 # NOT REPRODUCED. This is a single execution. Every timing row below carries n = 1 and
 # no summary statistic. Report it as one measured sample, never as a mean or a rate.
@@ -652,17 +758,48 @@ complete_model:
   - id: full.label_matches
     value: true
     tag: "[V]"
-    scope: "Decrypted class label matches the frozen Phase-A oracle label"
-    source: "run JSON: head.label_matches"
+    scope: >
+      Decrypted class label matches the manual float64 reference; the T=103 reference manifest
+      separately records that the manual float64 and released float32 full-prompt paths both
+      assign label N
+    source: >
+      run JSON: head.label_matches; T=103 reference manifest:
+      classification.complete_public_prompt_reference
+  - id: full.encrypted_examples
+    value: 1
+    tag: "[V]"
+    scope: "Number of selected prompts evaluated by the complete encrypted model"
+    source: "complete-run artifact and T=103 reference manifest"
+  - id: full.encrypted_margin
+    value: 12.266581857561365
+    tag: "[V]"
+    scope: "Decrypted encrypted-execution classification margin"
+    source: "run JSON: head.decrypted_margin_n_minus_a"
+  - id: full.encrypted_label
+    value: "N"
+    tag: "[V]"
+    scope: "Decrypted encrypted-execution class label"
+    source: "run JSON: head.label"
   - id: full.margin_rel_error
     value: 8.56e-09
     unit: "relative"
     tag: "[V]"
     scope: >
-      Decrypted classification margin against the plaintext oracle margin. Nine orders of
-      magnitude inside the 4e-2 acceptance tolerance. Exact recorded value 8.55814015132133e-09;
-      quote at three significant figures.
+      Decrypted classification margin against the manual NumPy float64 reference margin. The
+      ratio to the 4e-2 acceptance tolerance is 6.67 orders of magnitude. Exact recorded value
+      8.55814015132133e-09; quote at three significant figures.
     source: "run JSON: head.margin_rel_error"
+  - id: full.margin_headroom_orders
+    value: 6.67
+    unit: "orders of magnitude"
+    tag: "[A]"
+    scope: "log10(4e-2 / 8.55814015132133e-09)"
+    source: "derived from err.tolerance and full.margin_rel_error"
+  - id: full.margin_headroom_ratio
+    value: 4.67e6
+    tag: "[A]"
+    scope: "4e-2 divided by 8.55814015132133e-09"
+    source: "derived from err.tolerance and full.margin_rel_error"
   - id: full.margin_abs_error
     value: 1.05e-07
     tag: "[V]"
@@ -694,7 +831,9 @@ complete_model:
     value: 5638.561
     unit: s
     tag: "[V]"
-    scope: "Server-side encrypted linear algebra on GPU; 85.5% of encrypted evaluation"
+    scope: >
+      Residual provider-side encrypted-evaluation bucket: GPU-backend work plus its host
+      preparation, synchronization, and evaluator overhead; 85.5% of encrypted evaluation
     source: "run JSON: timings_seconds.server_linear_algebra_seconds"
   - id: full.client_boundaries
     value: 956.187
@@ -814,7 +953,7 @@ complete_model:
     value: 85.5
     unit: "%"
     tag: "[A]"
-    scope: "Server share of encrypted evaluation"
+    scope: "Provider-side residual bucket as a share of encrypted evaluation"
     source: "derived from full.server_linear_algebra and full.encrypted_evaluation"
   - id: full.client_share_of_eval
     value: 14.5
@@ -828,7 +967,7 @@ complete_model:
     value: 84.4
     unit: "%"
     tag: "[A]"
-    scope: "Server linear algebra as a share of wall clock"
+    scope: "Provider-side encrypted evaluation as a share of wall clock"
     source: "derived from full.server_linear_algebra and full.wall"
   - id: full.client_share_of_wall
     value: 14.3
@@ -847,12 +986,17 @@ complete_model:
   - id: full.crossings_physical
     value: 10299
     tag: "[V]"
-    scope: "Physical client boundary crossings across the complete model"
+    scope: >
+      In-process cryptographic boundary calls across the complete model. These are not network
+      messages and do not determine serialized byte volume.
     source: "run JSON: protocol.round_trips"
   - id: full.crossings_nonlinearity
     value: 10286
     tag: "[V]"
-    scope: "Crossings evaluating LayerNorm, softmax, or GELU"
+    scope: >
+      Twelve blocks' nonlinear boundary calls plus the two head inverse-square-root calls. This
+      shared-client counter excludes eleven inter-block refreshes, the head-input refresh, and
+      head SiLU.
     source: "run JSON: protocol.nonlinearity_round_trips"
   - id: full.refresh_crossings
     value: 11
@@ -861,8 +1005,12 @@ complete_model:
     source: "run JSON: composition.inter_block_full_hidden_refreshes"
   - id: full.logical_boundary_instances
     value: 1551081
+    unit: "heterogeneous logical-instance counter"
     tag: "[V]"
-    scope: "Individual nonlinear values carried by those crossings, through packing"
+    scope: >
+      Implementation-declared schedule counter with heterogeneous per-boundary units; includes
+      LayerNorm tokens, GELU token-copies, attention head/query/key scalars, and refresh-token
+      instances. It is not a scalar-work, traffic, or cost count.
     source: "run JSON: protocol.logical_boundary_instances"
   - id: full.client_per_crossing
     value: 0.0928
@@ -906,8 +1054,10 @@ complete_model:
     unit: MiB
     tag: "[V]"
     scope: >
-      Peak GPU memory of the evaluating process, flat across the run, within the 40 GB
-      device. Process footprint, not device-wide occupancy.
+      Peak device-wide memory-used sample during the evaluating run, within the 40 GB device.
+      The device was empty at allocation, so attribution to the run is reasonable; the sampler
+      is not a per-process metric. The value is reached at about 400 s and remains flat for the
+      final 94% of the run.
     source: "telemetry CSV: gpu0_mem_used_mib"
   - id: full.host_peak_mib
     value: 50930
@@ -931,7 +1081,92 @@ complete_model:
     source: "run JSON: evaluator_has_private_key"
 
 # ---------------------------------------------------------------------------
-# 9. External figures quoted from related work
+# 9. Derived communication accounting
+#
+# Ciphertext-object counts follow from the implemented boundary schedule. They are not network
+# messages or byte counts: the evaluated roles share one process and no wire serialization exists.
+# ---------------------------------------------------------------------------
+
+communication:
+  - id: comm.block_server_to_client_ciphertexts
+    value: 130
+    tag: "[A]"
+    scope: >
+      Ciphertext objects presented to the client by one transformer block: 26 LayerNorm
+      inverse-square-root inputs, 91 attention score tiles, and 13 GELU inputs.
+    source: "derived from the checked block boundary schedule"
+  - id: comm.block_client_to_server_ciphertexts
+    value: 766
+    tag: "[A]"
+    scope: >
+      Ciphertext objects returned by the client in one transformer block: 26 LayerNorm inverses,
+      727 attention-weight tiles, and 13 GELU outputs.
+    source: "derived from the checked block boundary schedule"
+  - id: comm.full_server_to_client_boundary_ciphertexts
+    value: 1719
+    tag: "[A]"
+    scope: "All complete-model nonlinear and refresh boundaries; excludes the final output"
+    source: "derived in reviews/2026-08-14-paper-evidence-revision.md"
+  - id: comm.full_client_to_server_boundary_ciphertexts
+    value: 9339
+    tag: "[A]"
+    scope: "All complete-model nonlinear and refresh boundaries; excludes the initial input"
+    source: "derived in reviews/2026-08-14-paper-evidence-revision.md"
+  - id: comm.full_boundary_ciphertexts_total
+    value: 11058
+    tag: "[A]"
+    scope: "Sum of complete-model ciphertext objects in both directions at declared boundaries"
+    source: >
+      derived from comm.full_server_to_client_boundary_ciphertexts and
+      comm.full_client_to_server_boundary_ciphertexts
+  - id: comm.initial_input_ciphertexts
+    value: 13
+    tag: "[A]"
+    scope: "Client-to-server encrypted embedded-input groups"
+    source: "derived from layout.token_groups"
+  - id: comm.final_output_ciphertexts
+    value: 1
+    tag: "[A]"
+    scope: "Server-to-client encrypted classification margin"
+    source: "complete-model driver output path"
+  - id: comm.full_ciphertexts_including_endpoints
+    value: 11072
+    tag: "[A]"
+    scope: "Boundary ciphertext objects plus 13 initial inputs and one final output"
+    source: "derived from comm.full_boundary_ciphertexts_total and endpoint rows"
+  - id: comm.minimum_sequential_boundary_phases
+    value: 63
+    tag: "[A]"
+    scope: >
+      Algorithmic lower bound under ideal same-stage batching: four nonlinear phases per block,
+      eleven inter-block refreshes, one head-input refresh, and three head nonlinearities. The
+      current implementation does not perform this network batching.
+    source: "derived from the protocol dependency graph"
+  - id: comm.minimum_transport_phases_including_endpoints
+    value: 65
+    tag: "[A]"
+    scope: "The 63 boundary phases plus initial input upload and final result return"
+    source: "derived from comm.minimum_sequential_boundary_phases"
+  - id: comm.networked_implementation
+    value: false
+    tag: "[V]"
+    scope: "Client and server roles share one process and node in the evaluated implementation"
+    source: "complete-model implementation boundary"
+  - id: comm.serialized_bytes_measured
+    value: false
+    tag: "[V]"
+    scope: "No wire serialization occurs in the evaluated implementation"
+    source: "complete-model implementation boundary"
+  - id: comm.serialized_byte_volume
+    value: "unknown"
+    tag: "[U]"
+    scope: >
+      Boundary levels, component counts, wire representation, compression, framing, and
+      serialization overhead are not recorded; an honest network-byte total cannot be derived.
+    source: "no serialized or networked client/server artifact"
+
+# ---------------------------------------------------------------------------
+# 10. External figures quoted from related work
 #
 # These are OTHER PEOPLE'S measurements, quoted so the manuscript can position its own cost
 # honestly. They are [V] in the sense that the cited paper reports them; this project did not
@@ -978,3 +1213,50 @@ related_work:
       MOAI's reported reduction in evaluation time relative to THOR. Reported by the cited
       authors; not reproduced here.
     source: "MOAI, IACR ePrint 2025/991 (cite: moai2025)"
+  - id: rw.dashformer_parameters
+    value: 138905
+    tag: "[V]"
+    scope: >
+      Total parameter count of the iDASH24 DASHformer protein-family classification model, the
+      closest prior homomorphically evaluated transformer over biological sequence data. Reported
+      by the cited authors; not reproduced here. Contrast with the released 0.1-billion-parameter
+      DNAGPT configuration evaluated in this study.
+    source: >
+      Harmanci et al., IEEE Data Descriptions 1:109-112, 2024, section "iDASH24 Protein
+      Classification Model" (cite: idash24descriptor)
+  - id: rw.dashformer_blocks
+    value: 1
+    tag: "[V]"
+    scope: >
+      DASHformer's transformer block count, with a four-head self-attention layer. Contrast with
+      the 12 released blocks evaluated in this study.
+    source: >
+      Harmanci et al., IEEE Data Descriptions 1:109-112, 2024, section "iDASH24 Protein
+      Classification Model" (cite: idash24descriptor)
+  - id: rw.dashformer_input_length
+    value: 50
+    unit: "amino acids"
+    tag: "[V]"
+    scope: >
+      DASHformer's fixed input fragment length, over a 25-letter amino-acid alphabet and 25
+      classes. Contrast with this study's 103-token genomic prompt.
+    source: >
+      Harmanci et al., IEEE Data Descriptions 1:109-112, 2024, sections "iDASH24 1.2 m Protein
+      Sequence Dataset" and "iDASH24 Protein Classification Model" (cite: idash24descriptor)
+  - id: rw.encrypted_dashformer_batch
+    value: 163
+    unit: sequences
+    tag: "[V]"
+    scope: >
+      Batch size classified in a single execution by the encrypted DASHformer protocol, the
+      first-place iDASH 2024 Track 1 solution. Reported by the cited authors; not reproduced here.
+    source: "Yang et al., IACR ePrint 2024/1851, abstract (cite: encrypteddashformer)"
+  - id: rw.encrypted_dashformer_time
+    value: 165
+    unit: s
+    tag: "[V]"
+    scope: >
+      Wall-clock time for the encrypted DASHformer protocol to classify its 163-sequence batch at
+      128-bit security, non-interactively and without bootstrapping. Reported by the cited
+      authors; not reproduced here.
+    source: "Yang et al., IACR ePrint 2024/1851, abstract (cite: encrypteddashformer)"

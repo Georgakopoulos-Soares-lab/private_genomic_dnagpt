@@ -95,6 +95,30 @@ runs:
       beginning at block 1, so encrypted composition requires public per-block range
       contracts or a separately validated range-control transform.
 
+  - id: fhe_multiblock_t103_precision_contract_20260814
+    task: "Metadata-only preservation of the accepted T=103 float32/float64 oracle checks"
+    status: "[V] preserved accepted evidence; no rerun"
+    scope:
+      prompt_tokens: 103
+      input_selection: "record 0 from the verified positive GSR FASTA input"
+      excluded: "weights, sequence data, token identifiers, and fixture arrays"
+    metrics:
+      numpy_vs_float64_shadow_max_block_abs: 5.223597732140206e-6
+      numpy_vs_released_float32_max_block_abs: 7.99744795450863e-4
+      released_float32_margin_n_minus_a: 12.2666015625
+      released_float32_label: "N"
+      numpy_float64_margin_n_minus_a: 12.266581945739606
+      numpy_float64_label: "N"
+    provenance:
+      result_sha256: "12d96c9c1551f7f81906249659d134ae06240e8c01f0b8ad02b5ead77d783996"
+      source_manifest_sha256: "ab55533eaf8779b64a67c5cdd8ac67152419389e33f1c44addd4a092e0ff962d"
+      exporter: "fhe/multiblock/export_fixture_t103.py"
+    verdict: >
+      [V] The accepted 103-token export records that all twelve NumPy float64 blocks and the
+      head pass the 2e-5 gate against a float64-cast PyTorch shadow. The released float32 and
+      independent NumPy float64 lineages both assign label N; their distinct margins and the
+      maximum observed block-level dtype drift are preserved in a committed metadata-only record.
+
   - id: fhe_range_control_t2_12block_optimized_v2_20260724
     task: "Plaintext-first fixed nonlinear schedule through 12 released DNAGPT blocks and GSR head"
     status: "[V] PASS simulation; [A] one-fixture domains; not an FHE run"

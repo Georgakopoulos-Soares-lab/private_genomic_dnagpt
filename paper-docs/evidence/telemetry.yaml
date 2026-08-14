@@ -9,10 +9,10 @@
 
 # NOTE: this first block describes the SINGLE-BLOCK trace from a shared-partition run. It is
 # retained for provenance and for quantities contention cannot affect (op counts, depth, error).
-# Its timings must not enter the manuscript. The complete-model sections below are the clean
-# dedicated-node evidence.
+# Its timings must not enter the manuscript. The complete-model sections below record the
+# whole-node run and its contention checks.
 meta:
-  updated: 2026-08-08
+  updated: 2026-08-14
   scope: "Single block, shared partition. Timings not usable in the manuscript."
   total_wall_s: 663
   sample_interval_s: 5
@@ -21,7 +21,7 @@ meta:
   tag: "[V]"
 
 # t_s      seconds since process start
-# gpu_mib  GPU memory used by the evaluating process
+# gpu_mib  device-wide GPU memory used during the evaluating run
 # gpu_pct  GPU utilization
 # rss_mib  host resident set size
 # load1    host one-minute load average, partly this process's own threads
@@ -57,12 +57,14 @@ stages:
 
 # What the trace shows, stated once so figure captions can stay short.
 readings:
-  - id: read.not_gpu_bound
+  - id: read.sampled_gpu_underutilization
     tag: "[V]"
     statement: >
       GPU utilization never exceeds 40 percent and falls to 1-2 percent for roughly 90 seconds
-      during the attention context stage. The evaluation is not GPU-bound at this scale; the
-      cost sits in host-side encoding and in the sequential client boundary.
+      during the attention context stage in the sampled single-block trace. This establishes
+      underutilization during the observation window, but it does not identify a causal
+      bottleneck; launch overhead, synchronization, memory movement, host encoding, and client
+      work require a current CPU/CUDA profile to separate.
   - id: read.memory_is_the_design
     tag: "[V]"
     statement: >
@@ -70,18 +72,17 @@ readings:
       weight matrices are cached, drops at each stage flush, and peaks in the MLP stage, which
       holds the most matrices.
   - id: read.client_stage_is_idle_gpu
-    tag: "[V]"
+    tag: "[A]"
     statement: >
       The stage with the lowest GPU utilization is also the stage still performing the most
-      redundant host encoding. That co-location is why the mask-plaintext cache is the clearest
-      remaining optimization target.
+      redundant host encoding. The co-location motivates profiling and a mask-plaintext-cache
+      experiment; the utilization trace alone does not attribute wall time to that work.
 
 # ---------------------------------------------------------------------------
 # Contention check for the complete-model run of 2026-08-12
 #
-# The manuscript may only report timing measured on an uncontended node. This section is the
-# evidence for that claim about the complete-model run, checked against its committed
-# telemetry (653 samples) and its scheduler output rather than asserted.
+# This section records a whole-node allocation with no contention detected in the available
+# telemetry. It does not claim scheduler exclusivity, because the job omitted --exclusive.
 #
 # Source: results/runs/fhe_fides_real_d768_t103_12blocks_head_cpudiagcache_t123_v3_scheme_b_a100_20260812
 #         {_telemetry.csv, _slurm.out}
@@ -137,11 +138,12 @@ complete_model_contention:
         total core count is not recorded in any committed artifact, so 32 is a thread request
         and not the denominator.
     - id: clean.gpu_headroom_persists_at_full_model
-      tag: "[A]"
+      tag: "[V]"
       statement: >
         GPU utilization has median 32 percent and maximum 51 percent across the complete model,
-        confirming at whole-model scale the single-block finding that the evaluation is not
-        GPU-bound.
+        establishing sampled accelerator underutilization at whole-model scale. These values do
+        not by themselves identify the limiting CPU, CUDA, memory-transfer, launch, or dependency
+        mechanism.
       source: "telemetry CSV: gpu0_util_pct"
     - id: clean.memory_flat_across_blocks
       tag: "[A]"

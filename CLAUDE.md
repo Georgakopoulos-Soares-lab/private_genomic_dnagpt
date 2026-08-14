@@ -43,10 +43,11 @@ architecture with active/planned work.
 `[V]` The active implementation closes one complete real-weight block at the 103-token GSR prompt
 length with eight-token SIMD packing and depth 13. `[V]` Two released blocks compose at two tokens
 through a declared client refresh. `[V]` The complete 12-block plus GSR-head driver has now run and
-passed at 103 tokens (2026-08-12, TACC Lonestar6): `6683 s` (~1.86 h) wall clock on a telemetry-confirmed
-clean single A100, final label matching the frozen Phase-A oracle — see `docs/hybrid/tasks.md`. This is
-one clean sample, not yet reproduced a second time; earlier long timings on other (non-T123-optimized or
-contended) runs remain contaminated/superseded as documented there. Remaining performance work is
+passed at 103 tokens (2026-08-12, TACC Lonestar6): `6683 s` (~1.86 h) wall clock on a whole-node
+allocation with no contention detected in recorded telemetry, final label matching the frozen
+Phase-A oracle — see `docs/hybrid/tasks.md`. This is one sample, not yet reproduced a second time;
+earlier long timings on other (non-T123-optimized or contended) runs remain
+contaminated/superseded as documented there. Remaining performance work is
 reproducing this result for variance, further exact-model optimization gates in `docs/hybrid/roadmap.md`,
 and a real networked client/server transport measurement — not an unprofiled multi-day run.
 
@@ -155,9 +156,10 @@ queue. Before any new remote run:
 4. require a dedicated or otherwise measured-clean host for performance claims; and
 5. create new evidence rather than overwriting an old run.
 
-The existing 12-block driver may be run now for arithmetic correctness closure. It must not be
-presented as an optimized latency result until the current T=103 profile and retained optimization
-gates have been integrated.
+The 12-block driver has closed arithmetic correctness once at task length. Treat its `6683 s` result
+as a single-sample feasibility measurement, not a stable latency target. Before any optimization or
+service-rate claim, obtain a current T=103 profile, run controlled paired gates, and repeat the
+complete execution after retained changes are integrated.
 
 ## Base validation
 
@@ -174,6 +176,7 @@ folder `10UPPx6V13oQW6knuLV7d8SRIA3D6hYor` (0.1b weights) to rehydrate before ru
 ## Definition of done (per task)
 
 - Data sourced with full provenance; preprocessing scripted (no manual steps).
-- Metric measured on the canonical test split via one documented command.
+- Metric measured on the declared evaluation set via one documented command, with held-out versus
+  all-example scope stated explicitly.
 - Immutable run JSON + manifest row written.
 - Verdict recorded in `docs/tasks.md` with `[V]`/`[U]` vs the published reference.

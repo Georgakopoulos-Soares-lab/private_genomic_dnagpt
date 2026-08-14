@@ -126,13 +126,13 @@ def title(ax, text, subtitle=None, size=13.5, pad=None):
 
 def fig_graphical_abstract(out: pathlib.Path) -> pathlib.Path:
     L = Ledger()
-    fig, ax = canvas(figsize=(14.0, 7.9))
+    fig, ax = canvas(figsize=(7.05, 4.45))
 
     ax.text(
         50,
-        95.5,
-        "The genome is protected. The client needs no GPU.",
-        fontsize=21,
+        96,
+        "A genomic fragment stays off the compute provider",
+        fontsize=13,
         fontweight="bold",
         color=BLACK,
         ha="center",
@@ -142,73 +142,66 @@ def fig_graphical_abstract(out: pathlib.Path) -> pathlib.Path:
     labelled_box(
         ax,
         2,
-        62,
-        30,
-        24,
+        68,
+        27,
+        18,
         "Data owner",
-        "a human genome it will\nnot disclose  ·  CPU only",
+        "600 bp genomic fragment\nCPU only; holds secret key",
         facecolor=CLIENT_PALE,
         edgecolor=CLIENT,
-        title_size=15,
-        sub_size=11,
+        title_size=9.6,
+        sub_size=7.2,
     )
     labelled_box(
         ax,
+        71,
         68,
-        62,
-        30,
-        24,
+        27,
+        18,
         "Compute provider",
-        "serves the model on\nGPU infrastructure",
+        "serves the model\non one GPU",
         facecolor=SERVER_PALE,
         edgecolor=SERVER,
-        title_size=15,
-        sub_size=11,
+        title_size=9.6,
+        sub_size=7.2,
     )
 
     labelled_box(
         ax,
-        27,
-        30,
-        46,
-        22,
+        4,
+        43,
+        25,
+        15,
+        "Local preprocessing",
+        "tokenize + embedding lookup\nthen encrypt embedded vectors",
+        facecolor=CLIENT_PALE,
+        edgecolor=CLIENT,
+        title_size=8.4,
+        sub_size=6.5,
+    )
+    labelled_box(
+        ax,
+        34,
+        39,
+        32,
+        23,
         "Client-assisted CKKS",
-        "every linear operation runs encrypted on the server;\n"
-        "the key holder evaluates three nonlinearities exactly",
+        "server: encrypted linear algebra\nclient: declared nonlinear boundaries",
         facecolor="white",
         edgecolor=BLACK,
-        title_size=15.5,
-        sub_size=10.5,
+        title_size=9.3,
+        sub_size=7.2,
     )
 
-    arrow(ax, 17, 61, 36, 52.5, color=CLIENT, lw=2.0)
-    arrow(ax, 83, 61, 64, 52.5, color=SERVER, lw=2.0)
-    ax.text(
-        21.5,
-        55.5,
-        "sends it\nencrypted",
-        fontsize=10,
-        color=CLIENT,
-        ha="center",
-        va="center",
-        style="italic",
-    )
-    ax.text(
-        78.5,
-        55.5,
-        "runs it\nin place",
-        fontsize=10,
-        color=SERVER,
-        ha="center",
-        va="center",
-        style="italic",
-    )
+    arrow(ax, 15.5, 67, 15.5, 59, color=CLIENT, lw=1.5)
+    arrow(ax, 29.5, 50.5, 33.5, 50.5, color=CLIENT, lw=1.5)
+    arrow(ax, 84.5, 67, 66.5, 57.5, color=SERVER, lw=1.5)
 
     ax.text(
         50,
-        26.0,
+        34.5,
         "The compute provider never receives a plaintext activation or the secret key.",
-        fontsize=11,
+        fontsize=7.3,
         color=BLACK,
         ha="center",
         va="center",
@@ -219,12 +212,15 @@ def fig_graphical_abstract(out: pathlib.Path) -> pathlib.Path:
     # dedicated-node artifact. The earlier per-block timing and the client peak-memory
     # figure are not used here because neither has committed dedicated-node evidence.
     results = [
-        (f"{L.value('prompt.gsr_total')} tokens", "the full task prompt"),
-        (f"{L.value('full.wall_hours')} h", "one complete encrypted inference"),
-        (r"$8.56\times10^{-9}$", "margin error vs. the plaintext model"),
+        (f"{L.value('prompt.gsr_total')} tokens", "GSR prompt"),
+        (f"{L.value('full.wall_hours')} h", "one measured run"),
         (
-            f"{L.value('full.client_share_of_eval')}\\%",
-            "the data owner's share, CPU only",
+            rf"${L.value('full.margin_rel_error'):.2e}$",
+            "vs. float64 reference",
+        ),
+        (
+            f"{L.value('full.client_share_of_eval')}%",
+            "of encrypted evaluation",
         ),
     ]
     for i, (big, small) in enumerate(results):
@@ -238,8 +234,8 @@ def fig_graphical_abstract(out: pathlib.Path) -> pathlib.Path:
             small,
             facecolor=LIGHT_GRAY,
             edgecolor=GRAY,
-            title_size=17,
-            sub_size=9.5,
+            title_size=9.8,
+            sub_size=6.6,
         )
 
     return emit(fig, out, "fig_graphical_abstract")
@@ -250,24 +246,24 @@ def fig_graphical_abstract(out: pathlib.Path) -> pathlib.Path:
 
 def fig_architecture(out: pathlib.Path) -> pathlib.Path:
     """The evaluation order, and which party performs each step."""
-    fig, ax = canvas(figsize=(13.0, 9.4))
+    fig, ax = canvas(figsize=(7.0, 5.65))
 
     steps = [
-        ("client", "Encrypt the embedded token vectors"),
+        ("client", "Tokenize, embed, and encrypt"),
         ("server", "LayerNorm statistics"),
         ("client", "Inverse square root"),
         ("server", "Query / key / value projection"),
         ("server", "Causal attention scores"),
         ("client", "Softmax over the score tiles"),
         ("server", "Attention context, projection, residual"),
-        ("client", "LayerNorm, second occurrence"),
+        ("server", "LayerNorm statistics, second site"),
+        ("client", "Inverse square root, second site"),
         ("server", "MLP up-projection"),
         ("client", "GELU"),
         ("server", "MLP down-projection, residual"),
-        ("client", "Decrypt the block output"),
     ]
 
-    top, bottom = 85.0, 11.0
+    top, bottom = 86.0, 18.0
     n = len(steps)
     pitch = (top - bottom) / n
     height = pitch * 0.72
@@ -275,13 +271,19 @@ def fig_architecture(out: pathlib.Path) -> pathlib.Path:
     boundary = 50.0
 
     ax.text(
-        4, 96.0, "Data owner", fontsize=16, fontweight="bold", color=CLIENT, va="center"
+        4,
+        96.0,
+        "Data owner",
+        fontsize=10.5,
+        fontweight="bold",
+        color=CLIENT,
+        va="center",
     )
     ax.text(
         4,
         92.0,
-        "holds the genome and the secret key  ·  no GPU",
-        fontsize=10.2,
+        "holds the genomic fragment and secret key  ·  no GPU",
+        fontsize=7.1,
         color=GRAY,
         va="center",
     )
@@ -289,7 +291,7 @@ def fig_architecture(out: pathlib.Path) -> pathlib.Path:
         54,
         96.0,
         "Compute provider",
-        fontsize=16,
+        fontsize=10.5,
         fontweight="bold",
         color=SERVER,
         va="center",
@@ -297,31 +299,19 @@ def fig_architecture(out: pathlib.Path) -> pathlib.Path:
     ax.text(
         54,
         92.0,
-        "holds the model  ·  no plaintext activation, no secret key  ·  one A100",
-        fontsize=10.2,
+        "holds the model  ·  encrypted activations only  ·  one A100",
+        fontsize=7.1,
         color=GRAY,
         va="center",
     )
 
     ax.plot(
         [boundary, boundary],
-        [6.5, 88.5],
+        [4.0, 88.5],
         color=GRAY,
         linewidth=1.1,
         linestyle=(0, (6, 5)),
     )
-    ax.text(
-        boundary,
-        5.4,
-        "trust boundary",
-        fontsize=9.6,
-        color=GRAY,
-        ha="center",
-        va="top",
-        style="italic",
-        bbox=dict(boxstyle="round,pad=0.28", facecolor="white", edgecolor="none"),
-    )
-
     centres = []
     for i, (who, label) in enumerate(steps):
         y = top - (i + 1) * pitch + (pitch - height) / 2
@@ -335,7 +325,7 @@ def fig_architecture(out: pathlib.Path) -> pathlib.Path:
             f"{i + 1}.  {label}",
             facecolor=CLIENT_PALE if who == "client" else SERVER_PALE,
             edgecolor=CLIENT if who == "client" else SERVER,
-            title_size=11,
+            title_size=7.4,
         )
         centres.append((who, x, y, y + height / 2))
 
@@ -358,17 +348,45 @@ def fig_architecture(out: pathlib.Path) -> pathlib.Path:
                 lw=1.3,
             )
 
+    # The retained implementation has two distinct block-end actions. A one-block validation
+    # may decrypt the output for comparison; composition decrypts and freshly re-encrypts the
+    # full hidden state before the next block. They are alternatives, not one generic readout.
+    last_x = rx + width / 2
+    last_y = centres[-1][3]
+    box_h = 7.2
+    labelled_box(
+        ax,
+        4,
+        6.5,
+        42,
+        box_h,
+        "Validation only: decrypt output",
+        facecolor=CLIENT_PALE,
+        edgecolor=CLIENT,
+        title_size=7.3,
+    )
+    labelled_box(
+        ax,
+        54,
+        6.5,
+        42,
+        box_h,
+        "Composition: decrypt + re-encrypt hidden state",
+        facecolor=CLIENT_PALE,
+        edgecolor=CLIENT,
+        title_size=7.1,
+    )
+    arrow(ax, last_x, last_y - height / 2, 25, 14.1, color=GRAY, lw=1.1)
+    arrow(ax, last_x, last_y - height / 2, 75, 14.1, color=GRAY, lw=1.1)
     ax.text(
         boundary,
-        1.6,
-        "Only ciphertexts cross. A crossing carries values derived from the client's own "
-        "query,\nwhich it decrypts, evaluates exactly, and returns freshly encrypted.",
-        fontsize=9.8,
+        1.2,
+        "Only ciphertexts cross the in-process role boundary; fresh encryption resets level to 0.",
+        fontsize=6.8,
         color=BLACK,
         ha="center",
-        va="top",
+        va="bottom",
         style="italic",
-        linespacing=1.45,
     )
 
     return emit(fig, out, "fig_architecture")
@@ -388,14 +406,15 @@ def fig_packing(out: pathlib.Path) -> pathlib.Path:
     bp = L.value("prompt.gsr_basepairs")
     kmer = L.value("prompt.kmer")
     specials = L.value("prompt.gsr_special_tokens")
+    active = L.value("layout.embedding_width")
 
-    fig, ax = canvas(figsize=(13.0, 7.2))
+    fig, ax = canvas(figsize=(7.0, 4.05))
 
     ax.text(
         2,
         96,
         f"One ciphertext holds {slots:,} slots",
-        fontsize=15.5,
+        fontsize=10.5,
         fontweight="bold",
         color=BLACK,
         va="center",
@@ -403,10 +422,9 @@ def fig_packing(out: pathlib.Path) -> pathlib.Path:
     ax.text(
         2,
         90.5,
-        f"{copies} activation copies  ×  {width_feat:,} padded features  ×  "
-        f"{lanes} token lanes  =  {copies * width_feat * lanes:,} slots."
-        f"   The {copies} copies exist because the MLP expands to {copies}× the hidden width.",
-        fontsize=10.6,
+        f"{copies} copies × {width_feat:,} features × {lanes} token lanes = "
+        f"{copies * width_feat * lanes:,} slots. The copies carry the {copies}× MLP expansion.",
+        fontsize=7.2,
         color=GRAY,
         va="center",
     )
@@ -420,7 +438,7 @@ def fig_packing(out: pathlib.Path) -> pathlib.Path:
             x + w / 2,
             78.0,
             f"copy {c}",
-            fontsize=12.5,
+            fontsize=8.4,
             fontweight="bold",
             color=BLACK,
             ha="center",
@@ -429,20 +447,61 @@ def fig_packing(out: pathlib.Path) -> pathlib.Path:
         ax.text(
             x + w / 2,
             74.0,
-            f"features 0–{width_feat - 1}",
-            fontsize=9,
+            f"{width_feat:,} features",
+            fontsize=6.7,
             color=GRAY,
             ha="center",
             va="center",
         )
         inner, pad = w - 3.0, 1.5
+        active_w = inner * active / width_feat
+        ax.add_patch(
+            plt.Rectangle(
+                (x + pad, 65.3),
+                active_w,
+                5.0,
+                facecolor=SERVER,
+                edgecolor=SERVER,
+                linewidth=0.6,
+            )
+        )
+        ax.add_patch(
+            plt.Rectangle(
+                (x + pad + active_w, 65.3),
+                inner - active_w,
+                5.0,
+                facecolor=PALE_ORANGE,
+                edgecolor=AMBER,
+                linewidth=0.6,
+            )
+        )
+        ax.text(
+            x + pad + active_w / 2,
+            67.8,
+            f"{active} active",
+            fontsize=5.9,
+            color="white",
+            ha="center",
+            va="center",
+            fontweight="bold",
+        )
+        ax.text(
+            x + pad + active_w + (inner - active_w) / 2,
+            67.8,
+            f"{width_feat - active}\npad + stage",
+            fontsize=5.2,
+            color=BLACK,
+            ha="center",
+            va="center",
+            linespacing=0.9,
+        )
         for lane in range(lanes):
             lw_ = inner / lanes
             ax.add_patch(
                 plt.Rectangle(
-                    (x + pad + lane * lw_, 62.5),
+                    (x + pad + lane * lw_, 59.0),
                     lw_ * 0.82,
-                    7.5,
+                    4.0,
                     facecolor=CLIENT_PALE,
                     edgecolor=CLIENT,
                     linewidth=0.8,
@@ -450,9 +509,9 @@ def fig_packing(out: pathlib.Path) -> pathlib.Path:
             )
         ax.text(
             x + w / 2,
-            59.0,
+            57.0,
             f"{lanes} token lanes",
-            fontsize=8.6,
+            fontsize=6.1,
             color=GRAY,
             ha="center",
             va="center",
@@ -461,8 +520,8 @@ def fig_packing(out: pathlib.Path) -> pathlib.Path:
     ax.text(
         2,
         46,
-        f"{tokens} tokens occupy {groups} ciphertext groups",
-        fontsize=14.5,
+        f"GSR: {bp} bp become {tokens} tokens in {groups} groups",
+        fontsize=10.0,
         fontweight="bold",
         color=BLACK,
         va="center",
@@ -473,7 +532,7 @@ def fig_packing(out: pathlib.Path) -> pathlib.Path:
         f"{bp} bp ÷ {kmer}-mer = {bp // kmer} tokens, plus {specials} task specials = "
         f"{tokens}.   {tokens} tokens across {lanes} lanes rounds up to {groups} groups; "
         f"the final group is partly padded.",
-        fontsize=10.6,
+        fontsize=7.0,
         color=GRAY,
         va="center",
     )
@@ -492,8 +551,8 @@ def fig_packing(out: pathlib.Path) -> pathlib.Path:
             f"{filled}/{lanes}",
             facecolor=SERVER_PALE if full else PALE_ORANGE,
             edgecolor=SERVER if full else AMBER,
-            title_size=10.5,
-            sub_size=8.8,
+            title_size=7.0,
+            sub_size=6.0,
         )
 
     ax.text(
@@ -501,7 +560,7 @@ def fig_packing(out: pathlib.Path) -> pathlib.Path:
         13,
         f"The {groups} groups give {groups * (groups + 1) // 2} lower-triangular causal "
         f"score tiles, and just {(-tokens) % lanes} of the {groups * lanes} lanes is padding.",
-        fontsize=10.2,
+        fontsize=6.9,
         color=GRAY,
         va="center",
     )
@@ -675,9 +734,12 @@ def fig_timeline(out: pathlib.Path) -> pathlib.Path:
     Drawn from the complete-model run, which is the only clean dedicated-node artifact. The
     earlier per-block stage trace came from a shared partition and is therefore not plotted.
     """
-    tel = load("telemetry")["complete_model_trace"]
+    telemetry = load("telemetry")
+    tel = telemetry["complete_model_trace"]
     trace = tel["trace"]
     total = tel["meta"]["total_wall_s"]
+    full_samples = telemetry["complete_model_contention"]["meta"]["samples"]
+    blocks = tel["meta"]["blocks"]
 
     t = np.array([r["t_s"] for r in trace], dtype=float)
     gpu_pct = np.array([r["gpu_pct"] for r in trace], dtype=float)
@@ -687,7 +749,7 @@ def fig_timeline(out: pathlib.Path) -> pathlib.Path:
     fig, (ax1, ax2) = plt.subplots(
         2,
         1,
-        figsize=(13.4, 7.0),
+        figsize=(7.0, 3.85),
         dpi=DPI,
         sharex=True,
         gridspec_kw={"height_ratios": [1.0, 1.0], "hspace": 0.12},
@@ -697,20 +759,9 @@ def fig_timeline(out: pathlib.Path) -> pathlib.Path:
     # boundaries would be nominal (equal division) rather than measured start times.
 
     ax1.plot(t, gpu_pct, color=NAVY, linewidth=1.7, zorder=3)
-    # 51 is the maximum over all 653 samples; the plotted curve is thinned, so its own visible
-    # maximum is lower. Label the line for what it is to avoid implying the curve reaches it.
-    ax1.axhline(51, color=GRAY, linewidth=1.1, linestyle="--", zorder=2)
-    ax1.text(
-        total * 0.995,
-        53,
-        "51% — maximum over the full 653-sample trace",
-        color=GRAY,
-        fontsize=9.6,
-        ha="right",
-        va="bottom",
-    )
-    ax1.set_ylabel("GPU utilization (%)", fontsize=11)
+    ax1.set_ylabel("GPU use (%)", fontsize=8)
     ax1.set_ylim(0, 100)
+    ax1.tick_params(labelsize=7)
     despine(ax1)
     ax1.grid(axis="y", color=LIGHT_GRAY, linewidth=0.8)
     ax1.set_axisbelow(True)
@@ -725,23 +776,16 @@ def fig_timeline(out: pathlib.Path) -> pathlib.Path:
         label="GPU memory",
         zorder=3,
     )
-    ax2.set_ylabel("Memory (MiB)", fontsize=11)
-    ax2.set_xlabel("Seconds since process start", fontsize=11)
-
-    fail = Ledger().value("mem.unbounded_failure")
-    ax2.set_ylim(0, fail * 1.22)
-    ax2.axhline(fail, color=FAILURE, linewidth=1.3, linestyle=":")
-    ax2.text(
-        total * 0.995,
-        fail * 1.02,
-        f"{fail:,} MiB — where the unbounded cache was killed",
-        color=FAILURE,
-        fontsize=9.2,
-        ha="right",
-        va="bottom",
-    )
+    ax2.set_ylabel("Memory (MiB)", fontsize=8)
+    ax2.set_xlabel("Seconds since process start", fontsize=8)
+    ax2.set_ylim(0, max(rss) * 1.14)
+    ax2.tick_params(labelsize=7)
     ax2.legend(
-        frameon=False, fontsize=10, loc="upper left", ncol=2, bbox_to_anchor=(0.0, 1.04)
+        frameon=False,
+        fontsize=7.2,
+        loc="upper left",
+        ncol=2,
+        bbox_to_anchor=(0.0, 1.04),
     )
     despine(ax2)
     ax2.grid(axis="y", color=LIGHT_GRAY, linewidth=0.8)
@@ -749,8 +793,9 @@ def fig_timeline(out: pathlib.Path) -> pathlib.Path:
 
     ax1.set_xlim(0, total)
     ax1.set_title(
-        "Twelve blocks cost what one block costs, and the GPU is never the limit",
-        fontsize=13,
+        f"Sampled GPU use stays below saturation; memory remains bounded across {blocks} blocks\n"
+        f"The plotted curve is thinned from the full {full_samples}-sample trace.",
+        fontsize=8.7,
         fontweight="bold",
         color=BLACK,
         loc="left",
@@ -776,7 +821,7 @@ def fig_memory(out: pathlib.Path) -> pathlib.Path:
         "MLP\n8 weight matrices resident",
     ]
 
-    fig, ax = plt.subplots(figsize=(9.6, 5.9), dpi=DPI)
+    fig, ax = plt.subplots(figsize=(6.0, 3.65), dpi=DPI)
     bars = ax.bar(
         range(3), values, width=0.5, facecolor=SERVER, **MEASURED_KW, zorder=3
     )
@@ -787,7 +832,7 @@ def fig_memory(out: pathlib.Path) -> pathlib.Path:
             f"{v:,} MiB",
             ha="center",
             va="bottom",
-            fontsize=12.5,
+            fontsize=8.8,
             fontweight="bold",
             color=BLACK,
         )
@@ -796,17 +841,18 @@ def fig_memory(out: pathlib.Path) -> pathlib.Path:
     ax.text(
         2.52,
         fail - 1400,
-        f"{fail:,} MiB — the unbounded cache\nwas killed by the operating system",
+        f"Separate unbounded-cache attempt:\n{fail:,} MiB at operating-system kill",
         color=FAILURE,
-        fontsize=9.8,
+        fontsize=7.2,
         ha="right",
         va="top",
         fontweight="bold",
     )
 
     ax.set_xticks(range(3))
-    ax.set_xticklabels(labels, fontsize=10.5)
-    ax.set_ylabel("Peak host memory (MiB)", fontsize=11)
+    ax.set_xticklabels(labels, fontsize=7.3)
+    ax.set_ylabel("Peak process RSS (MiB)", fontsize=8)
+    ax.tick_params(axis="y", labelsize=7)
     ax.set_ylim(0, fail * 1.22)
     ax.set_xlim(-0.62, 2.62)
     despine(ax)
@@ -814,9 +860,9 @@ def fig_memory(out: pathlib.Path) -> pathlib.Path:
     ax.set_axisbelow(True)
     title(
         ax,
-        "Flushing between stages bounds the peak",
-        "The cache has to hold only the largest single stage, not all twelve weight "
-        "matrices at once.",
+        "Bounded-cache run: stage-local host-memory peaks",
+        "One 103-token GSR block; the red line comes from a separate unbounded-cache attempt.",
+        size=9.5,
     )
     return emit(fig, out, "fig_memory")
 
@@ -830,9 +876,7 @@ def fig_cost_split(out: pathlib.Path) -> pathlib.Path:
     L = Ledger()
     server = L.value("full.server_linear_algebra")
     client = L.value("full.client_boundaries")
-    setup = L.value("full.context_keygen_load") + L.value("full.encrypt_input")
-    tail = L.value("full.final_decrypt") + L.value("full.fixture_load")
-    other = setup + tail + L.value("full.uninstrumented_remainder")
+    evaluation = L.value("full.encrypted_evaluation")
     wall = L.value("full.wall")
     crossings = L.value("full.crossings_physical")
     gpu_mib = L.value("full.gpu_peak_mib")
@@ -840,9 +884,9 @@ def fig_cost_split(out: pathlib.Path) -> pathlib.Path:
     fig, (ax, axr) = plt.subplots(
         1,
         2,
-        figsize=(13.4, 4.6),
+        figsize=(7.0, 3.25),
         dpi=DPI,
-        gridspec_kw={"width_ratios": [1.35, 1.0], "wspace": 0.13},
+        gridspec_kw={"width_ratios": [1.45, 1.0], "wspace": 0.17},
     )
 
     # Segments are labelled in place, so the figure needs no legend and nothing can collide
@@ -850,11 +894,8 @@ def fig_cost_split(out: pathlib.Path) -> pathlib.Path:
     for label, val, color, textcolor in (
         ("Compute provider", server, SERVER, "white"),
         ("Data owner", client, CLIENT, "white"),
-        ("", other, GRAY, BLACK),
     ):
-        left = {"Compute provider": 0.0, "Data owner": server}.get(
-            label, server + client
-        )
+        left = {"Compute provider": 0.0, "Data owner": server}[label]
         ax.barh(
             0,
             val,
@@ -864,64 +905,43 @@ def fig_cost_split(out: pathlib.Path) -> pathlib.Path:
             edgecolor=BLACK,
             linewidth=1.1,
         )
-        if label:
-            ax.text(
-                left + val / 2,
-                0.02,
-                f"{val:,.0f} s\n{100 * val / wall:.1f}% of wall",
-                ha="center",
-                va="center",
-                fontsize=12.5,
-                fontweight="bold",
-                color=textcolor,
-            )
-            ax.text(
-                left + val / 2,
-                -0.30,
-                label,
-                ha="center",
-                va="center",
-                fontsize=10.5,
-                color=color,
-                fontweight="bold",
-            )
-            sub = (
-                "encrypted linear algebra, one A100"
-                if label == "Compute provider"
-                else "exact nonlinearities, CPU only"
-            )
-            ax.text(
-                left + val / 2,
-                -0.40,
-                sub,
-                ha="center",
-                va="center",
-                fontsize=9.2,
-                color=GRAY,
-            )
+        inside = (
+            f"{val:,.0f} s  ·  {100 * val / evaluation:.1f}% of evaluation"
+            if label == "Compute provider"
+            else f"{val:,.0f} s"
+        )
+        ax.text(
+            left + val / 2,
+            0.02,
+            inside,
+            ha="center",
+            va="center",
+            fontsize=8.0 if label == "Compute provider" else 7.2,
+            fontweight="bold",
+            color=textcolor,
+        )
+        ax.text(
+            left + val / 2,
+            -0.31,
+            label,
+            ha="center",
+            va="center",
+            fontsize=7.5,
+            color=color,
+            fontweight="bold",
+        )
 
-    ax.set_xlim(0, wall)
+    ax.set_xlim(0, evaluation)
     ax.set_ylim(-0.52, 0.30)
     ax.set_yticks([])
-    ax.set_xlabel("Seconds", fontsize=11)
+    ax.set_xlabel("Seconds of encrypted evaluation", fontsize=7.5)
+    ax.tick_params(axis="x", labelsize=7)
     despine(ax, keep=("bottom",))
-    ax.text(
-        1.0,
-        -0.155,
-        f"setup, encryption, final decrypt and uninstrumented time account for the "
-        f"remaining {other:.0f} s",
-        transform=ax.transAxes,
-        fontsize=9.2,
-        color=GRAY,
-        ha="right",
-        va="top",
-    )
     title(
         ax,
-        f"Complete encrypted inference, 12 blocks and task head at 103 tokens — "
-        f"{wall:,.0f} s wall clock",
-        "One execution on an uncontended node. Server and client shares sum exactly to "
-        "encrypted evaluation.",
+        f"Encrypted evaluation: {evaluation:,.0f} s of {wall:,.0f} s wall clock",
+        "One measured 12-block + task-head execution at the 103-token GSR prompt.",
+        size=9.1,
     )
 
     axr.axis("off")
@@ -934,12 +954,12 @@ def fig_cost_split(out: pathlib.Path) -> pathlib.Path:
         98,
         34,
         "Data owner",
-        f"{client:,.0f} s  \u00b7  no GPU  \u00b7  CPU only\n"
-        f"holds the genome and the secret key",
+        f"{client:,.0f} s  \u00b7  CPU only  \u00b7  no GPU\n"
+        f"declared boundaries + refreshes",
         facecolor=CLIENT_PALE,
         edgecolor=CLIENT,
-        title_size=14,
-        sub_size=10.5,
+        title_size=9.5,
+        sub_size=7.0,
     )
     labelled_box(
         axr,
@@ -949,18 +969,18 @@ def fig_cost_split(out: pathlib.Path) -> pathlib.Path:
         34,
         "Compute provider",
         f"{server:,.0f} s  \u00b7  one A100  \u00b7  {gpu_mib:,} MiB peak\n"
-        f"holds the model; sees no plaintext, no secret key",
+        f"GPU backend + host support",
         facecolor=SERVER_PALE,
         edgecolor=SERVER,
-        title_size=14,
-        sub_size=10.5,
+        title_size=9.5,
+        sub_size=7.0,
     )
     arrow(axr, 50, 55, 50, 41, color=GRAY, lw=1.6, style="<|-|>")
     axr.text(
         53,
         48,
-        f"{crossings:,} boundary crossings",
-        fontsize=9.8,
+        f"{crossings:,} in-process boundary calls",
+        fontsize=6.8,
         color=GRAY,
         va="center",
     )
@@ -972,9 +992,10 @@ def fig_cost_split(out: pathlib.Path) -> pathlib.Path:
 
 
 def fig_scaling(out: pathlib.Path) -> pathlib.Path:
-    """Circuit size across the encrypted-scope tasks, with the one measured inference marked.
+    """Causal score-tile schedule across tasks, with the measured inference marked.
 
-    This plots circuit size, not time. Per-task time estimates were removed from the ledger:
+    This plots one schedule component, not total circuit size or time. Per-task time estimates
+    were removed from the ledger:
     they were built from per-block timings measured on a shared partition, which the manuscript
     may not use. Only genomic signal recognition has a measured complete inference.
     """
@@ -987,7 +1008,7 @@ def fig_scaling(out: pathlib.Path) -> pathlib.Path:
     measured = [t.get("full_pass_tag") == "[V]" for t in tasks]
 
     y = np.arange(len(tasks))
-    fig, ax = plt.subplots(figsize=(11.4, 5.4), dpi=DPI)
+    fig, ax = plt.subplots(figsize=(6.7, 3.7), dpi=DPI)
 
     for i, (tv, m) in enumerate(zip(tiles, measured)):
         ax.barh(
@@ -1006,7 +1027,7 @@ def fig_scaling(out: pathlib.Path) -> pathlib.Path:
             f"{tv:,} score tiles",
             va="center",
             ha="left",
-            fontsize=11.0,
+            fontsize=7.8,
             fontweight="bold" if m else "normal",
             color=BLACK if m else GRAY,
         )
@@ -1019,7 +1040,7 @@ def fig_scaling(out: pathlib.Path) -> pathlib.Path:
         f"measured complete inference: {anchor['full_pass_human']}",
         va="center",
         ha="left",
-        fontsize=10.2,
+        fontsize=7.3,
         color="white",
         fontweight="bold",
     )
@@ -1027,11 +1048,11 @@ def fig_scaling(out: pathlib.Path) -> pathlib.Path:
     ax.set_yticks(y)
     ax.set_yticklabels(
         [f"{n}\n{tk} tokens · {g} groups" for n, tk, g in zip(names, toks, groups)],
-        fontsize=10.2,
+        fontsize=7.2,
     )
     ax.set_xlabel(
         "Causal attention score tiles per block  (lower-triangular group pairs)",
-        fontsize=11,
+        fontsize=8,
     )
     ax.set_xlim(0, max(tiles) * 1.52)
     ax.set_ylim(-0.62, len(tasks) - 0.30)
@@ -1048,13 +1069,13 @@ def fig_scaling(out: pathlib.Path) -> pathlib.Path:
                 facecolor="white",
                 edgecolor=GRAY,
                 hatch="///",
-                label="circuit size only, not timed",
+                label="score-tile schedule only, not timed",
             ),
         ],
         frameon=False,
-        fontsize=9.6,
-        loc="lower right",
-        bbox_to_anchor=(1.0, 0.02),
+        fontsize=7.0,
+        loc="upper right",
+        bbox_to_anchor=(1.0, 0.94),
         ncol=1,
     )
 
@@ -1066,7 +1087,7 @@ def fig_scaling(out: pathlib.Path) -> pathlib.Path:
         f"{excl['token_groups']} groups, or {excl['causal_score_tiles']:,} score tiles — "
         f"a different regime, not a longer prompt.",
         transform=ax.transAxes,
-        fontsize=9.4,
+        fontsize=6.8,
         color=GRAY,
         ha="left",
         va="top",
@@ -1074,9 +1095,9 @@ def fig_scaling(out: pathlib.Path) -> pathlib.Path:
 
     title(
         ax,
-        "Prompt length sets circuit size quadratically",
-        "Token count grows linearly with the task window; the causal schedule grows with the "
-        "square of the ciphertext-group count.",
+        "Prompt length sets the causal score-tile schedule",
+        "Derived per-block schedule only; neither total operation count nor a timing model.",
+        size=9.5,
     )
     return emit(fig, out, "fig_scaling")
 
@@ -1194,7 +1215,6 @@ FIGURES = {
     "memory": fig_memory,
     "cost_split": fig_cost_split,
     "scaling": fig_scaling,
-    "baseline": fig_baseline,
 }
 
 

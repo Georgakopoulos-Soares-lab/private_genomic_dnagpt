@@ -1,13 +1,18 @@
 # Manuscript evidence and defensibility
 
+> **Status supersession, 2026-08-14.** Use the post-run variant. The complete twelve-block model
+> plus GSR head executed once at 103 tokens on 2026-08-12, matched the recorded label, and measured
+> 6683 s on a whole-node allocation with no contention detected in recorded telemetry. The current
+> limits are one prompt, one execution, no network transport, no private lookup, and no
+> production-security evaluation.
+
 > **Superseded on timing — read this first.**
 >
-> This note predates the optimization campaign. Any latency, wall-clock, or server/client
-> timing figure below has been replaced by the dedicated-node measurements in
+> This note predates the accepted complete execution. Any latency, wall-clock, or server/client
+> timing figure below has been replaced by the complete-run measurements in
 > [`../evidence/measurements.yaml`](../evidence/measurements.yaml) and
-> [`../evidence/optimizations.yaml`](../evidence/optimizations.yaml): one complete block at
-> 103 tokens now runs in **652 s of encrypted evaluation** (663 s wall), down from
-> approximately 2.1 hours, at a relative error of `4.64e-9`.
+> [`../evidence/optimizations.yaml`](../evidence/optimizations.yaml): one complete 12-block plus
+> task-head execution took **6683 s**. No paired pre-cache/current speedup is reportable.
 >
 > The older figures here were measured on a contended shared host and **do not go in the
 > manuscript in any form** — not as results and not as caveats. What remains valid in this note
@@ -34,15 +39,15 @@ submission.
 
 | # | Decision | Consequence for the manuscript |
 |---|---|---|
-| 1 | Encrypted correctness must be multi-example, not `n=1` | Results carries an encrypted-vs-plaintext label-agreement table. **Owner: user.** |
+| 1 | Separate graph feasibility from numerical generality | Report the measured one-input agreement and state that encrypted task accuracy remains unmeasured |
 | 2 | The client-cost objection is answered by a case study, **not** by changing the architecture | New Section 3.1 below is the load-bearing defence; it must appear in Introduction and Discussion |
 | 3 | **No interaction ablation.** The client-boundary set is fixed at LayerNorm + causal softmax + GELU | The design is presented as a stated protocol choice with a justification, not as a swept variable |
-| 4 | **Pure non-interactive CKKS (Scheme A) is removed from the paper** — it does not fit single-GPU memory | No Scheme A results, no A-vs-B speedup, no paired ablation. See editorial flag in §3.3 |
-| 5 | **Sequence-length scaling at a fixed circuit is in scope** | Planned figure: cost vs `T` on the current chunked + Token-SIMD circuit. See NEXT STEPS X |
-| 6 | No per-block error/level/time trace | Per-block behaviour is asserted from the two-block refresh result only |
+| 4 | The pure non-interactive CKKS result is a scoped negative baseline | Report the completed block and evaluated 80 GB composition boundary without a universal impossibility or speed comparison |
+| 5 | **Sequence structure is in scope** | Report ciphertext groups and causal score tiles, not projected time |
+| 6 | The complete run is `n=1` | Per-block values inside that execution are within-run traces, not run-to-run variance |
 | 7 | **mRNA is not encrypted.** Encrypted scope is GSR + GUE | mRNA stays in the plaintext-validation table as model-fidelity evidence and is explicitly scoped out of the encrypted claim |
 | 8 | `T = 103` is presented as an explicit, task-derived choice covering both encrypted-scope tasks | Justified quantitatively in §3.2 |
-| 9 | Measurement-discipline recommendations are not carried as next steps | Existing timing-contamination caveats stay in Results — they are measured facts and project rule 4 requires them |
+| 9 | Historical contended timings remain excluded | The single complete-run timing is reported with its whole-node telemetry qualification |
 | 10 | Security is presented as a **threat model** with a semi-honest ("non-determined") adversary at **128-bit classical parameters throughout** | New Security Model section |
 
 ---
@@ -51,37 +56,17 @@ submission.
 
 ### 2.1 Abstract
 
-Two variants. Use **A** if the twelve-block driver has not closed at submission; use **B** if it has.
+Use the measured post-run result:
 
-**Variant A — current evidence.**
-
-> Genomic sequence is the most durable identifier a person has: it cannot be rotated after a breach,
-> and it partially discloses the genomes of relatives who never consented. This makes genomic
-> foundation models an unusually sharp instance of the private-inference problem, because the natural
-> deployment — sending sequence to a compute provider that hosts the model — is the one deployment the
-> data's legal and biological properties forbid. We study whether DNAGPT, a 0.1-billion-parameter
-> genomic transformer, can be evaluated on encrypted input by a provider that never receives
-> plaintext. We first reproduce DNAGPT's published behaviour on genomic signal recognition and on
-> promoter and splice-site classification, and freeze its per-example predictions as a numerical
-> oracle. We then implement a client-assisted CKKS protocol in which a GPU server evaluates every
-> dense projection, attention product, residual, and feed-forward map on ciphertexts, while the
-> key-holding data owner evaluates LayerNorm, causal softmax, and GELU exactly at boundaries fixed
-> before inference and re-encrypts the result. Using a chunked causal-softmax construction and
-> eight-token SIMD packing, one complete released-weight transformer block evaluates at the full
-> 103-token prompt length — the maximum prompt length across both downstream tasks we encrypt — at
-> approximately `4e-9` relative error against the frozen oracle, within a `9.6 GiB` process footprint
-> on a single A100, using 156 dense encrypted products in place of 1,236 serial-equivalent products.
-> The client's share of encrypted evaluation is `1.0–4.6%` of wall time and is the most reproducible
-> quantity we measure. We report what remains open: complete twelve-block inference through the
-> released task head, private token-index lookup, and uncontaminated latency on dedicated hardware.
-
-**Variant B — with twelve-block closure.** Replace the final two sentences with:
-
-> Composing all twelve released blocks and the fine-tuned task head reproduces the frozen plaintext
-> prediction on `N` held-out examples. Private token-index lookup and uncontaminated latency on
-> dedicated hardware remain open.
-
-*(Fill `N` and the agreement count from the run in NEXT STEPS X-1.)*
+> We evaluate privacy-preserving inference for the released 0.1-billion-parameter DNAGPT model.
+> A pure non-interactive CKKS configuration completes one released-weight block but exceeds the
+> tested 80 GB accelerator-memory envelope when configured for composition. A client-assisted
+> protocol keeps linear algebra encrypted while the data owner evaluates the LayerNorm inverse
+> square root, causal softmax, GELU, and declared refreshes. All twelve released blocks and the task
+> head execute at the 103-token GSR prompt without homomorphic bootstrap. For the one selected
+> prompt, the decrypted label matches the reference and the margin has `8.56e-9` relative error.
+> One in-process execution takes `6683 s`; encrypted task accuracy, repetition, private lookup, and
+> networked deployment remain unmeasured.
 
 ---
 
@@ -112,9 +97,9 @@ schedule, not the model's dense maps, that first exceeds a single accelerator's 
 
 **Paragraph 4 — our protocol, stated as a choice.**
 We therefore adopt client-assisted CKKS. The server holds public evaluation material and the model
-and performs all encrypted linear algebra. At a small number of boundaries fixed before inference,
-the data owner — who already holds the query and the secret key — decrypts a value derived from its
-own request, evaluates the exact nonlinear function in plaintext, and returns a fresh ciphertext. The
+and performs all encrypted linear algebra. At boundaries fixed before inference, the data owner —
+who already holds the query and the secret key — decrypts values derived from its own request,
+evaluates the declared reference-form functions in double precision, and returns fresh ciphertexts. The
 server never receives the secret key, a plaintext activation, or a partial decryption. We present
 this boundary set as a design decision, not as a tuned parameter: it is the smallest set that removes
 every polynomial approximation from the encrypted lineage.
@@ -122,10 +107,10 @@ every polynomial approximation from the encrypted lineage.
 **Paragraph 5 — the objection, met head-on.**
 A reader will immediately ask why the client, which evaluates three nonlinearity classes anyway, does
 not simply evaluate the whole model locally. We answer this quantitatively rather than rhetorically.
-The local baseline is not slower; under the deployment premise it is *unavailable*, because it
-requires the client to hold model weights it is not permitted to hold. What the protocol offloads is
-not arithmetic but accelerator capital and the model artifact: the measured client side is CPU-only
-and accounts for `1.0–4.6%` of encrypted evaluation. Section 3.1 develops this as a case study.
+Local inference is preferable whenever the client may hold the model. The protocol addresses a
+different premise: the model is served but not distributed. The measured client side is CPU-only
+and accounts for `14.5%` of encrypted evaluation, but no comparable local CPU forward-pass time was
+recorded. Section 3.1 states that comparison directly.
 
 **Paragraph 6 — contributions.**
 
@@ -133,12 +118,11 @@ and accounts for `1.0–4.6%` of encrypted evaluation. Section 3.1 develops this
    splice-site classification, frozen per-example as the acceptance oracle for every encrypted run.
 2. A client-assisted CKKS protocol for DNAGPT with a general, chunked, exact causal-softmax boundary
    that removes the token-count ceiling of earlier packing schemes.
-3. An eight-token SIMD layout that evaluates one complete released-weight block at the full 103-token
-   prompt length using 156 dense encrypted products against 1,236 serial-equivalent products, within
-   a `9.6 GiB` measured process footprint on one A100.
-4. A measured server/client cost decomposition, an explicit threat model at 128-bit classical
-   parameters, and an honest boundary statement covering private token lookup, malicious-server
-   security, and clean latency.
+3. Complete-model execution of all twelve released blocks and the task head at the 103-token prompt,
+   with one-input label agreement, depth 13, and no homomorphic bootstrap.
+4. A measured provider/client cost decomposition, derived ciphertext-object and dependency-phase
+   accounting, stage-bounded host caching, and explicit limits covering private lookup, network
+   transport, and production security.
 
 ---
 
@@ -200,12 +184,12 @@ client encrypts embedded token vectors
 
 No boundary location, count, or size depends on a decrypted value.
 
-**Boundary batching.** One physical crossing may carry many logically independent nonlinear
-evaluations in disjoint ciphertext regions: the client decrypts once, applies each declared function
-to its assigned region, and returns one packed ciphertext. This changes the number of protocol
-messages, not the model mathematics. At the two-token scale it reduced a complete block from 24
-crossings to 7; at 103 tokens the complete packed block evaluates **129,162 logical boundary
-instances through 857 physical crossings**.
+**Boundary batching.** One client call may carry packed data for multiple independent evaluations
+in disjoint ciphertext regions. This changes the physical schedule, not the model mathematics. At
+103 tokens the complete block makes **857 in-process client calls**; attention accounts for 818
+(95.4%) and for 818 of 896 boundary ciphertext objects (91.3%). The asserted 129,162
+logical-instance counter mixes token, token-copy, and head/query/key-scalar units and is not a
+scalar-work or traffic total.
 
 **Chunked exact causal softmax.** For query position `i`, softmax is evaluated over keys `0..i` only.
 The server computes encrypted scores and packs them for the client in fixed-width chunks; the client
@@ -227,8 +211,9 @@ speed claim for it (§2.6).
 re-encrypts it as the next block's input. This resets level consumption and prevents the per-block
 depth and memory accumulation that otherwise forces a deeper context.
 
-**Hardware and measurement.** A100-SXM4-80GB; per-run GPU preflight; process-specific rather than
-device-wide memory telemetry, since the host is shared. Timing qualification is in Results.
+**Hardware and measurement.** The accepted complete execution uses one A100-PCIE-40GB and 32 CPU
+threads on a whole-node allocation. Host RSS is process-specific; retained GPU memory samples are
+device-wide. Timing and contention qualifications are stated with the complete-run result.
 
 ---
 
@@ -322,37 +307,29 @@ prompt in the encrypted scope (§3.2). mRNA is deliberately excluded.
 | Explicit rotations / reduction calls | 8,173 / 8,776 |
 | Minimum demonstrated multiplicative depth | 13 |
 | Physical client crossings | 857 |
-| Logical boundary instances | 129,162 |
+| Attention-related client calls | 818 of 857 (`95.4%`) |
+| Boundary ciphertext objects | 896 (`91.3%` attention-related) |
 | Relative error (global, across depth-13 samples) | `4.1e-9` – `5.0e-9` |
 | Acceptance criterion | `4e-2` |
-| Target-process peak GPU memory | 9,834 MiB (≈ `9.6 GiB`) |
+| Peak device-wide GPU memory used during the run | 9,834 MiB (≈ `9.6 GiB`) |
 
 Accuracy is not the constraint at single-block scale: the measured error is roughly seven orders of
 magnitude inside the predeclared criterion. The constraint is dense encrypted linear algebra.
 
-**Server/client cost decomposition.** `[V]` Six completed `T = 103` complete-block runs:
+**Provider/client cost decomposition.** `[V]` In the single accepted complete execution, encrypted
+evaluation takes `6594.748 s`. The residual provider-side bucket is `5638.561 s` (`85.5%`) and
+includes GPU-backend work plus host support. Declared client boundaries and refreshes take
+`956.187 s` (`14.5%`) on CPU. These are one execution's values, not a distribution or a causal
+profile.
 
-| Quantity | Range | Median | Mean ± sd | Coefficient of variation |
-|---|---:|---:|---:|---:|
-| Client boundary time (s) | 114.6 – 213.4 | 137.9 | 144.8 ± 35.2 | **24.3%** |
-| Server linear algebra (s) | 2,871.7 – 13,523.8 | 6,670.9 | 7,874.5 ± 4,451 | **56.5%** |
-| Client share of encrypted evaluation | 0.98% – 4.58% | — | — | — |
-
-Two things follow. First, the split is server-dominated by roughly two orders of magnitude: the cost
-of this architecture is encrypted dense linear algebra, not interaction. Second, the client boundary
-cost is the **most reproducible timing quantity in the study** — it varies by `1.86×` across runs
-whose server time varies by `4.71×`, because it is CPU-side decrypt/evaluate/encrypt work that does
-not depend on the accelerator. It is therefore the one wall-clock number we are willing to build an
-argument on. Per physical crossing it is `≈0.161 s`.
-
-**Short composition.** `[V]` Released blocks 0 and 1 compose sequentially at two tokens through a
-full-hidden-state client refresh, at `8.48e-11` relative error after block 1, with target-process GPU
-memory peaking during block 0 and not increasing in block 1 — the refresh does not accumulate
-footprint across blocks. `[U]` This has not been shown at 103 tokens or across all twelve blocks.
+**Composition.** `[V]` Released blocks 0 and 1 first composed at two tokens through a
+full-hidden-state client refresh, at `8.48e-11` relative error after block 1. The same mechanism then
+composed all twelve blocks and the task head at 103 tokens. Device-wide GPU memory used reached
+9839 MiB after about 400 s and did not grow with block index.
 
 **Retained optimizations.** `[V]` Boundary batching; general and chunked exact causal softmax;
-eight-token SIMD packing; depth 13; a CPU-side diagonal-vector cache (>99.99% hit rate, no additional
-process GPU memory, correct output, timing benefit unresolved); cross-process context/key reuse; a
+eight-token SIMD packing; depth 13; a CPU-side diagonal-vector cache (>99.99% hit rate, no added GPU
+allocation, correct output, timing benefit unresolved); cross-process context/key reuse; a
 two-GPU Q/K/V split (both workers matched the oracle; one clean unrepeated sample showed ≈`1.65×` on
 that substage).
 
@@ -365,41 +342,27 @@ low-contention window was available. A two-process MLP partial-sum split had exa
 but could not be built, because the pinned library provides no mechanism to transport a ciphertext
 between processes.
 
-**Timing qualification.** `[V]` Long-running measurements were performed on a shared host whose
-host-wide CPU load varied by roughly `4×` within and across runs, and target GPUs that passed an idle
-preflight could later acquire co-tenants. Completed depth-13 task-length variants span 2,986–13,658 s
-of encrypted evaluation. Process-specific memory telemetry was identical across repeats regardless of
-speed, and wall time tracked ambient contention instead. Accordingly: we report that the current
-implementation takes **tens of minutes to hours per block on this shared system**; we do **not**
-select the fastest sample as a benchmark, claim a repeatable cache speedup, claim a depth-13 speed
-advantage (that claim was tested by repetition and retracted), or multiply a contaminated block time
-by twelve. Correctness and timing carry different evidentiary weight here: the oracle comparison is a
-mathematical statement unaffected by host load.
+**Timing qualification.** `[V]` Historical block timings from a shared host remain excluded. The
+complete execution is one `6683 s` sample from a whole-node allocation with no contention detected
+in recorded telemetry; scheduler exclusivity was not requested. It supports neither a mean nor a
+service rate, and no paired pre-cache/current speedup is reportable.
 
-**Twelve-block closure.** `[U]` Pending — see NEXT STEPS X-1.
+**Twelve-block closure.** `[V]` All twelve released blocks and the GSR head execute at 103 tokens for
+one selected prompt. `[U]` Repetition and multi-input encrypted evaluation remain open.
 
 ---
 
 ### 2.7 Discussion
 
-**What the result is.** The feasibility boundary for encrypted DNAGPT has moved from isolated
-operators to a complete real-weight transformer block at the full prompt length of the downstream
-classification tasks, on one accelerator, at an error seven orders of magnitude inside the accepted
-tolerance. The remaining obstacle is not correctness and is not, at this scale, memory. It is the
-wall-clock cost of encrypted dense linear algebra.
+**What the result is.** Complete-model graph feasibility is measured across all twelve released
+blocks and the task head at 103 tokens. Numerical agreement is measured for one selected prompt,
+whose label matches the reference and whose margin has `8.56e-9` relative error. The current
+implementation's `6683 s` cost rules out interactive use in the evaluated form.
 
-**Why the measurement generalizes beyond our protocol.** Removing polynomial approximation from the
-encrypted lineage means the measured server cost is *only* the model's dense maps under CKKS. Any
-CKKS evaluation of the same graph must pay at least that, and a non-interactive one pays it plus
-approximation depth and the parameter growth that follows. The server-side numbers are therefore best
-read as a **lower bound on encrypted DNAGPT inference in CKKS**, which is a stronger and more
-transferable statement than a benchmark of one implementation.
-
-**On interaction.** The protocol is interactive by construction and we do not present that as
-incidental. The measured price of interaction is `1.0–4.6%` of encrypted evaluation and 857 physical
-crossings per block. The corresponding purchase is the elimination of every polynomial approximation,
-every approximation-domain calibration on private data, and the depth that both imply. Whether that
-trade is worth making in a given deployment depends on client availability, which we do not model.
+**On interaction.** The protocol is interactive by construction. Client boundaries and refreshes
+account for `956.187 s`, or `14.5%` of encrypted evaluation. Attention contributes 818 of 857 client
+calls and 818 of 896 boundary ciphertext objects per block. The evaluated roles share one process,
+so these are not network messages and serialized byte volume remains unknown.
 
 **On the local-execution objection.** Developed as a case study in §3.1 and summarized in the
 Introduction. In brief: the local baseline is faster in arithmetic and unavailable in deployment,
@@ -407,14 +370,12 @@ because it requires the client to hold weights the premise forbids; the architec
 accelerator capital and the model artifact rather than FLOPs; and the client's share is structurally
 decreasing in model width `[A]`.
 
-**Limitations, stated without hedging.** Complete twelve-block inference through the released head is
-the open correctness result. Private token-index lookup remains outside the encrypted boundary. The
-protocol requires the key-holding client at every declared boundary. No uncontaminated latency
-measurement exists on dedicated hardware. Security is established against a semi-honest,
-non-determined adversary at 128-bit classical parameters, not against a malicious server, side
-channels, or traffic analysis. Model confidentiality against the client is operational, not
-cryptographic. GUE uses a locally fine-tuned head over three of 28 datasets. Nothing here is a
-clinical or biological claim.
+**Limitations, stated without hedging.** The complete-model result covers one prompt and one
+execution. Private token-index lookup remains outside the encrypted boundary. The protocol requires
+the key-holding client at every declared boundary and has no network transport. The threat model is
+semi-honest at 128-bit classical parameters, not malicious-server, side-channel, or traffic-analysis
+security. Model confidentiality against the client is operational, not cryptographic. GUE uses a
+locally fine-tuned head over three of 28 datasets. Nothing here is a clinical or biological claim.
 
 **Outlook.** Named as directions, not as results: sequence-length scaling behaviour at a fixed
 circuit; distinct dense transforms across the four packed copies, derived to cut dense products from
@@ -427,93 +388,27 @@ in-process cryptographic boundaries rather than RPCs.
 
 ## 3. Defensibility dossier
 
-### 3.1 The client-cost case study — the load-bearing defence
+### 3.1 The client-cost case study
 
-This is the objection most likely to be raised first and hardest. It is answered here in full, and
-the architecture does not change.
+Local plaintext inference is the preferred architecture whenever the client may hold and run the
+model. It avoids all cryptographic work. This study did not measure a comparable local CPU forward
+pass, so it makes no numeric local-overhead claim.
 
-#### 3.1.1 The objection at full strength
+The evaluated protocol addresses a served-model premise in which the provider distributes the
+tokenizer and embedding table but not the full model weights. Under that premise, the choices are
+to disclose the genomic fragment, decline the inference, or use a privacy-preserving protocol. The
+public DNAGPT artifact is an auditable surrogate for that deployment; its public availability does
+not itself create a need for the service arrangement.
 
-> The client already evaluates LayerNorm, causal softmax, and GELU. Measured client boundary work is
-> `≈138 s` per block, so `≈27.6 min` for twelve blocks `[A]`. DNAGPT-0.1b at 103 tokens is roughly
-> `2 × 10^10` FLOPs — well under a second of ordinary CPU inference. The client is therefore doing
-> on the order of a thousand times more work inside the protocol than it would spend simply running
-> the model. Worse, in this study the weights are public, so there is not even a model-secrecy reason
-> for the server to be involved. Why does this protocol exist?
+In the measured complete execution, declared client boundaries and refreshes consume `956.187 s`
+(`14.5%` of encrypted evaluation) on CPU. The residual provider-side bucket consumes `5638.561 s`
+and includes GPU-backend work plus host preparation, synchronization, and evaluator overhead; it is
+not GPU-kernel time. The data owner must remain online throughout.
 
-We accept every number in that paragraph. They are ours.
-
-#### 3.1.2 The premise the objection assumes
-
-The local baseline is not a cheaper way to obtain the answer. It is a *different deployment*, and it
-is available only if the client may hold the model in plaintext. The case study is the setting where
-it may not.
-
-**Case study: a regulated genomic classification service.** Three constraints hold simultaneously.
-
-1. **The sequence cannot leave the data owner in plaintext.** Genetic data is special-category data
-   under GDPR Article 9 and separately regulated elsewhere. The technical reason the law is strict is
-   the one from the Introduction: a genome is re-identifiable from a small number of markers, is not
-   revocable, and discloses information about non-consenting relatives. A breach is permanent and
-   partially hereditary.
-2. **The classifier cannot be shipped to the data owner.** In the deployments this work targets the
-   model is a licensed commercial artifact or a version-controlled component of a regulated
-   diagnostic workflow, which must be evaluated at a single audited, logged, versioned instance. A
-   provider that ships weights to every laboratory loses both its commercial position and its ability
-   to attest which model version produced a given clinical result.
-3. **Therefore neither party may hold both plaintexts.** That is the precondition for secure
-   inference. Where it holds, "just run it locally" is not slow — it is *not an option at any price*.
-
-The 27.6 minutes and the sub-second local inference are consequently not alternatives on one axis.
-Comparing them is a category error, and the paper should name it as one.
-
-#### 3.1.3 What the protocol actually offloads
-
-Not arithmetic. The comparison that does hold is between resources.
-
-| | Client-local plaintext | Client-assisted CKKS (measured) |
-|---|---|---|
-| Client must hold model weights | **Yes — disqualifying under the premise** | No |
-| Client hardware requirement | GPU or fast CPU, plus the model artifact (~400 MB at 0.1b) and its runtime | CPU only |
-| Client wall time | `< 1 s` (0.1b, 103 tokens) | `≈138 s` per block; `≈27.6 min` for 12 blocks `[A]` |
-| Server hardware requirement | none (no server) | A100-class, 2,872–13,524 s per block |
-| Server sees plaintext genome | n/a | **No** |
-| Client online during inference | n/a | Required at 857 declared boundaries per block |
-| Available under the case-study premise | **No** | Yes |
-
-The protocol moves an accelerator-class workload — and the obligation to possess the model — off the
-client and onto hardware the client is not permitted to send data to. The client keeps a CPU-only
-role that is `1.0–4.6%` of the encrypted evaluation. That is the offload, stated precisely.
-
-#### 3.1.4 The client's share shrinks with model size
-
-Client work scales with the *number of nonlinear values*: `O(T·D)` per LayerNorm, `O(T²·H)` per
-attention boundary, `O(T·4D)` per GELU. Server work scales with dense products, `O(T·D²)` per
-projection. Client share is therefore `O(1/D)` in the width, and DNAGPT-0.1b at `D = 768` is the
-*least* favourable case in the family — the 3b configuration would push the client share down, not
-up `[A]`. This is a structural derivation from the operation counts, not a measurement, and is marked
-as such. It is worth stating because the objection implicitly assumes the ratio is fixed.
-
-#### 3.1.5 The measurement value, independent of deployment
-
-Even for a reader who rejects the deployment premise entirely, the numbers retain their meaning.
-Because every nonlinearity is exact, the server-side cost isolates encrypted dense linear algebra
-with no approximation term. It is a lower bound for any CKKS evaluation of this graph, and it
-localizes where an encrypted genomic transformer actually becomes expensive. That is a
-protocol-independent result and it should be the sentence the Discussion leads with.
-
-#### 3.1.6 Concessions to make explicitly
-
-Making these first is what makes the rest credible.
-
-- The public-weights setting of *this study* does not itself require the server. Public weights were
-  chosen for reproducibility of the oracle, and we say so.
-- Model confidentiality against a curious client is **not** cryptographic here (Security Model). The
-  case study's constraint 2 is enforced by contract and query budgeting.
-- Client availability is a real deployment cost that we do not model.
-- The 27.6-minute figure assumes constant per-block client cost across all twelve blocks and is
-  marked `[A]`; blocks 1–11 additionally carry a refresh boundary. The twelve-block run in
-  NEXT STEPS X-1 is what converts it to `[V]`.
+Model confidentiality from the data owner is not claimed. Intermediate activations create a
+chosen-query extraction surface, and some affine segments may be identifiable from sufficiently
+diverse queries. The protocol's claim is genomic-input confidentiality against the semi-honest
+compute provider under the stated boundary.
 
 ### 3.2 Why `T = 103`
 
@@ -557,10 +452,9 @@ are validated and two are encrypted. The answer in §2.6 is that mRNA is a regre
 different, longer input and is retained as model-fidelity evidence only. That is honest and
 sufficient, provided the encrypted-scope sentence appears *before* the mRNA row rather than after it.
 
-**Flag 3 — timing caveats are retained despite Decision 9.** Decision 9 drops measurement-discipline
-work from the next steps. It does not, and cannot, drop the existing contamination disclosures from
-Results: those are measured facts and project rule 4 requires them. The Results draft states the
-range and refuses the four specific inferences the data cannot support.
+**Flag 3 — historical contended timings stay out.** The complete-run timing is reported once with
+its whole-node telemetry qualification. Shared-host block timings remain repository history and do
+not enter the manuscript or a speedup calculation.
 
 ---
 
@@ -568,24 +462,19 @@ range and refuses the four specific inferences the data cannot support.
 
 Decided, not yet produced. Ordered by effect on defensibility.
 
-### X-1 — Multi-example encrypted correctness through the twelve-block driver and task head
-**Owner: user.** Status `[U]`. Closes the `n = 1` gap and the twelve-block correctness gap in one
-run. Push `N ≥ 20` held-out GSR examples through all twelve released blocks and the fine-tuned head
-at `T = 103`, spanning the logit range and including near-decision-boundary cases.
-
-Report: encrypted-vs-plaintext **label agreement `N/N`**; per-example global and worst-token relative
-error; error against activation magnitude; final logit deltas. Feeds Abstract Variant B, the Results
-twelve-block row, and converts the `≈27.6 min` client projection in §3.1 from `[A]` to `[V]`.
-A `v3` / T123 run is currently in flight; confirm whether it already carries multi-example capability
-before scheduling separately.
+### X-1 — Replication and a small predeclared prompt panel
+Status `[U]`. Repeat the accepted prompt enough times to estimate variability, then evaluate a small
+panel fixed in advance across both labels and low/median/high plaintext margins. Report label
+agreement and margin/activation error per example. This would strengthen numerical generality and
+timing confidence; complete-graph feasibility is already closed for the accepted prompt.
 
 ### X-2 — Client-cost case study measurements
 Status `[U]`. **No GPU time required.** Two missing measurements complete §3.1:
 
 1. Plaintext DNAGPT-0.1b inference wall time at `T = 103` on representative client CPU hardware,
    measured rather than estimated from FLOPs, including model load.
-2. Client-side resource profile at the boundary: peak RAM, whether any GPU is touched, and
-   decrypt/evaluate/re-encrypt split within the `0.161 s` per crossing.
+2. Client-side resource profile at the boundary: peak RAM, confirmation that no GPU is used, and
+   a breakdown of decrypt, reference-form function evaluation, and re-encryption.
 
 Also record the model artifact size on disk. These turn the §3.1.3 table from partly derived into
 fully measured, which is what makes the argument land.
@@ -597,7 +486,7 @@ SIMD circuit, one variable changed, same fixture, same parameters, same placemen
 
 Report per `T`: encrypted evaluation time with server/client split, dense product count,
 ciphertext–plaintext and ciphertext–ciphertext multiplications, rotations, physical crossings,
-logical boundary instances, peak process GPU memory, and relative error. Expected figure: cost versus
+client calls, boundary ciphertext objects, peak device-wide GPU memory used, and relative error. Expected figure: cost versus
 `T` with the quadratic attention term visible against the linear projection term. Note in the caption
 that absolute times inherit the shared-host qualification; the *shape* is the result.
 

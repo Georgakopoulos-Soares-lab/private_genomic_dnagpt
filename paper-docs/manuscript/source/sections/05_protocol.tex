@@ -68,7 +68,10 @@ bootstrapping with fresh encryption at already declared boundaries.
 
 \begin{figure}[tb]\centering
   \includegraphics[width=\textwidth]{fig_architecture.pdf}
-  \caption{Evaluation order for one transformer block, and which party performs each step. The compute provider holds the model and evaluates every linear operation on ciphertexts; the data owner holds the secret key and evaluates the three nonlinearity classes exactly. Only ciphertexts cross the boundary, and each crossing carries values derived from the data owner's own query.}
+  \caption{Evaluation order for one transformer block and party allocation. The provider computes
+  both LayerNorm statistics under encryption; the data owner evaluates the inverse square root,
+  causal softmax, and GELU at declared boundaries. A validation readout decrypts the output, while
+  composition decrypts and freshly re-encrypts the hidden state before the next block.}
   \label{fig:architecture}
 \end{figure}
 
@@ -186,15 +189,18 @@ $N_1 = N_2 = 32$ and $N_1N_2 = W = 1024$.}
 \end{algorithmic}
 \end{algorithm}
 
+\clearpage
+
 The algorithms also expose the protocol transcript. Its order and size are determined by the
 circuit and sequence length, never by decrypted content. The evaluated block makes $857$ physical
 client boundary crossings, including $91$ score-tile decryptions and $727$ weight-tile encryptions
-for attention. These physical operations batch $129{,}162$ individual nonlinear values. Softmax
-accounts for $128{,}544$, or $99.5\%$, of them; LayerNorm and GELU are minor components of the
-boundary traffic. Consequently, reducing boundary cost means addressing the attention
-nonlinearity. The implementation asserts the complete operation schedule, boundary counts, and
-remaining depth on every run and aborts when any differs. Section~\ref{sec:optimization} can thus
-treat an unchanged circuit as a checked invariant rather than as an assurance.
+for attention. Attention therefore accounts for $818$ of the $857$ client calls, or $95.4\%$.
+In directional object accounting it contributes $818$ of the block's $896$ boundary ciphertext
+objects, or $91.3\%$. These homogeneous counts identify attention as the main boundary-schedule
+target without treating the implementation's mixed-unit logical-instance counter as scalar work.
+The implementation asserts the complete operation schedule, boundary counts, and remaining depth
+on every run and aborts when any differs. Section~\ref{sec:optimization} can thus treat an
+unchanged circuit as a checked invariant rather than as an assurance.
 
 \subsection{Packing}
 Each ciphertext has $32{,}768$ usable slots, indexed by activation copy, padded feature, and token
@@ -216,7 +222,10 @@ a structural reduction of $7.92\times$. No latency factor follows from that oper
 
 \begin{figure}[tb]\centering
   \includegraphics[width=\textwidth]{fig_packing.pdf}
-  \caption{Slot layout and token grouping. Each ciphertext carries four activation copies of 1{,}024 padded features across eight token lanes. The 103-token prompt therefore occupies 13 ciphertext groups, which generate 91 lower-triangular causal score tiles.}
+  \caption{Slot layout for the genomic-signal task. Each ciphertext carries four copies of 1{,}024
+  features across eight token lanes: 768 features are active and the remainder supplies
+  power-of-two padding and attention staging. The 103-token prompt occupies 13 groups and generates
+  91 lower-triangular causal score tiles.}
   \label{fig:packing}
 \end{figure}
 
@@ -250,5 +259,10 @@ parameter space; parameter optimization is a separate experiment.
 Composition uses a declared full-hidden-state client refresh between blocks. The data owner decrypts
 the packed block output, restores its token-vector layout, and encrypts fresh level-$0$ inputs for
 the next block under the same context and key lineage. Two consecutive released blocks compose by
-this mechanism at two tokens with relative error $8.48\times10^{-11}$. GPU memory peaks in the
-first block and does not grow in the second.
+this mechanism at two tokens with relative error $8.48\times10^{-11}$. Device-wide GPU memory used
+peaks in the first block and does not grow in the second.
+
+The complete evaluation uses the same key lineage with $11$ full-hidden-state refreshes and one
+last-token refresh into the task head; Section~\ref{sec:results} reports the measured outcome.
+
+\clearpage

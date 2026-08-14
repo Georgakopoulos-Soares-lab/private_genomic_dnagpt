@@ -13,7 +13,7 @@
 # Use descriptive names. Internal tags (T123, v0/v1/v2/v3, config1/2/3) do not appear in prose.
 
 meta:
-  updated: 2026-08-08
+  updated: 2026-08-14
   invariants_held: >
     Operation schedule, packing layout, multiplicative depth, client-boundary sequencing, and
     the frozen plaintext reference are unchanged across every retained step. Each run asserts
@@ -35,11 +35,12 @@ retained:
       plaintexts of its weight matrix, giving 159,744 encoding operations per block.
     why_it_was_slow: >
       Approximately 90 percent of those encodings are byte-for-byte identical: each of the 12
-      weight matrices is reused across all 13 token groups. Two repeats on an uncontended host
-      showed the process pegged at 3,900 to 4,700 percent CPU. The bottleneck was the host
-      encoding path, not the GPU.
+      weight matrices is reused across all 13 token groups. Two historical repeats showed the
+      process at 3,900 to 4,700 percent CPU, motivating the host-encoding optimization. Those
+      artifacts do not constitute a current causal CPU/CUDA profile or prove that GPU work was
+      not limiting wall time.
     block_time_s: 7560
-    block_time_tag: "[V]"
+    block_time_tag: "[U]"
     block_time_note: >
       Approximately 2.1 hours per block. Attested by the measuring engineer from the
       pre-optimization runs. See open_provenance below.
@@ -149,8 +150,9 @@ validated_not_in_measured_run:
 # ---------------------------------------------------------------------------
 
 # SUPERSEDED 2026-08-13. The whole-model figure is no longer a projection: the complete
-# twelve-block model with the released task head was executed at 103 tokens on a dedicated node
-# on 2026-08-12 and measured at 6,683 s (1.86 h). See measurements.yaml `complete_model`.
+# twelve-block model with the released task head was executed at 103 tokens on a whole-node
+# allocation with no contention detected in recorded telemetry on 2026-08-12 and measured at
+# 6,683 s (1.86 h). See measurements.yaml `complete_model`.
 #
 # The rows below are retained as the project's memory of what was projected before that run, and
 # must not be quoted. The 26-hour starting point remains attested rather than committed, so the
@@ -176,17 +178,17 @@ net:
   to_encrypted_evaluation_s: 652.545
   to_wall_s: 663
   factor: 11.6
-  tag: "[V]"
+  tag: "[U]"
   error_after: 4.64e-9
   tolerance: 4e-2
   statement: >
-    One complete DNAGPT transformer block at the full 103-token prompt length went from
-    approximately 2.1 hours to 652 seconds of encrypted evaluation, roughly a factor of 11.6,
-    with an unchanged operation schedule and a relative error of 4.64e-9 against a 4e-2
-    acceptance tolerance.
+    Historical comparison retained for provenance. The approximately 2.1-hour starting point
+    is attested rather than backed by a committed dedicated-node artifact, so neither the 11.6
+    factor nor the endpoint comparison is reportable as a measured speedup.
   caveat: >
-    The factor compares the pre-optimization configuration with the reported run. Report it as
-    an implementation speedup on a fixed circuit, never as a cryptographic result.
+    Do not quote the factor in the manuscript. The retained implementation's complete-model
+    timing is measured separately in measurements.yaml; a controlled pre-cache/current paired
+    experiment remains open.
 
 # ---------------------------------------------------------------------------
 # Abandoned, with mechanism. These constrain future work and explain the retained design.

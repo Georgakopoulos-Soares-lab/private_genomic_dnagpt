@@ -1,5 +1,11 @@
 # Methods and protocol
 
+> **Status supersession, 2026-08-14.** The described full-hidden-state refresh now composes all
+> twelve released blocks and the task head once at the 103-token prompt. The accepted run is one
+> selected input and one execution; network transport and private token lookup remain outside the
+> evaluated boundary. Historical statements below saying full composition has not executed are
+> superseded by `evidence/measurements.yaml`.
+
 The method combines CKKS arithmetic on an untrusted GPU server with exact nonlinear computation by
 the data owner. It is designed to protect the genomic input from the compute provider, not to remove
 the client from the inference loop.
@@ -129,13 +135,12 @@ time; rotations and key switching were a small fraction of one matrix call in th
 
 ## Client-boundary batching
 
-A physical round trip may contain many independent logical nonlinearities in disjoint ciphertext
-regions. The client decrypts once, evaluates each declared function on its assigned region, and
-re-encrypts one packed response.
-
-This reduced the two-token complete block from 24 physical crossings to seven. At 103 tokens, the
-complete packed block evaluates 129,162 logical boundary instances through 857 physical crossings.
-The logical work remains large; batching reduces protocol messages rather than changing model math.
+A client call may carry packed data for multiple independent evaluations in disjoint ciphertext
+regions. At 103 tokens, the complete block makes 857 in-process client calls. Attention accounts
+for 818 of them (95.4%) and for 818 of the 896 boundary ciphertext objects (91.3%). The separate
+129,162 logical-instance assertion mixes token, token-copy, and head/query/key-scalar units and is
+therefore a schedule check, not a scalar-work or traffic measure. Packing changes the physical
+schedule rather than the model mathematics.
 
 ## General causal attention
 
@@ -182,21 +187,23 @@ The demonstrated block-to-block mechanism uses a client refresh rather than an e
 After block `n`, the client decrypts the packed hidden state, unpacks its token vectors, and re-encrypts
 fresh level-zero inputs for block `n+1` under the same context and key lineage.
 
-This mechanism passed for released blocks 0 and 1 at two tokens. Target-process memory did not grow
-in the second block. Scaling the same mechanism to 103 tokens and all twelve blocks is designed and
-locally validated but has not been executed.
+This mechanism first passed for released blocks 0 and 1 at two tokens. It then composed all twelve
+released blocks and the task head at 103 tokens through eleven inter-block refreshes and one refresh
+into the head. Device-wide GPU memory used during the complete run reached 9839 MiB after about
+400 s and did not grow with block index.
 
 ## Measurement discipline
 
 Each retained correctness experiment uses released weights, a frozen plaintext oracle, a declared
 security configuration, fail-closed structural checks, and recorded client/server timing splits.
 
-Long GPU experiments ran on a shared eight-GPU host. An idle target GPU did not imply an idle host:
-CPU-side diagonal preparation and encoding competed with other tenants even when target-process GPU
-memory stayed stable. Consequently:
+Historical block experiments ran on a shared eight-GPU host. An idle target GPU did not imply an
+idle host, so their wall times remain excluded. The accepted complete-model execution instead used
+a whole-node allocation with no contention detected in recorded telemetry, although scheduler
+exclusivity was not requested. Consequently:
 
 - correctness and exact operation counts remain usable;
-- target-process memory is usable when measured per process;
+- host RSS is reported per process, while retained GPU memory samples are device-wide;
 - within-one-run call-site comparisons are stronger than comparisons across windows;
 - cross-run wall time is labeled contaminated unless both host and GPUs stayed quiet; and
-- projected all-block latency is not reported as a measurement.
+- projected all-block latency is superseded by the single measured `6683 s` complete execution.

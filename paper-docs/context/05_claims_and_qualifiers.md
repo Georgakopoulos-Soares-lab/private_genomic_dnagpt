@@ -1,13 +1,22 @@
 # Claims for outside readers
 
+> **Status supersession, 2026-08-14.** The paper may now claim one measured complete-model
+> execution: twelve released blocks plus the GSR head at 103 tokens, one selected prompt, one
+> whole-node run with no contention detected in recorded telemetry, final label agreement, and
+> 6683 s wall time. Older prohibitions below against any
+> complete-model or final-label claim are historical. It may not claim encrypted task accuracy,
+> run-to-run variance, networked protocol cost, private lookup, or input-domain numerical
+> generality.
+
 This note translates repository evidence into language suitable for an abstract, introduction,
 results section, talk, or review response. It is intentionally conservative.
 
 ## Strongest defensible headline
 
-> Client-assisted CKKS can evaluate one complete real-weight DNAGPT transformer block at the full
-> 103-token GSR prompt length while keeping server-side linear algebra encrypted. Complete
-> twelve-block task inference and clean latency remain unmeasured.
+> Client-assisted CKKS executes all twelve released DNAGPT blocks and the task head at the full
+> 103-token GSR prompt from encrypted embedded vectors. The selected prompt matches the reference
+> label; the measured single-process cost is 6683 s, which rules out interactive use in the
+> evaluated form.
 
 This is stronger than an operator demonstration and weaker than end-to-end private inference.
 
@@ -21,9 +30,11 @@ The following paragraph is defensible with the current evidence:
 > completes one real-weight two-token transformer block but exceeds the tested A100 memory envelope
 > when configured for chained composition. A client-assisted protocol keeps linear algebra encrypted
 > on the GPU server while the data owner evaluates exact nonlinearities at fixed boundaries. With
-> chunked causal softmax and eight-token SIMD packing, this protocol completes one real-weight block
-> at the full 103-token GSR prompt length with relative error near `1e-9`. Full twelve-block inference,
-> private embedding lookup, and uncontaminated latency remain open.
+> chunked causal softmax and eight-token SIMD packing, this protocol executes all twelve released
+> blocks and the task head at the full 103-token GSR prompt. For the one selected prompt, the label
+> matches the reference and the margin has `8.56e-9` relative error. One in-process execution takes
+> `6683 s`; private embedding lookup, network transport, repetition, and encrypted task accuracy
+> remain open.
 
 ## Claims that can be made
 
@@ -63,20 +74,22 @@ it is not an impossibility result for pure CKKS.
 
 - The compute server performs dense linear algebra on encrypted activations and never receives the
   secret key or a plaintext intermediate.
-- The data owner evaluates exact LayerNorm, causal-softmax, and GELU functions at fixed, declared
-  boundaries.
+- The data owner evaluates the LayerNorm inverse square root, causal softmax, GELU, and declared
+  refreshes at fixed boundaries.
 - A complete released-weight block passes at the complete 103-token GSR prompt length.
 - Eight-token SIMD packing reduces dense products from 1,236 serial-equivalent products to 156.
 - The minimum demonstrated depth for the retained task-length graph is 13.
 - Two released blocks compose correctly at two tokens using a client full-hidden-state refresh.
-- One task-length block fits in the measured target-process memory footprint of about 9.6 GiB.
+- All twelve released blocks and the task head compose at 103 tokens for one selected prompt.
+- Device-wide GPU memory used during the complete run reaches 9839 MiB and does not grow with block
+  index after loading.
 
-Required qualifier: the protocol is interactive, and one task-length block is not the twelve-block
-classifier.
+Required qualifier: the protocol is interactive; the numerical result covers one selected prompt
+and one complete execution, not encrypted task accuracy or a service rate.
 
 ### Optimization evidence
 
-- The CPU-side diagonal-vector cache works structurally and does not add target-process GPU memory.
+- The CPU-side diagonal-vector cache works structurally and adds no GPU allocation.
 - Q/K/V projections can be split across two GPU processes while preserving correctness.
 - Some intuitive optimizations failed: GPU plaintext reuse crashed, a native linear primitive was
   slower, and process-separated MLP merging was blocked by missing ciphertext transport.
@@ -88,12 +101,12 @@ measured.
 
 | Tempting wording | Defensible replacement |
 |---|---|
-| “DNAGPT runs under FHE.” | “One real-weight DNAGPT block runs with encrypted server-side linear algebra and client-assisted nonlinearities.” |
+| “DNAGPT runs under FHE.” | “All twelve released DNAGPT blocks and the task head execute from encrypted embedded vectors under client-assisted CKKS for one selected prompt.” |
 | “The full GSR input is encrypted end to end.” | “The full 103-token embedded prompt is encrypted; token-index embedding lookup occurs before the encrypted boundary.” |
 | “The hybrid method is 6.6 times faster.” | “The first two-token hybrid observation used a much smaller circuit and completed faster than the pure baseline; it was not a controlled paired benchmark.” |
 | “Token packing gives a 7.4-times speedup.” | “Token packing reduces dense products by 7.92 times; a contaminated micro-gate showed a similar directional wall-time ratio.” |
 | “Depth 13 is faster.” | “Depth 13 is the smallest demonstrated passing depth; shared-host repeats do not establish a speed advantage.” |
-| “One A100 is enough for DNAGPT.” | “One complete 103-token block fit comfortably in one measured A100 process footprint; the twelve-block graph has not run.” |
+| “One A100 is enough for DNAGPT.” | “One complete 103-token execution ran on one 40 GB A100; device-wide memory used reached 9839 MiB, but latency, throughput, and other inputs remain uncharacterized.” |
 | “Two GPUs accelerate the model.” | “Two GPUs reduced one Q/K/V projection substage in a single unrepeated sample.” |
 | “The server learns nothing.” | “The server does not receive plaintext activations or the secret key under the stated prototype boundary; network metadata and side channels were not analyzed.” |
 
@@ -101,8 +114,8 @@ measured.
 
 Do not state or imply that the project has demonstrated:
 
-- complete twelve-block encrypted DNAGPT inference;
-- encrypted GSR classification accuracy or a final encrypted label;
+- encrypted GSR task accuracy or input-domain numerical stability from the one evaluated prompt;
+- run-to-run latency variance, throughput, or a service rate;
 - encrypted tokenization or embedding lookup;
 - pure, non-interactive execution of the primary protocol;
 - a clean latency benchmark, production throughput, or stable speedup;
@@ -149,16 +162,14 @@ carry different evidentiary strength.
 ### Is 103 tokens a toy sequence?
 
 It is the complete tokenized prompt length for the selected GSR task, not an arbitrary short prefix.
-However, only one transformer block has completed at that length.
+All twelve blocks and the task head have executed at that length, but only for one selected prompt.
 
-### What is the next result needed for the main claim?
+### What evidence would most strengthen the current claim?
 
-Execute all twelve blocks and the released GSR head at 103 tokens, then compare the encrypted logits
-or label with the frozen plaintext prediction. That closes arithmetic correctness only. For a
-performance claim, first profile the current task-length block, resolve the remaining exact-model
-packing, LayerNorm-boundary, attention-reduction, and encoded-weight gates, integrate retained changes,
-and run the complete classifier on a dedicated host. Networked end-to-end latency is a further separate
-experiment.
+Repeat the same complete execution and evaluate a small, predeclared panel of prompts spanning both
+labels and plaintext margins. For performance, obtain a current task-length CPU/CUDA profile and a
+controlled pre-cache/current comparison before integrating further exact-model changes. Networked
+latency and serialized byte volume require a separate transport implementation.
 
 ## Paper hygiene checklist
 
@@ -168,8 +179,9 @@ Before moving a statement into manuscript prose:
 - name the exact model boundary: operator, attention subgraph, one block, two blocks, or full model;
 - name the sequence length and whether it represents a real task prompt;
 - say whether nonlinearities were encrypted or evaluated by the client;
-- distinguish physical client crossings from logical nonlinear values;
-- distinguish target-process memory from device-wide memory that includes co-tenants;
+- distinguish homogeneous client-call and ciphertext-object counts from the heterogeneous
+  logical-instance schedule counter;
+- identify whether GPU memory is a per-process counter or the sampler's device-wide value;
 - avoid converting a structural operation reduction into a latency claim;
 - avoid multiplying a contaminated one-block time into a full-model result;
 - distinguish a baseline full-model correctness run from an optimized performance run;

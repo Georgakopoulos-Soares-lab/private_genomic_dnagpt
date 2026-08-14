@@ -35,12 +35,12 @@ question. Feasibility and practicality are **separate verdicts**, reported separ
 encrypted path is a real answer, not a failure — never tune a claim or a parameter to reach
 "practical".
 
-State the measured scope once, where it belongs: the measured unit is one complete transformer
-block at the task's own prompt length. Whole-model figures are arithmetic on that measurement;
-label them projections once, at each appearance, and move on. Do not hedge the same limitation in
-the abstract, the key points, three body sections, and the conclusion — that is what buries a
-result. The twelve-block evaluation is built and ready to launch; write so its result lands in
-Table 4 and the scaling figure without disturbing the argument around them.
+State the measured scope once, where it belongs. One complete transformer block at the task's own
+prompt length remains the unit for block-level operation counts and stage memory. The complete
+twelve-block model plus task head has also executed once at that prompt length, so its timing,
+memory, and label agreement are measured single-sample results rather than projections. Do not turn
+that one execution into a mean, variance, service rate, encrypted task accuracy, or input-domain
+correctness claim, and do not repeat the same limitation in every summary layer.
 
 **3. Measured, projected, and assumed are different words.** `[V]` measured, `[A]` derived or
 projected, `[U]` not measured. An operation-count reduction is never a speedup. Twelve times a
@@ -50,8 +50,10 @@ block time is never a latency. Say which one you mean, in the sentence where the
 host names, no scheduler job numbers, no file hashes, no fixture or gate names, no engineer names
 in the body. See the replacement table in `00_terminology.md`.
 
-**5. Lead with what worked.** This is a paper about a system that got roughly twelve times faster
-without giving up a digit of accuracy. That is the story, and it should occupy the space.
+**5. Lead with what worked.** This is a paper about a complete released model that executed under
+the declared protocol, with a fixed checked circuit and a systems design that bounds host and GPU
+memory. The historical speedup factor lacks a controlled dedicated-node baseline and does not enter
+the manuscript.
 
 A failed attempt earns a place only when it explains a design decision the reader would otherwise
 find arbitrary — chiefly why weight plaintexts are *cloned* rather than reused, and why client

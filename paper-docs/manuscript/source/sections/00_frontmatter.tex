@@ -19,7 +19,7 @@ Model: A Client-Assisted CKKS Evaluation of DNAGPT}\vspace{-0.2cm}}
   \textbf{Christos Galanopoulos$^{1,*}$, Kimon Antonios Provatas$^{1}$,
   Ilias Georgakopoulos-Soares$^{1,*}$}\\[2pt]
   \normalsize $^{1}$The University of Texas at Austin, Austin, TX, USA\\[2pt]
-  \small $^{*}$Corresponding authors: \texttt{TODO@utexas.edu}\\[2pt]
+  \small $^{*}$Correspondence: Christos Galanopoulos and Ilias Georgakopoulos-Soares\\[2pt]
   \small\textit{Homomorphic encryption $\cdot$ Genomic privacy $\cdot$ Transformer inference
   $\cdot$ GPU acceleration}
   \end{minipage}
@@ -32,38 +32,33 @@ Model: A Client-Assisted CKKS Evaluation of DNAGPT}\vspace{-0.2cm}}
 % --- Abstract ---------------------------------------------------------------
 \section*{Abstract}
 
-\textbf{Motivation.} Human genomic sequence is identifying, cannot be replaced after disclosure,
-and is precisely the input that genomic foundation models are designed to interpret. We ask
-whether a provider can execute a released genomic transformer without receiving genomic values in
-plaintext, and whether correctness, memory, or cost prevents a complete encrypted deployment.
+\textbf{Motivation.} Genomic sequence is identifying and cannot be replaced after disclosure. We
+ask whether a provider can execute a released genomic transformer without receiving the genomic
+input in plaintext, and where numerical agreement, memory, or cost limits that deployment.
 
-\textbf{Results.} We validate DNAGPT on genomic-signal recognition, promoter and splice-site
-classification, and mRNA abundance regression, then freeze an independently checked numerical
-reference. We evaluate two CKKS designs. In the evaluated pure non-interactive configuration,
-polynomial nonlinearities permit a released-weight block to complete, but context and evaluation
-keys exceed the tested $80$~GB memory envelope when configured for composition. In the
-client-assisted design, the provider evaluates linear operations on ciphertexts while the
-key-holding data owner evaluates exact LayerNorm, causal softmax, and GELU at fixed boundaries.
-Under that design all $12$ released blocks and the released task head execute at the task-defined
-prompt in one encrypted lineage, and the decrypted prediction reproduces the frozen plaintext label
-with $8.56\times10^{-9}$ relative margin error against a $4\times10^{-2}$ tolerance fixed in
-advance. Encryption begins at the embedded token vectors, so token-index lookup stays outside the
-encrypted boundary. That inference was measured once, at $1.86$~hours on one A100 GPU node,
-performing no homomorphic bootstrap and holding GPU memory at $9839$~MiB across all twelve
-blocks.
+\textbf{Results.} We validate DNAGPT on three genomic task families and construct an independently
+checked numerical reference. In the client-assisted design, the provider evaluates every linear
+operation on ciphertexts under one key lineage; the key holder evaluates LayerNorm inverse square
+roots, causal softmax, and GELU exactly, at boundaries fixed before execution. All $12$ released
+blocks and the task head execute from encrypted embedded vectors with declared client refreshes and
+no homomorphic bootstrap, leaving the released weights and nonlinear formulas unmodified. For the
+one prompt evaluated, the decrypted label matches the reference and its margin has
+$8.56\times10^{-9}$ relative error, $6.67$ orders of magnitude below the $4\times10^{-2}$ tolerance
+fixed in advance; no polynomial approximation of a nonlinearity contributes to that residual.
+Client refresh holds multiplicative depth at $13$, and device-wide GPU memory used reaches
+$9839$~MiB without growing by block index. One in-process execution takes $1.86$~hours on an A100
+GPU node. A pure non-interactive configuration completes one released-weight block, then exceeds
+the tested $80$~GB accelerator-memory envelope on its composition context and evaluation keys,
+placing that barrier in the nonlinear schedule rather than in the model's dense maps.
 
-\textbf{Conclusions.} Correctness is not the barrier, and neither is memory in this design.
-Replacing deep non-interactive segments with fresh encryption at declared boundaries bounds
-multiplicative depth by the longest segment between boundaries rather than by network depth, so
-twelve blocks cost what one block costs in accelerator memory; bounded caching separately prevents
-encoded plaintexts from accumulating in host memory. Complete encrypted inference over the released
-blocks and task head, beginning at embedded token vectors, is therefore feasible. It is not
-practical for interactive use at the measured $1.86$~hours for one sequence, though the evaluation
-is not accelerator-bound at that cost, and the two verdicts are reported separately rather than
-merged. Client assistance is not the fast route: published non-interactive systems report lower
-cost at comparable model shape and identical cryptographic parameters. What it buys instead is
-exact released nonlinearities, no homomorphic bootstrap, and a decrypted prediction that can be
-checked against a frozen plaintext reference.
+\textbf{Conclusions.} The executed case establishes complete-model graph feasibility and numerical
+agreement for one input, and locates the limiting barrier in throughput rather than in correctness
+or accelerator memory. Client refresh bounds multiplicative depth by the longest encrypted segment
+rather than by network depth, which is what makes the twelve-block lineage expressible without
+bootstrapping; stage-bounded plaintext caching separately prevents host-side accumulation. The
+current single-process implementation is not practical for interactive use and has not been
+evaluated as a networked service, so feasibility and practicality are reported as separate
+verdicts.
 
 \textbf{Availability.} Code, evaluation harnesses, and the evidence record are maintained at
 \url{https://github.com/Georgakopoulos-Soares-lab/private_genomic_dnagpt}.
@@ -72,39 +67,31 @@ checked against a frozen plaintext reference.
 \section*{Key Points}
 
 \begin{itemize}
-  \item We test whether a released genomic foundation model can be evaluated under homomorphic
-        encryption, and report feasibility and practicality as separate verdicts rather than as
-        one.
-  \item The model is validated first on three genomic task families; the independent numerical
-        reference is itself asserted against every upstream block before it is used to verify
-        encrypted execution.
-  \item Correctness is not a barrier: the complete model, all twelve blocks and the task head at
-        the task's own prompt length, reproduces the frozen plaintext label to $8.56\times10^{-9}$
-        relative margin error, nine orders of magnitude inside the tolerance fixed before the run.
-  \item Memory is a barrier that design removes in the configuration evaluated here.
-        Approximating the nonlinearities under encryption exceeded the tested $80$~GB accelerator
-        envelope at composition; client assistance holds GPU memory at $9839$~MiB with no growth
-        across the twelve blocks, and needs no homomorphic bootstrap anywhere in the model. That
-        envelope is a property of the evaluated backend, packing, and parameters, not of
-        non-interactive CKKS in general.
-  \item Bounded caching addresses a distinct host-memory problem, and is what makes removing
-        redundant plaintext encoding viable at all rather than fatal. Runtime assertions confirm
-        that the complete operation schedule, packing, depth, and reference remain unchanged while
-        that redundancy is removed.
-  \item The data owner requires no GPU and carries $14.5\%$ of the encrypted work on CPU alone.
-  \item Practicality is a separate verdict and it is negative for interactive use: one encrypted
-        classification was measured at $1.86$~hours on one A100 GPU node, in a single execution.
-        GPU utilization never exceeds $51\%$, so that cost is not set by accelerator throughput.
-  \item Client assistance is not the cheaper route. Published non-interactive systems report lower
-        cost for a comparable encoder at the same ring degree, depth, security level, and
-        accelerator. The properties this design offers in exchange are exact released
-        nonlinearities, no homomorphic bootstrap, and an output checkable against a frozen
-        plaintext reference.
+  \item All twelve released DNAGPT blocks and the task head execute from encrypted embedded vectors
+        at the $103$-token task prompt, under one key lineage and without any homomorphic
+        bootstrap. The released weights and nonlinear formulas are preserved unmodified, and the one
+        evaluated prompt reproduces the reference label with $8.56\times10^{-9}$ relative margin
+        error.
+  \item The validation chain separately records released float32 behavior, checks an independent
+        NumPy float64 reference against a float64-cast PyTorch shadow, and compares encrypted
+        execution with that reference.
+  \item Because client refresh bounds depth by the longest encrypted segment rather than by network
+        depth, multiplicative depth stays at $13$ and device-wide GPU memory used stays at
+        $9839$~MiB across the complete model, with no growth by block index. Stage-bounded caching
+        separately limits host memory while preserving the asserted operation schedule.
+  \item One in-process execution takes $1.86$~hours and requires an online key holder, so the
+        evaluated form is not interactive. Feasibility and practicality are therefore reported as
+        separate verdicts: complete-model feasibility is established for the evaluated prompt, while
+        encrypted task accuracy, service rate, and networked deployment remain open.
 \end{itemize}
 
 % --- Graphical abstract -----------------------------------------------------
 \begin{figure*}[t]\centering
   \includegraphics[width=\textwidth]{fig_graphical_abstract.pdf}
-  \caption{The data owner holds the genome and the secret key and evaluates the three nonlinearity classes exactly on CPU; the compute provider holds the model and evaluates every linear operation on ciphertexts, receiving no plaintext activation and no secret key.}
+  \caption{The data owner tokenizes and embeds a genomic fragment locally, encrypts the embedded
+  vectors, and retains the secret key. The provider evaluates model linear algebra on ciphertexts;
+  the data owner evaluates declared nonlinear functions on CPU. The measured implementation
+  emulates both roles in one process. The result panel reports one measured execution at the
+  103-token genomic-signal prompt.}
   \label{fig:abstract}
 \end{figure*}

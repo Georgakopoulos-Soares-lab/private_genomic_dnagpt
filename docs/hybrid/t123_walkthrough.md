@@ -489,8 +489,9 @@ the measured price of the client-assisted architecture, and it is dominated by t
 encrypt-and-return round trips plus 91 decrypts.
 
 `[V]` `round_trips = 857 = 26 (LN) + 13 (GELU) + 91 (scores) + 727 (weights)`, and
-`logical_boundary_instances = 129,162` — the count of *individual scalar values* crossing the
-boundary, so the protocol cost is auditable, not hand-waved.
+`logical_boundary_instances = 129,162`. The latter is an implementation schedule counter with
+mixed units: LayerNorm counts active tokens, GELU counts token-copies, and attention counts
+head/query/key scalars. It is auditable but is not a homogeneous scalar-work or traffic count.
 
 #### 5d. Attention projection + residual (fast)
 
@@ -548,7 +549,7 @@ Two independent checks, in this order:
    | `weight_tile_encryptions` | 727 | |
    | `cached_key/value_lane_shifts` | 90 each | |
    | `round_trips` | 857 | client boundary crossings |
-   | `logical_instances` | 129,162 | scalars crossing the boundary |
+   | `logical_instances` | 129,162 | heterogeneous schedule counter; not a traffic total |
    | `diagonal_cache_misses` / `hits` | 12 / 144 | 12 distinct weights; 156 − 12 reuses |
 
    A mismatch throws — the run fails even if the numbers are accurate. This is what caught the
@@ -662,7 +663,7 @@ visible in the code and in the telemetry:
 | Context + keygen + GPU load | 4.653 | 0.7 % |
 | Encrypt 13 input ciphertexts | 1.956 | 0.3 % |
 | **Encrypted evaluation** | **652.545** | **98.4 %** |
-|  ├ server linear algebra (GPU) | 531.933 | 80.2 % |
+|  ├ provider-side encrypted evaluation (GPU backend + host support) | 531.933 | 80.2 % |
 |  └ client boundaries (CPU, exact) | 120.612 | 18.2 % |
 | Final decrypt (13 ciphertexts) | 0.644 | 0.1 % |
 | **Wall clock (measured by the shell)** | **663** | |

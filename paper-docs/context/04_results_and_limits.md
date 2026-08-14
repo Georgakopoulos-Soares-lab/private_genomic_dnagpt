@@ -1,13 +1,17 @@
 # Results and limits
 
+> **Status supersession, 2026-08-14.** The complete twelve-block model plus GSR head executed once
+> at 103 tokens on 2026-08-12, matched the recorded label, and measured 6683 s on a whole-node
+> allocation with no contention detected in recorded telemetry. Repetition, multi-input encrypted
+> evaluation, profiling, serialization, and network transport remain open.
+
 > **Superseded on timing — read this first.**
 >
-> This note predates the optimization campaign. Any latency, wall-clock, or server/client
-> timing figure below has been replaced by the dedicated-node measurements in
+> This note predates the accepted complete execution. Any latency, wall-clock, or server/client
+> timing figure below has been replaced by the complete-run measurements in
 > [`../evidence/measurements.yaml`](../evidence/measurements.yaml) and
-> [`../evidence/optimizations.yaml`](../evidence/optimizations.yaml): one complete block at
-> 103 tokens now runs in **652 s of encrypted evaluation** (663 s wall), down from
-> approximately 2.1 hours, at a relative error of `4.64e-9`.
+> [`../evidence/optimizations.yaml`](../evidence/optimizations.yaml): one complete 12-block plus
+> task-head execution took **6683 s**. No paired pre-cache/current speedup is reportable.
 >
 > The older figures here were measured on a contended shared host and **do not go in the
 > manuscript in any form** — not as results and not as caveats. What remains valid in this note
@@ -103,18 +107,19 @@ Token-SIMD packing then carried the entire real-weight block through all remaini
 | Relative error across completed depth-13 samples | approximately `4.1e-9` to `5.0e-9` |
 | Correctness criterion | `4e-2` |
 | Physical client crossings | 857 |
-| Logical boundary instances | 129,162 |
-| Target-process peak GPU memory | 9,834 MiB, about 9.6 GiB |
+| Attention-related client calls | 818 of 857 (`95.4%`) |
+| Boundary ciphertext objects | 896 (`91.3%` attention-related) |
+| Peak device-wide GPU memory used during the run | 9,834 MiB, about 9.6 GiB |
 
 Accuracy is not the current single-block constraint. The measured errors are millions of times below
-the predeclared criterion. The cost is interaction and linear algebra: many logical nonlinear values
-are batched into 857 physical crossings, while dense encrypted maps dominate server work.
+the predeclared criterion. Attention dominates the homogeneous client-call and boundary-object
+counts, while dense encrypted maps dominate provider work.
 
 ### Short multi-block composition
 
 Released blocks 0 and 1 passed sequentially at two tokens using a full-hidden-state client refresh
-between blocks. Relative error after block 1 was `8.48e-11`. Target-process GPU memory peaked at
-10,872 MiB during block 0 and did not increase in block 1.
+between blocks. Relative error after block 1 was `8.48e-11`. Device-wide GPU memory used during the
+run peaked at 10,872 MiB during block 0 and did not increase in block 1.
 
 This shows that the client-refresh mechanism prevents the pure baseline's per-block depth and memory
 accumulation at the tested shape. It does not establish the same property at 103 tokens or across all
@@ -130,7 +135,7 @@ twelve blocks.
 | General and chunked causal softmax | Passed through full GSR prompt length | Exact at client boundary; interactive |
 | Eight-token SIMD packing | `7.92x` fewer dense products for the complete 103-token block | Structural count is stronger than wall time |
 | Depth 13 | Smallest demonstrated passing setting | No validated speedup over depth 16 |
-| CPU-side diagonal-vector cache | More than `99.99%` cache hits, unchanged target-process GPU memory, correct output | Timing benefit unresolved |
+| CPU-side diagonal-vector cache | More than `99.99%` cache hits, no added GPU allocations, correct output | Timing benefit unresolved |
 | Cross-process context/key reuse | Correct results after reloading cryptographic state | Avoids setup, which is a small share of full-block time |
 | Two-GPU Q/K/V split | Both workers matched the real oracle | One clean, unrepeated sample showed about `1.65x` improvement for this substage |
 | Cache plus two-GPU Q/K/V split | Combined configuration passed | Correctness-only result under host contention |
@@ -157,17 +162,16 @@ Completed depth-13 task-length block variants ranged from 2,986 to 13,658 second
 identical cache behavior differed by more than a factor of two solely under different ambient load.
 Uncached repeats also reversed the apparent depth-13 advantage over depth 16.
 
-The paper may use these observations to establish that the current implementation takes tens of
-minutes to hours on the shared system. It must not select the fastest sample as a benchmark, claim a
-repeatable cache speedup, or multiply one contaminated block time by twelve and present the result as
-end-to-end latency.
+The shared-host observations remain historical and do not enter the manuscript. They must not be
+used to claim a repeatable cache speedup or a stable block-time distribution.
 
 Trustworthy performance evidence is narrower:
 
 - exact operation-count reductions;
-- target-process memory when measured separately from device-wide co-tenants;
+- target-process host RSS and correctly scoped device-wide GPU-memory samples;
 - comparisons between sibling call sites in one run; and
-- the single-sample, substage-only two-GPU concurrency observation with its qualifier.
+- the single-sample, substage-only two-GPU concurrency observation with its qualifier; and
+- the one `6683 s` complete execution, reported as one sample with its whole-node telemetry caveat.
 
 ## Optimization audit and execution decision
 
@@ -188,23 +192,22 @@ Three other exact-model opportunities remain unresolved:
 Wider B=16/B=32 layouts and stage-specific contexts also require operation-count screening. These are
 research hypotheses, not measured improvements.
 
-The execution decision separates correctness from performance. The existing 12-block driver may run
-now to establish arithmetic composition. Before it supplies an optimized latency result, the project
-must obtain a dedicated current-block profile, test the remaining gates individually, integrate the
-retained changes, and rerun the complete classifier. A separate networked experiment is required for
-end-to-end protocol latency because current client crossings occur inside one process.
+The accepted 12-block execution establishes arithmetic composition for one selected prompt. It is a
+single baseline-feasibility run, not an optimized latency distribution. Further performance claims
+require a current block profile, controlled optimization comparisons, and repeated complete runs. A
+separate networked experiment is required because current client boundaries occur inside one process.
 
 ## What has not been proved
 
-- **Complete encrypted DNAGPT:** all twelve blocks and the released GSR head have not been executed
-  together under the client-assisted protocol.
-- **Task-level accuracy:** no encrypted 103-token prediction has reached the released head and been
-  compared with the frozen GSR label or logits.
-- **Task-length composition:** the two-block refresh passed only at two tokens.
+- **Encrypted task accuracy:** one 103-token prediction reached the released head and matched its
+  reference label; no encrypted test set or multi-input accuracy estimate exists.
+- **Input-domain numerical stability:** numerical agreement is measured for one selected prompt.
+- **Run-to-run variance:** the complete execution has not been repeated.
 - **Private token lookup:** the client currently computes embeddings before encryption.
 - **Non-interactive inference:** the main protocol requires the key-owning client at every declared
   nonlinear and block-refresh boundary.
-- **Clean latency:** no sustained uncontaminated full-block or full-model benchmark exists.
+- **Networked latency or throughput:** the measured roles share one process, and the one whole-node
+  execution does not support a service rate.
 - **Production security:** transport, authentication, key custody, malicious behavior, traffic
   leakage, and side channels are outside the prototype.
 - **Clinical or biological claims:** the work evaluates computational privacy and model fidelity; it
@@ -212,15 +215,11 @@ end-to-end protocol latency because current client crossings occur inside one pr
 
 ## Current conclusion
 
-The work has moved the feasibility boundary from isolated encrypted operators to a complete
-real-weight DNAGPT block at the full GSR prompt length. Client assistance removes the nonlinear depth
-and calibration burden that stopped pure CKKS composition, while token packing makes the sequence
-length representable on one A100-class GPU.
+The work has moved the feasibility boundary to all twelve released blocks and the task head at the
+full 103-token GSR prompt. The evaluated prompt matches the reference label, establishing
+complete-graph feasibility and one-input numerical agreement. It is not end-to-end private DNAGPT:
+token lookup, network transport, production security, and encrypted task accuracy remain open.
 
-The twelve-block task-length driver makes the remaining correctness experiment concrete. Until it runs
-through the released head and matches the plaintext task oracle, the correct conclusion remains
-**task-length single-block feasibility**, not complete private DNAGPT inference.
-
-Performance has a second boundary: the current driver is a baseline, not an optimization-complete
-implementation. Clean profiling and the unresolved exact-model gates must precede any final optimized
-latency claim.
+Performance has a separate boundary. The current single-process driver takes `6683 s` for one
+classification and is not practical for interactive use. Profiling, controlled optimization
+comparisons, and repetition are required before any broader performance claim.

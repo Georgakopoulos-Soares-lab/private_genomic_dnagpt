@@ -37,16 +37,18 @@ attention nonlinearity, and GELU — the data owner, who already holds both the 
 decrypts values derived from its own input, evaluates the function exactly, and returns a freshly
 encrypted result.
 
-**Client boundary crossing.** One physical decrypt-evaluate-encrypt operation. Distinct from a
-**logical nonlinear instance**, which is one individual value evaluated. One crossing batches many
-instances: the measured block has 857 crossings and 129,162 instances. Never quote one number as
-the other, and never write "round trip" — it implies a network operation, and the boundary in the
-evaluated implementation is in-process.
+**Client boundary call.** One in-process call at a declared client boundary. Depending on the
+stage, it may decrypt and re-encrypt one ciphertext, consume a score ciphertext, or emit an
+attention-weight ciphertext. The measured block has 857 calls. The implementation also asserts a
+129,162 **logical-instance counter**, but its units are heterogeneous: LayerNorm counts active
+tokens, GELU counts token-copies, and attention counts head/query/key scalars. Do not interpret it
+as scalar work or traffic, and never write "round trip" — it implies a network operation, while the
+evaluated boundary is in-process.
 
-**Task-length block.** One transformer block evaluated at the full 103-token prompt. This is the
-paper's measured unit. It is not the twelve-block classifier, and a sentence that presents it *as*
-a measurement of the whole model is wrong. A labelled projection from it to the whole model is
-fine, and expected — see the projection rule below.
+**Task-length block.** One transformer block evaluated at the full 103-token prompt. It is the unit
+for block-level operation counts and stage memory. The twelve-block classifier plus task head has
+also executed once at this prompt length; its complete-run values are measured single-sample
+results and must not be conflated with the block rows.
 
 **Frozen plaintext reference.** The per-example plaintext prediction, computed once before any
 encrypted work, that the encrypted output must reproduce. Not "ground truth" — it is the model's
@@ -69,11 +71,10 @@ These rules exist because each corresponds to a specific way this work could be 
 156. That is a 7.92× *structural reduction*. It is not a 7.92× speedup and must never be written
 as one.
 
-**Projections are legitimate; unlabelled ones are not.** Twelve times a measured block time is a
-projection at fixed circuit. Tag it `[A]`, call it a projection in the sentence where it appears,
-and then use it freely — including in the abstract, because the reader's question is what a whole
-inference costs. What is forbidden is presenting it as a measurement, or restating the caveat so
-often that the result disappears behind it. The measured scope is stated once, in the limitations.
+**Projections are legitimate; unlabelled ones are not.** Twelve times a block time remains a
+projection and must be tagged `[A]`. The accepted 2026-08-12 complete-model run supersedes the old
+projection for its one evaluated prompt. Report that run as one sample; do not convert it into a
+distribution, a service rate, or a claim about other inputs.
 
 **Depth 13 is minimal, not fast.** It is the smallest demonstrated passing depth at the retained
 scale, packing, and digit count. There is no measured speed advantage over other depths, and an
@@ -83,12 +84,11 @@ earlier claim to that effect was tested by repetition and withdrawn.
 activation and no secret key under the stated boundary. Network metadata, traffic analysis, and
 side channels were not analyzed.
 
-**Model confidentiality is not claimed.** The data owner observes full intermediate activations
-at every nonlinearity, which decouples the network into shallow segments whose nonlinearities are
-already known — turning a hard global inversion into cheap per-segment regression. What the
-protocol offers the model owner is basic hiding of the weights that raises the cost of casual
-copying; it does not stop a determined adversary. State this in the threat model and repeat the
-consequence in the limitations. Conceding it makes the paper stronger, not weaker.
+**Model confidentiality is not claimed.** The data owner observes intermediate activations at every
+nonlinearity, creating a chosen-query extraction surface and making some affine segments directly
+identifiable given sufficiently diverse observations. This study does not measure extraction cost,
+sample complexity, or recovery of all attention weights. Server-side placement may deter casual
+copying, but it is not a cryptographic model-confidentiality guarantee.
 
 **Encrypted scope starts at embedded vectors.** Token-index lookup into the embedding table
 happens before the encrypted boundary. Never write "end-to-end encrypted DNAGPT inference."
@@ -97,11 +97,11 @@ happens before the encrypted boundary. Never write "end-to-end encrypted DNAGPT 
 not a leak; it holds the key and the query. The privacy objective is confidentiality against the
 compute provider.
 
-**Contended timing does not enter the manuscript.** Every reported time comes from the
-dedicated-node runs. Measurements taken while other tenants were competing for the same host are
-not results, and writing them up as caveated results would be worse than omitting them. They stay
-in the repository, and they may still be cited for quantities contention cannot touch — relative
-error, operation counts, memory footprint, multiplicative depth.
+**Contended timing does not enter the manuscript.** The reported complete-model time comes from a
+whole-node allocation with no contention detected in recorded telemetry; the job did not request
+scheduler exclusivity. Measurements taken while other tenants were observed competing for the host
+remain excluded from the manuscript. They stay in the repository and may still support quantities
+contention cannot affect, such as relative error, operation counts, and multiplicative depth.
 
 ## Prose style
 

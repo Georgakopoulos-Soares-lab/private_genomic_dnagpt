@@ -20,37 +20,46 @@ computation between parties; the present work instead keeps the server's linear 
 and assigns exact nonlinear evaluation to the data owner at explicit boundaries. This choice
 changes both the security contract and the allocation of work between the parties.
 
+The client-aided division of labor predates transformer work. nGraph-HE2 evaluates standard
+pre-trained networks under CKKS while returning to the client to compute their native activation
+functions, precisely so that those activations need not be replaced by polynomials~\cite{ngraphhe2}.
+THE-X carries the pattern to transformers: the server evaluates HE-compatible
+operations and the client decrypts and re-encrypts around nonlinear functions~\cite{thex2022}.
 Safhire is the closest architectural antecedent~\cite{safhire2025}. It likewise places
 homomorphically evaluated linear layers on the server, then has the client decrypt an
 intermediate, apply the nonlinearity in plaintext, and return a fresh encryption. Safhire
 studies convolutional networks and adds randomized output permutation to make reconstruction
-from released intermediates harder. We therefore do not claim the client-assisted pattern as
-new. The contribution here is to test that pattern on a released genomic transformer at its
-task-defined prompt, retain the released weights and exact nonlinearities, verify the
-encrypted block through an independently checked plaintext reference, and expose the resulting
-arithmetic, boundary schedule, and memory behavior. This evaluation applies the established
-protocol pattern to a released genomic transformer with a reproducible verification chain.
+from released intermediates harder. The client-assisted pattern is thus established prior art, and
+we adopt rather than propose it. What this study adds is its application to a complete forward pass
+of a released genomic transformer at that model's task-defined prompt, preserving the released
+weights and exact nonlinearities, together with an independently checked plaintext reference that
+makes the resulting arithmetic, boundary schedule, and memory behavior reproducible.
 
-The non-interactive line of work is the relevant point of comparison for cost, and it is faster
-than the design evaluated here. THOR evaluates a $12$-layer, $768$-wide encoder at $128$ tokens on a
+The non-interactive line of work supplies useful cost context. THOR evaluates a $12$-layer,
+$768$-wide encoder at $128$ tokens on a
 single A100, at ring degree $2^{16}$, depth $13$, and $128$-bit security, in $602$~s end to end,
-with no client interaction at any point~\cite{thor}. Those are the parameters and the accelerator
-used in this study, at a comparable model shape and a longer prompt, against the $6683$~s measured
-here. NEXUS reaches non-interactivity over RNS-CKKS with SIMD ciphertext compression and a secure
+with no client interaction at any point~\cite{thor}. Its headline configuration overlaps with
+this study in several dimensions, but the workload, protocol, and implementation differ from the
+$6683$~s execution measured here. NEXUS reaches non-interactivity over RNS-CKKS with SIMD
+ciphertext compression and a secure
 argmax~\cite{nexus2025}; its headline per-inference figure is amortized over a batch, and its
 single-prediction latency is substantially higher, so the two readings should not be conflated.
 MOAI reports a further $52.8\%$ reduction in evaluation time against THOR by holding one packing
 convention across all layers and removing rotations from softmax and
 normalization~\cite{moai2025}.
 
-We therefore do not present client assistance as the fast route to encrypted transformer inference.
-On cost it is behind the non-interactive state of the art at comparable parameters. What it buys is
-a different property: the released nonlinearities are evaluated exactly rather than approximated by
-polynomials, no bootstrap is required, and the decrypted prediction can be checked against a frozen
-plaintext oracle for the released weights. THOR's result also indicates that the memory wall
-observed here belongs to the evaluated backend, parameters, packing, and circuit rather than to
-non-interactive CKKS as such, though that inference crosses library implementations and should be
-read as an indication rather than a measurement.
+These are uncontrolled cross-system comparisons. Model semantics, prompt length, nonlinear
+circuits, bootstrapping, packing, libraries, CPU paths, and measurement endpoints differ. They
+establish that the present implementation is not performance-leading, but they do not isolate the
+cost of client assistance. The evaluated design occupies a different point in that space: it
+retains the released nonlinear formulas exactly, requires no homomorphic bootstrap, and pairs its
+execution with a frozen, independently checked plaintext reference.
+
+Powerformer represents a complementary model-modifying direction, training HE-suitable polynomial
+components rather than preserving the released transformer unchanged~\cite{powerformer2025}.
+ELLMo further shows how packing and depth-aware design can restructure encrypted transformer
+inference~\cite{ellmo2026}. These systems reinforce that performance comparisons must account for
+model and circuit changes, not only headline dimensions.
 
 \subsection{Homomorphic encryption for genomics}
 
@@ -63,6 +72,21 @@ Those workloads center on searches or prescribed statistics over genomic records
 instead composes dense projections, attention, normalization, and a feed-forward network while
 preserving the numerical behavior of a released foundation model. This study extends the genomic
 HE lineage to the feasibility boundary of that transformer forward pass.
+
+The iDASH series has since moved from encrypted statistics toward encrypted neural evaluation, and
+supplies the closest prior art to this study. Its 2024 homomorphic-encryption track distributed
+DASHformer, a protein-family classifier comprising a tokenizer, an encoder, a single transformer
+block with four-head self-attention, and a dense classification layer, totaling $138{,}905$
+parameters over $50$-residue fragments~\cite{idash24descriptor}. The winning solution evaluates it
+non-interactively under leveled CKKS, with no bootstrapping and no client participation at any
+point, classifying a batch of $163$ encrypted sequences in about $165$~s at $128$-bit
+security~\cite{encrypteddashformer}. On interaction that result is strictly stronger than the
+design evaluated here, which returns to the key holder at every nonlinearity. It reaches that
+strength under different constraints: one transformer block against twelve, a purpose-trained
+competition classifier against a released $0.1$-billion-parameter backbone, and nonlinearities
+replaced by data-driven non-polynomial fits rather than preserved. To our knowledge, no released,
+pretrained genomic foundation model has previously been evaluated under homomorphic encryption for
+a complete forward pass.
 
 \subsection{GPU-accelerated homomorphic encryption}
 
@@ -86,8 +110,9 @@ linear layer requires. THOR's diagonal-major representation and compact packing 
 that layout for transformer inference~\cite{thor}; HE-BLAS develops a broader library of
 homomorphic linear-algebra kernels and shape-aware algorithms~\cite{heblas2025}. These works
 motivate the remaining targets in Section~\ref{sec:optimization}, as does MOAI's rotation-free
-formulation of softmax and normalization~\cite{moai2025}: reducing repeated packing work, copying fewer distinct diagonal plaintexts, and replacing segmented slot reductions
-with kernels matched to the actual tensor shapes. Packing, key material, level consumption, and
-the operation schedule are coupled. Integrating a candidate primitive therefore includes
-revalidation against the frozen plaintext reference and checked schedule before performance is
-compared.
+formulation of softmax and normalization~\cite{moai2025}. Those targets include reducing repeated
+packing work, copying fewer distinct diagonal plaintexts, and replacing segmented slot reductions
+with kernels matched to the tensor shapes. ELLMo likewise treats packing and depth as coupled
+optimization choices~\cite{ellmo2026}. Because packing, key material, level consumption, and the
+operation schedule interact, each candidate primitive must be revalidated against the frozen
+plaintext reference and checked schedule before its performance is compared.

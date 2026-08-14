@@ -1,0 +1,35 @@
+{
+  "id": "fhe_multiblock_t103_precision_contract_20260814",
+  "status": "[V] preserved metadata from the accepted T=103 export; no rerun",
+  "purpose": "Preserve the numerical precision and label checks needed to audit the paper without committing model weights, sequence data, token identifiers, or fixture arrays.",
+  "scope": {
+    "model": "released 12-block DNAGPT 0.1b classifier and GSR head",
+    "prompt_tokens": 103,
+    "input_selection": "record 0 from the verified positive GSR FASTA input",
+    "comparison": "released PyTorch float32; float64-cast PyTorch shadow; independent NumPy float64 lineage"
+  },
+  "oracle_gate": {
+    "per_block_rtol": 0.00002,
+    "per_block_atol": 0.00002,
+    "all_blocks_and_head_passed": true,
+    "all_finite": true,
+    "max_block_abs_error_numpy_vs_float64_shadow": 0.000005223597732140206,
+    "max_block_abs_error_numpy_vs_released_float32": 0.000799744795450863,
+    "head_abs_error_numpy_vs_float64_shadow": 0.0000011163525241997263,
+    "head_abs_error_numpy_vs_released_float32": 0.00017358288599744753
+  },
+  "classification": {
+    "released_float32_margin_n_minus_a": 12.2666015625,
+    "released_float32_label": "N",
+    "numpy_float64_margin_n_minus_a": 12.266581945739606,
+    "numpy_float64_label": "N",
+    "binary_meaning": "real GSR"
+  },
+  "provenance": {
+    "preserved_utc_date": "2026-08-14",
+    "source_artifact": "gitignored T=103 multiblock export manifest",
+    "source_manifest_sha256": "ab55533eaf8779b64a67c5cdd8ac67152419389e33f1c44addd4a092e0ff962d",
+    "exporter": "fhe/multiblock/export_fixture_t103.py",
+    "repository_head_when_preserved": "641a44c288ae7aec3ceb9f2f9852f348c55bcca7"
+  }
+}

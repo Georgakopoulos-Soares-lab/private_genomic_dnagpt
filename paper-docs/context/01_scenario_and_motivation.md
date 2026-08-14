@@ -28,14 +28,15 @@ framing is not formally sound, and a competent reviewer will say so, so the pape
 The mechanism is specific and worth stating precisely, because it is stronger than the usual
 hand-wave about black-box extraction:
 
-> The data owner observes the full intermediate activations at every nonlinearity. That decouples
-> the network into shallow segments whose nonlinearities are already known. The hard global
-> inversion problem collapses into cheap per-segment regression.
+> The data owner observes intermediate activations at every nonlinearity. This transcript creates
+> a chosen-query extraction surface and can make some affine segments directly identifiable from
+> sufficiently diverse observations. The study does not measure extraction cost or recovery of all
+> attention parameters.
 
 So an honest statement of what the protocol gives the model owner is: **basic hiding of the
-weights that raises the cost of casual copying and does not stop a determined adversary.** Weight
-extraction is a per-segment fitting problem, not a research problem. Say that in §3 and repeat the
-consequence in the limitations, and the paper is stronger for having conceded it.
+weights that raises the cost of casual copying and does not stop a determined adversary.** Say
+that in §3 and repeat the consequence in the limitations without claiming an unmeasured recovery
+cost.
 
 What survives is the reason that actually holds: the data owner has no GPU, will not disclose the
 genome, and the model owner has the hardware. That is a sufficient and defensible motivation.
@@ -45,10 +46,10 @@ genome, and the model owner has the hardware. That is a sufficient and defensibl
 The strongest reviewer objection is easy to state, and the paper must state it first, at full
 strength, before answering it.
 
-> DNAGPT-0.1b at 103 tokens is roughly 2 × 10¹⁰ floating-point operations. That is well under a
-> second of ordinary CPU inference. The protocol spends about 120 seconds of client CPU per block
-> and roughly 27 minutes across twelve blocks. The client is therefore doing on the order of a
-> thousand times more work inside the protocol than it would need to just run the model itself.
+> Local inference avoids the cryptographic work entirely when the client may receive the model.
+> The measured protocol instead spends substantial client CPU time at declared boundaries. No
+> named representative-client plaintext timing has been recorded, so the paper should make this
+> qualitative comparison without an unsourced sub-second claim.
 
 Every number in that objection is correct, and the paper should concede it in those words.
 
@@ -62,9 +63,9 @@ in the clear, or do not run the model at all — the comparison is:
 | Client needs the model | yes | no | no |
 | Client needs a GPU | yes | no | **no** |
 | Server sees the genome | not applicable | **yes** | no |
-| Client compute per block | sub-second | none | ~121 s, CPU |
+| Client compute per block | ordinary plaintext inference | none | ~121 s, CPU |
 | Client peak memory | model-sized | none | ~14 GB |
-| Server compute per block | not applicable | sub-second | ~532 s, one A100 |
+| Server compute per block | not applicable | ordinary plaintext inference | ~532 s, one A100 |
 
 The middle column is what the protocol competes with in practice, and the row that decides it is
 the third.
@@ -89,12 +90,10 @@ and present it as a scaling argument.
 
 ## What the resource trace adds
 
-The measured GPU utilization never exceeds 40 percent, and collapses to 1–2 percent for about 90
-seconds while the client evaluates attention weights. That is not a defect to apologize for; it
-is the empirical shape of the architecture. The encrypted linear algebra is not the saturating
-cost at this scale, and the sequential client boundary is a real, identified, addressable
-bottleneck rather than an inherent one — parallelizing it was blocked by a backend limitation,
-not by the design.
+The sampled GPU utilization never exceeds 40 percent, and falls to 1–2 percent for about 90
+seconds during attention-context processing. This establishes underutilization in that trace, not
+a causal bottleneck. A current CPU/CUDA profile is required to separate launch, synchronization,
+memory movement, host encoding, and client work.
 
 ## What this scenario does not cover
 

@@ -22,17 +22,19 @@ Do not reconstruct current status from filenames or old run tags. The roadmaps o
 - `[V]` Pure non-interactive CKKS closes one real-weight block but is frozen after chained
   composition hit a root-caused A100 memory wall.
 - `[V]` Client-assisted CKKS closes one complete real-weight block at the 103-token GSR length with
-  eight-token SIMD packing, depth 13, about `4e-9` relative error, and about `9.8 GiB` process peak
-  GPU memory.
+  eight-token SIMD packing, depth 13, about `4e-9` relative error, and about `9.8 GiB` peak
+  device-wide GPU memory used during the run.
 - `[V]` Two released blocks compose at two tokens using a declared client refresh.
-- `[U]` The built 12-block plus GSR-head driver has not run at 103 tokens.
-- `[U]` Existing long timings are contaminated by shared-host load. There is no clean end-to-end
-  latency result or networked client/server measurement.
+- `[V]` All 12 released blocks plus the GSR head pass at 103 tokens in one whole-node execution
+  with no contention detected in recorded telemetry: `6683 s` (`1.86 h`), correct label, no
+  homomorphic bootstrap, and `9839 MiB` peak device-wide GPU memory used during the run.
+- `[U]` The complete execution has not been repeated, and only one prompt has been evaluated.
+  There is no encrypted task-set accuracy or networked client/server measurement.
 
-The next performance step is **not** an unprofiled multi-day run. First obtain a dedicated one-block
-baseline and current T=103 CPU/CUDA profile, then evaluate the exact-model changes ordered in
-`docs/hybrid/roadmap.md`. Run the existing 12-block driver immediately only when the goal is arithmetic
-correctness closure, and label it a baseline feasibility run.
+The next performance step is **not** another unprofiled complete-model run. First obtain a paired
+dedicated one-block baseline and current T=103 CPU/CUDA profile, then evaluate the exact-model changes
+ordered in `docs/hybrid/roadmap.md`. Repeat the complete execution only to establish variance or to
+validate retained changes; treat the existing run as a single-sample feasibility result.
 
 ## Terminology
 

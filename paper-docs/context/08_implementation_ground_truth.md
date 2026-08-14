@@ -109,7 +109,7 @@ recorded run, by porting `simd_t103_schedule.hpp` and re-executing it. **All twe
 | Explicit rotations | 8,173 | 8,173 | `2,821 + 4,836 + 360 + 156` |
 | Reduction calls | 8,776 | 8,776 | `HEADS · 727 + 4 · GROUPS` |
 | Client crossings | 857 | 857 | `91 + 727 + 3 · GROUPS` |
-| Logical instances | 129,162 | 129,162 | `206 + 412 + 2 · HEADS · T(T+1)/2` |
+| Heterogeneous logical-instance counter | 129,162 | 129,162 | `206 + 412 + 2 · HEADS · T(T+1)/2` |
 
 `[A]` The packing reduction is `1236/156 = 7.923`, so **7.92× is correct**.
 
@@ -127,10 +127,11 @@ remaining optimization target:
 `[V]` The 17,448 mask plaintexts are the ones still re-encoded on every use — this is the "roughly
 17,400" figure in the optimization section, and it is exact.
 
-`[A]` The 129,162 logical instances decompose as: LayerNorm site 1, 103; LayerNorm site 2, 103;
-GELU, 412 (`= T · COPIES`); softmax scores in, 64,272; softmax weights out, 64,272 (each
-`= HEADS · T(T+1)/2`). Softmax dominates at **99.5%** of all values crossing the boundary. Worth
-stating: the boundary cost is essentially the attention nonlinearity, not LayerNorm or GELU.
+`[A]` The 129,162 counter decomposes as: LayerNorm site 1, 103 active tokens; LayerNorm site 2,
+103 active tokens; GELU, 412 token-copies (`= T · COPIES`); attention scores consumed, 64,272;
+attention weights emitted, 64,272 (each `= HEADS · T(T+1)/2`). These terms have different units
+and cannot support a scalar-work or traffic share. Homogeneous measures do: attention accounts for
+818 of 857 client calls (`95.4%`) and 818 of 896 boundary ciphertext objects (`91.3%`).
 
 ---
 
@@ -338,9 +339,9 @@ evidence ledger.
    boundaries, not the network's depth, because re-encryption returns to level 0. Without that
    sentence, depth 13 for a 12-block model looks impossible.
 
-6. **Softmax is 99.5% of the boundary traffic.** The paper treats the three nonlinearity classes as
-   comparable. They are not, and this reframes the optimization discussion: the boundary cost is
-   attention.
+6. **Attention dominates the boundary schedule.** It accounts for 95.4% of client calls and 91.3%
+   of boundary ciphertext objects per block. The mixed-unit logical-instance counter must not be
+   presented as a traffic share.
 
 7. **"No biases" should be stated as verified, not omitted silently.** §1.
 

@@ -19,12 +19,14 @@ latency claims; contaminated observations are not benchmarks.
 - `[V]` Pure non-interactive CKKS closes one real-weight block and then hits a root-caused GPU memory
   wall during chained-composition setup. That path is frozen as the non-interactive baseline.
 - `[V]` Client-assisted CKKS closes a complete real-weight block at 103 tokens with eight-token SIMD
-  packing, depth 13, approximately `4e-9` relative error, and approximately `9.8 GiB` process peak GPU
-  memory.
+  packing, depth 13, approximately `4e-9` relative error, and approximately `9.8 GiB` peak
+  device-wide GPU memory used during the run.
 - `[V]` Two released blocks compose at two tokens through a declared client refresh.
-- `[V]` The 12-block plus GSR-head task-length driver builds and passes local contracts.
-- `[U]` Complete task-length encrypted inference, clean latency, and a real networked protocol remain
-  unmeasured.
+- `[V]` The 12-block plus GSR-head task-length driver executes and passes at 103 tokens in one
+  whole-node sample with no contention detected in recorded telemetry (`6683 s`, correct label,
+  no homomorphic bootstrap).
+- `[U]` Independent repetition, encrypted task-set accuracy, a current causal profile, and a real
+  networked protocol remain unmeasured.
 
 Historical pure-CKKS decisions are in [pure/roadmap.md](pure/roadmap.md). The active detailed plan is
 [hybrid/roadmap.md](hybrid/roadmap.md).
@@ -51,19 +53,17 @@ Use local slot/NumPy contracts before GPU work, then test one change at a time:
 
 The detailed hypotheses and go/no-go conditions are in [hybrid/roadmap.md](hybrid/roadmap.md).
 
-### 3. Rebuild composition from retained pieces
+### 3. Rebuild composition after retained changes
 
-Integrate retained optimizations into one task-length block. Reconfirm the oracle, level schedule,
-memory, and operation counts. Then update the 12-block plus released GSR-head driver. Do not assume
-individually passing micro-gates compose correctly.
+Integrate retained optimizations into one task-length block. Reconfirm the reference, level schedule,
+memory, and operation counts. Then update and repeat the 12-block plus released GSR-head driver. Do
+not assume individually passing micro-gates compose correctly.
 
-### 4. Close arithmetic end to end
+### 4. Reproduce arithmetic end to end
 
-Run all twelve blocks and the task head at 103 tokens on a dedicated host. Compare final logits and
-label with the frozen plaintext oracle. Use three or more repetitions for any stable latency claim.
-
-The current unoptimized driver may be run before Stage 2 only to close arithmetic correctness. Label
-that result as a baseline feasibility run and do not use it as the final performance result.
+Arithmetic correctness is closed for one selected prompt: all twelve blocks and the task head pass at
+103 tokens on a dedicated host. Repeat the same case at least once to confirm reproducibility, and use
+three or more repetitions before reporting a mean, variance, service rate, or stable latency target.
 
 ### 5. Measure the protocol, not only the arithmetic
 

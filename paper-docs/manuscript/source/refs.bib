@@ -2,7 +2,7 @@
 %% Bibliography
 %%
 %% Entries were checked against the primary records identified in
-%% reviews/2026-08-08-paper-sources.md. Grouped by category.
+%% reviews/2026-08-14-paper-sources.md. Grouped by category.
 %% ---------------------------------------------------------------------------
 
 %% ----- The model under study -----
@@ -20,13 +20,11 @@
 
 %% VERIFIED 2026-08-08
 @inproceedings{dnabert2,
-  title         = {DNABERT-2: Efficient Foundation Model and Benchmark For Multi-Species Genome},
+  title         = {DNABERT-2: Efficient Foundation Model and Benchmark for Multi-Species Genomes},
   author        = {Zhou, Zhihan and Ji, Yanrong and Li, Weijian and Dutta, Pratik and Davuluri, Ramana V. and Liu, Han},
-  booktitle     = {International Conference on Learning Representations (ICLR)},
+  booktitle     = {The Twelfth International Conference on Learning Representations},
   year          = {2024},
-  eprint        = {2306.15006},
-  archivePrefix = {arXiv},
-  note          = {Source of the GUE benchmark and promoter/splice-site reference metrics}
+  url           = {https://openreview.net/forum?id=oMLQB4EZE1}
 }
 
 %% VERIFIED 2026-08-08
@@ -72,33 +70,37 @@
   title     = {{OpenFHE}: Open-Source Fully Homomorphic Encryption Library},
   author    = {Al Badawi, Ahmad and Bates, Jack and Bergamaschi, Flavio and Cousins, David Bruce and Erabelli, Saroja and Genise, Nicholas and Halevi, Shai and Hunt, Hamish and Kim, Andrey and Lee, Yongwoo and Liu, Zeyu and Micciancio, Daniele and Quah, Ian and Polyakov, Yuriy and Saraswathy, R. V. and Rohloff, Kurt and Saylor, Jonathan and Suponitsky, Dmitriy and Triplett, Matthew and Vaikuntanathan, Vinod and Zucca, Vincent},
   booktitle = {Proceedings of the 10th Workshop on Encrypted Computing \& Applied Homomorphic Cryptography},
+  pages     = {53--63},
   year      = {2022},
-  note      = {Also IACR ePrint 2022/915}
+  doi       = {10.1145/3560827.3563379}
 }
 
 %% VERIFIED 2026-08-08
-@misc{gpu-ckks-backend,
+@inproceedings{gpu-ckks-backend,
   title         = {{FIDESlib}: A Fully-Fledged Open-Source FHE Library for Efficient CKKS on GPUs},
   author        = {Agull\'{o}-Domingo, Carlos and Vera-L\'{o}pez, \'{O}scar and Guzelhan, Seyda and Daksha, Lohit and El Jerari, Aymane and Shivdikar, Kaustubh and Agrawal, Rashmi and Kaeli, David and Joshi, Ajay and Abell\'{a}n, Jos\'{e} L.},
+  booktitle     = {2025 IEEE International Symposium on Performance Analysis of Systems and Software},
+  pages         = {365--367},
   year          = {2025},
-  eprint        = {2507.04775},
-  archivePrefix = {arXiv},
-  note          = {Poster paper, IEEE ISPASS 2025}
+  doi           = {10.1109/ISPASS64960.2025.00045},
+  url           = {https://arxiv.org/abs/2507.04775}
 }
 
 %% VERIFIED 2026-08-08
 @misc{concreteml,
-  title  = {Concrete {ML}: a Privacy-Preserving Machine Learning Library using Fully Homomorphic Encryption for Data Scientists},
+  title  = {{Concrete ML}: Privacy-Preserving Machine Learning with Fully Homomorphic Encryption},
   author = {{Zama}},
   year   = {2022},
+  howpublished = {Software repository},
   url    = {https://github.com/zama-ai/concrete-ml}
 }
 
 %% VERIFIED 2026-08-08
 @misc{tfhers,
-  title  = {{TFHE-rs}: A Pure Rust Implementation of the {TFHE} Scheme for Boolean and Integer Arithmetics Over Encrypted Data},
+  title  = {{TFHE-rs}: A Pure Rust Implementation of the {TFHE} Scheme for Boolean and Integer Arithmetic},
   author = {{Zama}},
   year   = {2022},
+  howpublished = {Software repository},
   url    = {https://github.com/zama-ai/tfhe-rs}
 }
 
@@ -108,7 +110,7 @@
 @inproceedings{gazelle2018,
   title     = {{GAZELLE}: A Low Latency Framework for Secure Neural Network Inference},
   author    = {Juvekar, Chiraag and Vaikuntanathan, Vinod and Chandrakasan, Anantha},
-  booktitle = {27th USENIX Security Symposium},
+  booktitle = {27th USENIX Security Symposium (USENIX Security 18)},
   pages     = {1651--1669},
   year      = {2018},
   url       = {https://www.usenix.org/conference/usenixsecurity18/presentation/juvekar}
@@ -160,10 +162,11 @@
 @inproceedings{thor,
   title     = {{THOR}: Secure Transformer Inference with Homomorphic Encryption},
   author    = {Moon, Jungho and Yoo, Dongwoo and Jiang, Xiaoqian and Kim, Miran},
-  booktitle = {Proceedings of the ACM SIGSAC Conference on Computer and Communications Security},
+  booktitle = {Proceedings of the 2025 ACM SIGSAC Conference on Computer and Communications Security},
+  pages     = {3765--3779},
   year      = {2025},
   doi       = {10.1145/3719027.3765150},
-  note      = {Also IACR ePrint 2024/1881}
+  url       = {https://eprint.iacr.org/2024/1881}
 }
 
 %% ----- Homomorphic encryption for genomics -----
@@ -235,19 +238,21 @@
   author  = {Bae, Youngjin and Cheon, Jung Hee and Hanrot, Guillaume and Park, Jai Hyun and Stehl\'{e}, Damien},
   journal = {Journal of Cryptology},
   volume  = {39},
+  pages   = {25},
   year    = {2026},
   doi     = {10.1007/s00145-026-09580-x},
   note    = {Preprint: arXiv:2503.16080}
 }
 
 %% VERIFIED 2026-08-08
-@inproceedings{aegis,
+@misc{aegis,
   title     = {{AEGIS}: Scaling Long-Sequence Homomorphic Encrypted Transformer Inference via Hybrid Parallelism on Multi-{GPU} Systems},
   author    = {Gong, Zhaoting and Ran, Ran and Yao, Fan and Wen, Wujie},
-  booktitle = {Proceedings of the International Conference on Supercomputing (ICS)},
   year      = {2026},
   eprint    = {2604.03425},
-  archivePrefix = {arXiv}
+  archivePrefix = {arXiv},
+  note      = {Accepted at ICS 2026},
+  url       = {https://arxiv.org/abs/2604.03425}
 }
 
 %% VERIFIED 2026-08-13
@@ -267,22 +272,100 @@
   booktitle = {2024 IEEE Symposium on Security and Privacy (SP)},
   pages     = {4753--4771},
   year      = {2024},
-  note      = {Also IACR ePrint 2023/1893}
+  doi       = {10.1109/SP54263.2024.00130}
 }
 
-%% VERIFIED 2026-08-13 -- cite the ePrint; venue unconfirmed
-@misc{moai2025,
-  title        = {{MOAI}: Module-Optimizing Architecture for Non-Interactive Secure Transformer Inference},
-  year         = {2025},
-  howpublished = {IACR Cryptology ePrint Archive, Report 2025/991},
-  note         = {\url{https://eprint.iacr.org/2025/991}}
+%% VERIFIED 2026-08-14
+@inproceedings{moai2025,
+  title     = {{MOAI}: Module-Optimizing Architecture for Non-Interactive Secure Transformer Inference},
+  author    = {Zhang, Linru and Wang, Xiangning and Sim, Jun Jie and Huang, Zhicong and Zhong, Jiahao and Wang, Huaxiong and Duan, Pu and Lam, Kwok-Yan},
+  booktitle = {The Fourteenth International Conference on Learning Representations},
+  year      = {2026},
+  url       = {https://openreview.net/forum?id=qJn4HtTzhH}
 }
 
 %% VERIFIED 2026-08-13
 @misc{dnaembeddinginversion2026,
   title         = {How Private Are {DNA} Embeddings? Inverting Foundation Model Representations of Genomic Sequences},
-  author        = {Ouaari, Mehdi and Kreuer, Se\'{a}n and Pfeifer, Nico},
+  author        = {Ouaari, Sofiane and Kreuer, Jules and Pfeifer, Nico},
   year          = {2026},
   eprint        = {2603.06950},
-  archivePrefix = {arXiv}
+  archivePrefix = {arXiv},
+  url           = {https://arxiv.org/abs/2603.06950}
+}
+
+%% VERIFIED 2026-08-14
+@inproceedings{thex2022,
+  title     = {{THE-X}: Privacy-Preserving Transformer Inference with Homomorphic Encryption},
+  author    = {Chen, Tianyu and Bao, Hangbo and Huang, Shaohan and Dong, Li and Jiao, Binxing and Jiang, Daxin and Zhou, Haoyi and Li, Jianxin and Wei, Furu},
+  booktitle = {Findings of the Association for Computational Linguistics: ACL 2022},
+  pages     = {3510--3520},
+  year      = {2022},
+  doi       = {10.18653/v1/2022.findings-acl.277},
+  url       = {https://aclanthology.org/2022.findings-acl.277/}
+}
+
+%% VERIFIED 2026-08-14
+@inproceedings{powerformer2025,
+  title     = {Powerformer: Efficient and High-Accuracy Privacy-Preserving Language Model with Homomorphic Encryption},
+  author    = {Park, Dongjin and Lee, Eunsang and Lee, Joon-Woo},
+  booktitle = {Proceedings of the 63rd Annual Meeting of the Association for Computational Linguistics (Volume 1: Long Papers)},
+  pages     = {11090--11111},
+  year      = {2025},
+  doi       = {10.18653/v1/2025.acl-long.543},
+  url       = {https://aclanthology.org/2025.acl-long.543/}
+}
+
+%% VERIFIED 2026-08-14
+@misc{ellmo2026,
+  title        = {{ELLMo}: Packing- and Depth-Aware Encrypted Transformer Inference},
+  author       = {Guzelhan, Seyda Nur and Daksha, Lohit and Agull\'{o} Domingo, Carlos and Jonatan, Gilbert and Kim, John and Abellan, Jose L. and Kaeli, David and Joshi, Ajay},
+  year         = {2026},
+  howpublished = {IACR Cryptology ePrint Archive, Report 2026/198},
+  url          = {https://eprint.iacr.org/2026/198}
+}
+
+%% VERIFIED 2026-08-14
+@inproceedings{limicciancio2021,
+  title     = {On the Security of Homomorphic Encryption on Approximate Numbers},
+  author    = {Li, Baiyu and Micciancio, Daniele},
+  booktitle = {Advances in Cryptology -- EUROCRYPT 2021},
+  pages     = {648--677},
+  year      = {2021},
+  doi       = {10.1007/978-3-030-77870-5_23},
+  url       = {https://eprint.iacr.org/2020/1533}
+}
+
+%% VERIFIED 2026-08-14 — primary record: https://pmc.ncbi.nlm.nih.gov/articles/PMC11660429/
+%% Author given names confirmed against publisher-deposited Crossref metadata for
+%% doi:10.1109/ieeedata.2024.3482283; volume/pages match Crossref and NCBI (PMID 39712862).
+@article{idash24descriptor,
+  title   = {Descriptor: Benchmarking Secure Neural Network Evaluation Methods for Protein Sequence Classification ({iDASH24})},
+  author  = {Harmanci, Arif and Chen, Luyao and Kim, Miran and Jiang, Xiaoqian},
+  journal = {IEEE Data Descriptions},
+  volume  = {1},
+  pages   = {109--112},
+  year    = {2024},
+  doi     = {10.1109/ieeedata.2024.3482283}
+}
+
+%% VERIFIED 2026-08-14 — primary record: https://eprint.iacr.org/2024/1851
+@misc{encrypteddashformer,
+  title        = {Secure Transformer-Based Neural Network Inference for Protein Sequence Classification},
+  author       = {Yang, Linhan and Wang, Shuai and Yang, Li and Wu, Kang and Dai, Lizhong},
+  howpublished = {Cryptology {ePrint} Archive, Paper 2024/1851},
+  note         = {First-place solution, iDASH 2024 Track 1},
+  year         = {2024},
+  url          = {https://eprint.iacr.org/2024/1851}
+}
+
+%% VERIFIED 2026-08-14 — primary record: https://eprint.iacr.org/2019/947
+@inproceedings{ngraphhe2,
+  title     = {{nGraph-HE2}: A High-Throughput Framework for Neural Network Inference on Encrypted Data},
+  author    = {Boemer, Fabian and Costache, Anamaria and Cammarota, Rosario and Wierzynski, Casimir},
+  booktitle = {Proceedings of the 7th ACM Workshop on Encrypted Computing \& Applied Homomorphic Cryptography},
+  pages     = {45--56},
+  year      = {2019},
+  doi       = {10.1145/3338469.3358944},
+  url       = {https://eprint.iacr.org/2019/947}
 }

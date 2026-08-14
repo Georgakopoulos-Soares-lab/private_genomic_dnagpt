@@ -17,7 +17,7 @@ three genomic task families are the numerical acceptance oracles for encrypted e
 
 | Task | Local result | Verdict |
 |---|---:|---|
-| Human AATAAA signal recognition | accuracy `0.9124`, F1 `0.916`, `n=22,604` | `[V]` pass |
+| Human AATAAA signal recognition | accuracy `0.9124`, F1 `0.916`, `n=22,604` full corpus | `[V]` pipeline fidelity |
 | Human mRNA abundance | r² `0.562`, Pearson `0.753`, `n=1,000` | `[V]` pass |
 | GUE human promoter/splice subsets | MCC `0.680`, `0.897`, `0.831` | `[V]` pass |
 
@@ -34,9 +34,9 @@ Two implemented paths matter to the paper:
   tested A100 memory envelope. This is a measured backend/configuration boundary, not an impossibility
   result for pure CKKS.
 - **Client-assisted CKKS** is the active path. The GPU server evaluates encrypted linear algebra. At
-  fixed LayerNorm, attention-softmax, GELU, and refresh boundaries, the data-owning client decrypts its
-  own intermediate, computes the exact operation, and re-encrypts it. The server does not receive the
-  secret key or plaintext activations under the stated prototype boundary.
+  fixed boundaries, the data-owning client evaluates LayerNorm's inverse square root, causal softmax,
+  GELU, and declared refreshes, then re-encrypts. The server does not receive the secret key or
+  plaintext activations under the stated prototype boundary.
 
 See [shared/architecture_options.md](shared/architecture_options.md) and
 [shared/backend_selection.md](shared/backend_selection.md) for the decision rationale.
@@ -45,35 +45,39 @@ See [shared/architecture_options.md](shared/architecture_options.md) and
 
 - `[V]` **The complete released-weight model (all 12 transformer blocks plus the encrypted GSR head)
   passes at the full 103-token GSR prompt length** (TACC Lonestar6, 2026-08-12; see
-  [hybrid/tasks.md](hybrid/tasks.md)). Wall clock `6683 s` (~1.86 h) on a telemetry-confirmed clean
-  single A100. Per-block relative-infinity error stays in the `2.3e-9`-`2.1e-8` band across all 12
+  [hybrid/tasks.md](hybrid/tasks.md)). Wall clock `6683 s` (~1.86 h) on a whole-node allocation
+  with no contention detected in recorded telemetry. Per-block relative-infinity error stays in
+  the `2.3e-9`-`2.1e-8` band across all 12
   blocks and 11 inter-block client refreshes; the final decrypted head margin matches the frozen Phase-A
   plaintext oracle (label `N`) to a relative error of `8.6e-9`. Zero intermediate decrypts; the
   evaluator never holds the secret key.
 - `[V]` Eight-token SIMD packing reduces dense products from 1,236 serial-equivalent products to 156.
 - `[V]` The minimum demonstrated depth for the retained graph is 13.
-- `[V]` Target-process peak GPU memory is approximately `9.8 GiB` per block; target-process peak host
-  RAM across the complete 12-block run is `49.7 GiB` and does not accumulate block-over-block (each
+- `[V]` Device-wide GPU memory used during the run peaks at approximately `9.8 GiB`; the device was
+  empty at allocation, but the retained sampler is not per-process. Target-process peak host RAM
+  across the complete 12-block run is `49.7 GiB` and does not accumulate block-over-block (each
   block's evaluator is freshly constructed).
 - `[V]` A two-GPU Q/K/V substage passes; one unrepeated sample observed about `1.65x` substage
   improvement. It is not integrated into the full block.
-- `[U]` The 2026-08-12 result is one clean sample, not yet reproduced a second time on an independent
-  node -- repeat/variance confirmation is still open.
+- `[U]` The 2026-08-12 result is one sample with no contention detected in recorded telemetry, not
+  yet reproduced a second time on an independent node -- repeat/variance confirmation is still open.
 - `[U]` No production network, transport, authentication, key-custody, or side-channel evaluation has
   been performed. All boundary crossings measured so far are in-process function calls, not networked
   round trips.
 
-Correctness is therefore now established for the complete classifier, not only a task-length block.
+Graph feasibility and numerical agreement are therefore established for one complete-classifier
+prompt, not only a task-length block. Input-domain correctness remains preliminary because only one
+prompt has been evaluated under encryption.
 `1.86 h` for one encrypted example on a single A100 is a real, measured latency figure; whether that
 counts as "practical" is a separate, deliberately unaddressed judgment call, not tuned toward either
 answer.
 
 ## Current decision
 
-The complete-model correctness question is closed for one clean sample. What remains before any
+The complete-model correctness question is closed for one sampled execution. What remains before any
 practicality claim:
 
-1. reproduce the 12-block result at least once more on an independent clean node to bound variance;
+1. reproduce the 12-block result at least once more on an independent node to bound variance;
 2. evaluate further exact-model optimization gates (packing/layout/reuse changes) only where they
    preserve the oracle and improve a measured cost;
 3. measure a real client/server transport separately -- every crossing measured so far is an in-process

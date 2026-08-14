@@ -24,8 +24,10 @@ python eval/eval_gsr.py --limit -1 --tag gsr_aataaa_human_full
 |---|---|---|---|---|
 | **0.9124** | 0.881 | 0.954 | **0.916** | DeepGSR human AATAAA ~0.916 |
 
-**Verdict** `[V]`: matches the published accuracy within ~0.4 pt on the full test set. DNAGPT
-reliably performs GSR recognition.
+**Verdict** `[V]`: the released head and local pipeline produce the expected aggregate behavior on
+the full balanced 22,604-example source corpus. Because this all-example corpus includes records
+used to train the released head, the result is model/pipeline-fidelity evidence rather than an
+independent held-out generalization estimate.
 
 ---
 
@@ -99,6 +101,7 @@ comparison and decision rationale):
   two-block composition, and the current optimization history — see [hybrid/tasks.md](hybrid/tasks.md)
   and [hybrid/roadmap.md](hybrid/roadmap.md).
 
-Both share the same Phase-A oracle and `4e-2` accuracy gate. The complete 12-block plus GSR-head
-task-length driver remains unexecuted, clean latency is unmeasured, and the active execution order is
-in [roadmap.md](roadmap.md).
+Both share the same Phase-A acceptance rule. The complete 12-block plus GSR-head driver has executed
+once at task length on a clean node and matched the recorded class label; it is a single selected
+prompt and a single run, not encrypted task-set accuracy or a stable latency estimate. The remaining
+execution order is in [roadmap.md](roadmap.md).

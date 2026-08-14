@@ -72,13 +72,13 @@ mechanics, source-integrity checks, and experimental bookkeeping.
 - Use **measured**, **observed**, **derived**, **unmeasured**, and **failed** in ordinary prose.
 - A **task-length block** means one transformer block evaluated at the 103-token GSR prompt length.
   It does not mean the complete twelve-block classifier.
-- A **client boundary** is a fixed decrypt/compute/re-encrypt operation performed by the data owner,
-  never by the compute server.
-- A **round trip** is a physical boundary crossing. One crossing may batch many logical nonlinear
-  calculations.
+- A **client boundary** is a fixed in-process client call declared by the protocol. Depending on
+  stage it may decrypt and re-encrypt one ciphertext, consume a score ciphertext, or emit an
+  attention-weight ciphertext; it is not a measured network round trip.
 - Do not call contaminated shared-host wall time a benchmark or stable speedup.
-- Do not describe the current system as end-to-end encrypted DNAGPT: encrypted token lookup, all
-  twelve blocks, and the released task head have not closed together.
+- Do not describe the current system as end-to-end encrypted DNAGPT: all twelve blocks and the
+  released task head now close from encrypted embedded vectors, but encrypted token lookup and a
+  networked deployment remain outside scope.
 
 ## Update rule
 

@@ -1,13 +1,19 @@
 # Research timeline
 
+> **Status supersession, 2026-08-14.** All twelve released blocks plus the GSR head have now run
+> once at 103 tokens on a whole-node allocation with no contention detected in recorded telemetry,
+> matched the recorded label, and completed in 6683 s. Statements below that call this execution or
+> its final label unmeasured are historical.
+> Independent repetition, encrypted task-set accuracy, profiling, private lookup, and network
+> transport remain open.
+
 > **Superseded on timing — read this first.**
 >
-> This note predates the optimization campaign. Any latency, wall-clock, or server/client
-> timing figure below has been replaced by the dedicated-node measurements in
+> This note predates the accepted complete execution. Any latency, wall-clock, or server/client
+> timing figure below has been replaced by the complete-run measurements in
 > [`../evidence/measurements.yaml`](../evidence/measurements.yaml) and
-> [`../evidence/optimizations.yaml`](../evidence/optimizations.yaml): one complete block at
-> 103 tokens now runs in **652 s of encrypted evaluation** (663 s wall), down from
-> approximately 2.1 hours, at a relative error of `4.64e-9`.
+> [`../evidence/optimizations.yaml`](../evidence/optimizations.yaml): all twelve blocks and the
+> task head took **6683 s** in one execution. No paired pre-cache/current speedup is reportable.
 >
 > The older figures here were measured on a contended shared host and **do not go in the
 > manuscript in any form** — not as results and not as caveats. What remains valid in this note
@@ -165,7 +171,7 @@ defensible result; the observed wall-clock ratio is directional, not a clean spe
 
 A two-block experiment at two tokens added an explicit block-boundary client refresh. The client
 decrypted and unpacked the first block's hidden state, then re-encrypted fresh level-zero token states
-for the next block. Both released blocks passed, and target-process GPU memory did not increase in the
+for the next block. Both released blocks passed, and device-wide GPU memory used during the run did not increase in the
 second block. This established the composition mechanism, but only at the shortest nontrivial length.
 
 The 103-token complete block initially used a conservative multiplicative depth of 16. A controlled
@@ -183,7 +189,7 @@ not currently carry a validated speed advantage.
 Several optimizations produced useful positive or negative results.
 
 - A CPU-side cache of reusable diagonal vectors passed, reused more than 99.99% of lookups, and added
-  no target-process GPU memory. Its timing benefit remains unresolved because cached and uncached
+  no GPU allocations. Its timing benefit remains unresolved because cached and uncached
   samples ran under different host load.
 - Reusing GPU-resident plaintext objects was abandoned after six reproducible crashes, bracketed by
   passing controls. The safe CPU-vector cache replaced it.
@@ -202,26 +208,22 @@ Several optimizations produced useful positive or negative results.
 
 ## 11. Reach the current boundary
 
-The repository now contains a built and locally validated driver for all twelve blocks and the
-released GSR head at 103 tokens. It has not been executed because available single-block observations
-imply a long run and the shared host has not provided a sustained quiet window.
+On 2026-08-12 the retained driver executed all twelve released blocks and the released GSR head at
+103 tokens. The selected prompt reproduced the recorded label, and the decrypted classification
+margin differed from the NumPy float64 reference by `8.56e-9` relatively. The run took `6683 s`
+(`1.86 h`) on a whole-node allocation with no contention detected in recorded telemetry. It used
+one key lineage with declared client refreshes and no homomorphic bootstrap.
 
-The strongest completed encrypted result is therefore one full real-weight block at the complete GSR
-prompt length. The strongest composition result is two blocks at two tokens. These results make the
-remaining experiment concrete, but they do not substitute for it.
-
-A subsequent optimization audit changed the execution order without changing those claims. The
-existing complete-model driver is sufficient to test arithmetic composition, but the task-length block
-has not received a current stage-level CPU/CUDA profile. The audit also identified unused parallelism
-across the four packed copies, an opportunity to compute complete LayerNorm at its existing client
-boundary, unresolved encoded-plaintext reuse, and specialized attention reductions and layouts. The
-performance plan therefore became: establish a clean profiled block baseline, resolve those exact-model
-gates, rebuild the driver, and only then measure optimized full-model latency.
+This closes complete-model graph feasibility and one-input numerical agreement. It does not close
+encrypted task accuracy, input-domain numerical generality, run-to-run variance, private token
+lookup, serialized client/server transport, or production security. The task-length block also lacks
+a current causal CPU/CUDA profile and a controlled pre-cache/current comparison.
 
 The paper must leave four boundaries visible:
 
-1. all twelve blocks and the task head have not run together under encryption;
-2. no encrypted task prediction has been compared with the frozen GSR oracle;
-3. token-index embedding lookup remains outside the encrypted graph; and
-4. clean end-to-end latency is unknown because long measurements were contaminated by shared-host
-   CPU and GPU activity.
+1. the numerical result covers one selected prompt and one complete execution;
+2. token-index embedding lookup remains outside the encrypted graph;
+3. the two parties are roles in one process, so serialized byte volume and network latency are
+   unknown; and
+4. the measured cost rules out interactive use for the evaluated implementation, while throughput
+   and other workload targets remain unmeasured.

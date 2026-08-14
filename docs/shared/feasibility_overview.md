@@ -30,15 +30,17 @@ The architecture comparison and threat-model consequences are in
   length with approximately `4e-9` relative error.
 - `[V]` Eight-token SIMD packing reduces dense products from 1,236 serial-equivalent products to 156.
 - `[V]` The retained task-length block uses minimum demonstrated depth 13 and approximately `9.8 GiB`
-  process peak GPU memory.
+  peak device-wide GPU memory used during the run.
 - `[V]` Two released blocks compose at two tokens using a fixed client full-state refresh.
-- `[V]` A 12-block plus GSR-head task-length driver builds and passes local contracts.
+- `[V]` The 12-block plus GSR-head driver executes and passes at 103 tokens in one whole-node sample
+  with no contention detected in recorded telemetry: `6683 s`, final label agreement, no
+  homomorphic bootstrap, and device-wide GPU memory flat at `9839 MiB` after about 400 s.
 
 ## Unresolved claims
 
-- `[U]` The complete 12-block classifier has not executed at 103 tokens.
-- `[U]` No encrypted task-length logits or label have been compared with the final plaintext task oracle.
-- `[U]` Existing task-length wall times are contaminated by shared-host CPU/GPU load.
+- `[U]` The complete run has not been independently repeated and only one selected prompt has been
+  evaluated; encrypted task-set accuracy and run-to-run variance remain unknown.
+- `[U]` A current task-length CPU/CUDA profile has not identified the causal performance bottleneck.
 - `[U]` The current multi-GPU result covers only Q/K/V projection and is not connected to full-block
   execution.
 - `[U]` The prototype has no real client/server ciphertext transport, so cryptographic boundary counts
@@ -48,13 +50,11 @@ The architecture comparison and threat-model consequences are in
 
 ## Current execution decision
 
-Do not treat the existing long 12-block driver as the final performance experiment. First obtain a
-dedicated current-block profile, test the exact-model optimization gates in
-[../hybrid/roadmap.md](../hybrid/roadmap.md), integrate retained changes, and then run the complete
-classifier on a dedicated host.
-
-The current driver may be run immediately to close arithmetic correctness. Its result must be labeled
-as baseline feasibility, not optimized latency.
+Treat the existing complete execution as a single-sample feasibility result, not a final performance
+experiment. First obtain a dedicated current-block profile, test the exact-model optimization gates in
+[../hybrid/roadmap.md](../hybrid/roadmap.md), integrate retained changes, and repeat the complete
+classifier on a dedicated host. A separate repetition of the current driver is useful for
+reproducibility, but it does not replace profiling or a networked protocol experiment.
 
 ## Evidence ownership
 

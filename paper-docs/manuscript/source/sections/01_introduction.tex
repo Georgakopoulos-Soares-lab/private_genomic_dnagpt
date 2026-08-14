@@ -42,72 +42,62 @@ non-interactive evaluator must approximate them with polynomial circuits, length
 multiplicative path and increasing the context, bootstrapping, and evaluation-key material that
 must be resident. Moving the exact functions to the key holder shortens those paths and resets the
 depth budget, but introduces interaction and a different threat model. Earlier systems establish
-both directions: THOR demonstrates non-interactive homomorphic transformer inference, while
-Safhire uses the same server-linear/client-nonlinear division studied here in convolutional
-networks~\cite{thor,safhire2025}. Our contribution is not the invention of that division. It is an
-auditable account of the correctness, memory behavior, and executed work that result when the
-division is applied to a released genomic transformer.
+both directions: THOR demonstrates non-interactive homomorphic transformer inference; THE-X and
+Safhire use interactive workflows in which the client evaluates nonlinear
+functions~\cite{thor,thex2022,safhire2025}. The division of labor is therefore established prior
+art. What has not been reported is an auditable account of the numerical behavior, memory,
+interaction, and executed work that results when it is applied end to end to a released genomic
+transformer, at that model's own task prompt, with its weights and nonlinear formulas unmodified.
 
-The cost comparison between those two directions does not favour the one studied here, and we
-state that before reporting our own numbers rather than after. THOR evaluates a $12$-layer,
-$768$-wide encoder at $128$ tokens on a single A100, at ring degree $2^{16}$, depth $13$, and
-$128$-bit security, in $602$~s with no client interaction at any point~\cite{thor}; MOAI reports a
-further reduction against it~\cite{moai2025}. Those are this study's cryptographic parameters, this
-study's accelerator, a comparable model shape, and a longer prompt. The complete encrypted
-inference reported below took $6683$~s and required an online key holder throughout, roughly an
-order of magnitude above THOR's reported figure. This paper therefore does not claim that client
-assistance is the cheap way to evaluate a transformer under encryption. It claims a different set
-of properties, and Section~\ref{sec:related} develops the comparison: the released nonlinearities
-are evaluated exactly rather than approximated, no homomorphic bootstrap is performed, and the
-decrypted prediction is checkable against a frozen plaintext reference for the released weights.
+That choice buys exactness and depth. Evaluating LayerNorm, softmax, and GELU at the key holder
+keeps the released formulas intact, so no polynomial approximation of a nonlinearity enters the
+model, and it bounds multiplicative depth by the longest encrypted segment rather than by network
+depth. The price is an online key holder and a protocol that is not the fastest available:
+non-interactive systems report lower cost for transformer inference, and Section~\ref{sec:related}
+treats those figures as cross-paper context rather than as a controlled benchmark.
 
 We begin by establishing that the target computation is meaningful and independently reproducible.
 The released DNAGPT paths are evaluated across genomic-signal recognition, promoter and splice-site
 classification, and mRNA abundance regression, with task outputs frozen before encrypted work.
-An independent NumPy block is asserted against the upstream PyTorch implementation at
-$2\times10^{-5}$ for every released block and the task head, preventing an encrypted circuit and an
-unchecked reference from agreeing on the same defect. We then build two CKKS designs: a
+The validation records the released float32 path, checks an independent NumPy float64 lineage
+against a float64-cast PyTorch shadow at $2\times10^{-5}$ for every released block and the task
+head, and then compares encrypted execution with the NumPy reference. We build two CKKS designs: a
 non-interactive circuit with polynomial nonlinearities, and a client-assisted circuit whose fixed,
 non-adaptive boundaries evaluate the released nonlinearities exactly. Instrumented evaluations
 record where each design stops in correctness and memory, while runtime assertions preserve the
 complete cryptographic operation schedule throughout the systems campaign.
 
-The results separate the three candidate barriers. The client-assisted design evaluates the
-complete model, all twelve released blocks and the released task head at the task's own prompt
-length, and reproduces the frozen plaintext label with $8.56\times10^{-9}$ relative margin error
-against a $4\times10^{-2}$ tolerance fixed before evaluation. Correctness is not the barrier. The
-non-interactive design completed a single released-weight block, but its composition configuration
-exceeded the tested $80$~GB memory envelope while loading its context and evaluation keys. Client
-re-encryption removes that accelerator-memory barrier rather than deferring it: multiplicative
-depth is bounded by the longest segment between two client boundaries instead of by network depth,
-so GPU memory stays at $9839$~MiB with no growth across the twelve blocks and the model needs no
-homomorphic bootstrap. That envelope was reached by the backend, packing, and parameters evaluated
-here, and other non-interactive implementations of comparable encoders do not report it, so the
-barrier removed is the one this configuration met rather than a general property of non-interactive
-CKKS. Bounded caching addresses a separate risk on the host by preventing encoded plaintexts
-from accumulating across stages, and is what allows the complete model to run without the host
-process being terminated. Cost is the barrier that remains: one encrypted classification
-was measured at $1.86$~hours on an A100 GPU node, in a single execution, which forecloses
-interactive use while leaving batch analysis available. That cost is not imposed by the
-accelerator, whose utilization never exceeds $51\%$.
+The results separate three candidate barriers and resolve two of them. Correctness holds: the
+client-assisted design evaluates all twelve released blocks and the task head at the $103$-token
+prompt, and for the one input evaluated it reproduces the frozen plaintext label with
+$8.56\times10^{-9}$ relative margin error against a $4\times10^{-2}$ tolerance fixed before
+evaluation. Accelerator memory holds as well, and for a structural reason: because multiplicative
+depth is bounded by the longest segment between client boundaries instead of by network depth, it
+stays at $13$ for the complete model, device-wide GPU memory used reaches $9839$~MiB without growth
+across the twelve blocks, and no homomorphic bootstrap is required at any point. Bounded caching
+separately prevents encoded plaintexts from accumulating across host-side stages. The evaluated
+non-interactive design, by contrast, completes one released-weight block but exceeds the tested
+$80$~GB envelope while loading its composition context and evaluation keys, placing that barrier in
+the nonlinear schedule rather than in the model's dense maps. Cost is the barrier that remains: one
+encrypted classification takes $1.86$~hours on an A100 GPU node, which forecloses interactive use
+in the evaluated form, and sampled GPU utilization peaks at $51\%$, locating headroom without
+attributing it. These memory and timing figures are specific to the evaluated backend, packing, and
+parameters.
 
 The paper makes the following contributions:
 
 \begin{itemize}
-  \item It constructs a frozen plaintext reference for a released genomic foundation model across
-        three task families, with a two-stage verification chain from the upstream implementation
-        to the independent reference and from that reference to encrypted execution.
-  \item It specifies a client-assisted CKKS transformer protocol with exact nonlinearities at
-        fixed boundaries, including the packing, depth-reset mechanism, complete algorithms, and
-        the corresponding semi-honest threat model.
-  \item It executes a complete released-weight model, twelve blocks and the task head, at the
-        task-defined prompt, and verifies the decrypted prediction against the frozen reference
-        under a tolerance declared in advance.
-  \item It reports host-side systems work carried out under a run-time assertion that the
-        encrypted operation schedule, packing, and depth are unchanged, including the bounded
-        plaintext cache that keeps host memory within the largest single stage and thereby makes
-        the complete run executable at all, and the redundant encoding and sequential-boundary
-        work that remain.
-  \item It gives separate feasibility and practicality verdicts and names the measurements required
-        to close a complete encrypted deployment.
+  \item \textbf{Complete-model feasibility.} All twelve released DNAGPT blocks and the task head
+        execute at the $103$-token task prompt from encrypted embedded vectors, with unmodified
+        released weights and nonlinear formulas and without homomorphic bootstrap; the one
+        evaluated prompt reproduces the reference label. To our knowledge this is the first
+        complete forward pass of a released, pretrained genomic foundation model evaluated under
+        CKKS; prior homomorphic transformer evaluations over biological sequence data have targeted
+        small, purpose-trained classifiers~\cite{idash24descriptor,encrypteddashformer}.
+  \item \textbf{Model-faithful, reproducible evaluation.} The protocol, packing, checked operation
+        schedule, predeclared tolerance, and three-link float32--float64--encrypted validation
+        chain make the complete execution independently inspectable.
+  \item \textbf{Measured systems anatomy and scoped negative results.} We report complete-model
+        cost, interaction, depth, and memory; the stage-bounded cache that makes host-side reuse
+        executable; and the memory boundary reached by the evaluated non-interactive configuration.
 \end{itemize}

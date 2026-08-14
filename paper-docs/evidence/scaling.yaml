@@ -5,12 +5,13 @@
 # deliberately carry no time estimate, because the per-block timings such estimates were built
 # from come from a shared partition and cannot enter the manuscript.
 #
-# Token counts are arithmetic, not choices: DNAGPT tokenizes overlapping 6-mers, so a window of
-# B base pairs becomes B/6 tokens, plus the task-format special tokens. Eight tokens are packed
-# per ciphertext, so a prompt of T tokens needs ceil(T/8) ciphertext groups.
+# Token counts are arithmetic, not choices: DNAGPT chunks the sequence into non-overlapping
+# 6-mers, retaining a shorter final token when needed, so a window of B base pairs becomes
+# ceil(B/6) sequence tokens plus task-format special tokens. Eight tokens are packed per
+# ciphertext, so a prompt of T tokens needs ceil(T/8) ciphertext groups.
 
 meta:
-  updated: 2026-08-08
+  updated: 2026-08-14
   packing: "Eight tokens per ciphertext group."
   anchor: gsr
   anchor_note: >
@@ -28,54 +29,87 @@ tasks:
     name: "Core promoter detection"
     family: "Genome understanding evaluation"
     basepairs: 70
+    basepairs_tag: "[V]"
     kmer_tokens: 12
+    kmer_tokens_tag: "[A]"
     special_tokens: 1
+    special_tokens_tag: "[V]"
     tokens: 13
+    tokens_tag: "[A]"
     token_groups: 2
+    token_groups_tag: "[A]"
     causal_score_tiles: 3
     causal_score_tiles_tag: "[A]"
+    source: >
+      docs/data_provenance.md and DNAGPT task formatting; derived as ceil(70/6)+1 tokens,
+      ceil(13/8) groups, and g(g+1)/2 score tiles
     plaintext_metric: "MCC 0.680"
 
   - id: gue_prom_300
     name: "300 bp promoter detection"
     family: "Genome understanding evaluation"
     basepairs: 300
+    basepairs_tag: "[V]"
     kmer_tokens: 50
+    kmer_tokens_tag: "[A]"
     special_tokens: 1
+    special_tokens_tag: "[V]"
     tokens: 51
+    tokens_tag: "[A]"
     token_groups: 7
+    token_groups_tag: "[A]"
     causal_score_tiles: 28
     causal_score_tiles_tag: "[A]"
+    source: >
+      docs/data_provenance.md and DNAGPT task formatting; derived as ceil(300/6)+1 tokens,
+      ceil(51/8) groups, and g(g+1)/2 score tiles
     plaintext_metric: "MCC 0.897"
 
   - id: gue_splice
     name: "Splice-site classification"
     family: "Genome understanding evaluation"
     basepairs: 400
+    basepairs_tag: "[V]"
     kmer_tokens: 67
+    kmer_tokens_tag: "[A]"
     special_tokens: 1
+    special_tokens_tag: "[V]"
     tokens: 68
+    tokens_tag: "[A]"
     token_groups: 9
+    token_groups_tag: "[A]"
     causal_score_tiles: 45
     causal_score_tiles_tag: "[A]"
+    source: >
+      docs/data_provenance.md and DNAGPT task formatting; derived as ceil(400/6)+1 tokens,
+      ceil(68/8) groups, and g(g+1)/2 score tiles
     plaintext_metric: "MCC 0.831"
 
   - id: gsr
     name: "Genomic signal recognition"
     family: "Polyadenylation-signal motif"
     basepairs: 600
+    basepairs_tag: "[V]"
     kmer_tokens: 100
+    kmer_tokens_tag: "[A]"
     special_tokens: 3
+    special_tokens_tag: "[V]"
     tokens: 103
+    tokens_tag: "[A]"
     token_groups: 13
+    token_groups_tag: "[A]"
     causal_score_tiles: 91
     causal_score_tiles_tag: "[A]"
+    source: >
+      released GSR task formatting and DNAGPT tokenizer; derived as ceil(600/6)+3 tokens,
+      ceil(103/8) groups, and g(g+1)/2 score tiles
     full_pass_seconds: 6683
     full_pass_human: "1.86 h"
     full_pass_tag: "[V]"
     full_pass_note: >
       Measured. All twelve blocks and the released task head executed at this prompt length on
-      an uncontended node, 2026-08-12. One sample.
+      a whole-node allocation with no contention detected in the recorded telemetry,
+      2026-08-12. One sample.
     peak_host_mib: 50930
     peak_host_tag: "[V]"
     plaintext_metric: "accuracy 0.9124, F1 0.916"
@@ -85,11 +119,19 @@ out_of_encrypted_scope:
   - id: mrna
     name: "mRNA abundance regression"
     basepairs: 10500
+    basepairs_tag: "[V]"
     kmer_tokens: 1750
+    kmer_tokens_tag: "[A]"
     special_tokens: 5
+    special_tokens_tag: "[V]"
     tokens: 1755
+    tokens_tag: "[A]"
     token_groups: 220
-    tag: "[U]"
+    token_groups_tag: "[A]"
+    encrypted_evaluation_tag: "[U]"
+    source: >
+      released mRNA task formatting and DNAGPT tokenizer; derived as ceil(10500/6)+5 tokens,
+      ceil(1755/8) groups, and g(g+1)/2 score tiles
     why_excluded: >
       At 1,755 tokens the prompt needs 220 ciphertext groups. The causal schedule visits the
       lower-triangular group pairs, so it needs 220 * 221 / 2 = 24,310 score tiles, growing
@@ -107,5 +149,5 @@ rules:
   - "The 103-token complete-model time and its peak host memory are measured, once. Everything else here is circuit size, not time."
   - "Do not restore per-task time estimates. The per-block timings they were built from come from a shared partition and cannot enter the manuscript."
   - "Any figure built from this file must visually separate the measured anchor from anything derived."
-  - "State the token derivation whenever a token count appears: base pairs divided by six, plus specials."
+  - "State the token derivation whenever a token count appears: ceil(base pairs divided by six), plus specials."
   - "The mRNA row exists to explain an exclusion. Do not use it to imply a longer-sequence capability."
