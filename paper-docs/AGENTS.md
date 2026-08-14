@@ -88,7 +88,8 @@ ledger is the project's memory. The manuscript draws a deliberate subset from it
 paper-docs/
 ├── context/      what the paper may say, and how (read-only during drafting)
 ├── evidence/     every number, with source and tag (the only numeric source)
-├── manuscript/   source/ (LaTeX) and figures/ (generated PDFs, committed)
+├── manuscript/   source/ (LaTeX), figures/ (generated PDFs, committed), and the committed
+│                 compiled snapshot dnagpt-fhe-paper.pdf
 ├── scripts/      figure generation, number and terminology lint, build
 ├── reviews/      dated agent review output
 └── submission/   arXiv package (build artifact — never hand-edited)

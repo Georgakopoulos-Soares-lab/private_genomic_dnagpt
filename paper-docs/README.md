@@ -29,7 +29,7 @@ number in the manuscript that is not there. And `[V]` measured, `[A]` derived or
 |---|---|
 | [`context/`](context/) | what the paper may say and how — terminology, the deployment scenario, the research narrative, defensible claims |
 | [`evidence/`](evidence/) | every number the manuscript may print, with its source and evidence tag. The only numeric authority |
-| [`manuscript/`](manuscript/) | `source/` (LaTeX) and `figures/` (generated PDFs, committed) |
+| [`manuscript/`](manuscript/) | `source/` (LaTeX), `figures/` (generated PDFs, committed), and `dnagpt-fhe-paper.pdf`, the committed snapshot of the compiled manuscript |
 | [`scripts/`](scripts/) | figure generation, the number and terminology lint, the build wrapper |
 | [`reviews/`](reviews/) | dated agent review output, appended never overwritten |
 | `submission/` | packaged submission. Build artifact, never hand-edited. Not created yet |
@@ -54,7 +54,18 @@ brew install --cask mactex-no-gui      # macOS, full TeX Live
 apt install texlive-full latexmk       # Debian
 ```
 
-The compiled `manuscript/source/main.pdf` is a build artifact and is not committed.
+The compiled `manuscript/source/main.pdf` is a build artifact and is not committed: it is rewritten
+on every build, so tracking it would churn the repository.
+
+A snapshot of the current compiled manuscript is committed separately at
+[`manuscript/dnagpt-fhe-paper.pdf`](manuscript/dnagpt-fhe-paper.pdf) so the paper can be read
+without a LaTeX toolchain. It is a copy, not a build output — refresh it deliberately after a clean
+build whose four lint checks pass:
+
+```bash
+paper-docs/scripts/build.sh
+cp paper-docs/manuscript/source/main.pdf paper-docs/manuscript/dnagpt-fhe-paper.pdf
+```
 
 ## How the pieces connect
 

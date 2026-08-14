@@ -104,6 +104,7 @@ paper-docs/manuscript/source/*.synctex.gz
 paper-docs/manuscript/source/*.toc
 paper-docs/manuscript/source/*.xdv
 # The compiled manuscript is a build artifact: run scripts/build.sh to make it.
+# A committed snapshot lives at paper-docs/manuscript/dnagpt-fhe-paper.pdf.
 paper-docs/manuscript/source/main.pdf
 paper-docs/scripts/__pycache__/
 # Generated figures ARE tracked: paper-docs/manuscript/figures/*.pdf
