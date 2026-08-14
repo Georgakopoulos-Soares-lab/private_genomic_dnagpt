@@ -37,10 +37,16 @@ number in the manuscript that is not there. And `[V]` measured, `[A]` derived or
 ## Build
 
 ```bash
-paper-docs/scripts/build.sh            # figures, PDF, lint
+paper-docs/scripts/build.sh            # figures, PDF, lint — preprint (no line numbers)
+paper-docs/scripts/build.sh --review   # same, with line numbers for referees
 paper-docs/scripts/build.sh figures    # figures only
 paper-docs/scripts/build.sh lint       # numbers, terminology, citations
 ```
+
+The default build is the preprint. `--review` turns on `lineno` margin numbers so referees can cite
+a page and line; the script writes `source/buildmode.tex` on every run, so a stale flag can never
+leak line numbers into a preprint or drop them from a reviewer copy. The committed snapshot is a
+preprint build.
 
 First run creates `paper-docs/.venv-paper` and installs `requirements.txt`. The repository's root
 `.venv` is pinned to reproduce the plaintext baseline and must not gain dependencies.

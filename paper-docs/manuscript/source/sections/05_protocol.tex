@@ -11,7 +11,7 @@
 \begin{table}[t]\centering\small
 \caption{Notation. All values are those of the evaluated configuration.}
 \label{tab:notation}
-\begin{tabularx}{\textwidth}{l l Y}
+\begin{tabularx}{\linewidth}{l l Y}
 \toprule
 Symbol & Value & Meaning \\
 \midrule
@@ -66,14 +66,14 @@ approach stops. It does identify the measured pressure that the client-assisted
 design removes: exact client evaluation shortens each encrypted segment and replaces encrypted
 bootstrapping with fresh encryption at already declared boundaries.
 
-\begin{figure}[tb]\centering
-  \includegraphics[width=\textwidth]{fig_architecture.pdf}
+\begin{figure*}[!tb]\centering
+  \includegraphics[width=\linewidth]{fig_architecture.pdf}
   \caption{Evaluation order for one transformer block and party allocation. The provider computes
   both LayerNorm statistics under encryption; the data owner evaluates the inverse square root,
   causal softmax, and GELU at declared boundaries. A validation readout decrypts the output, while
   composition decrypts and freshly re-encrypts the hidden state before the next block.}
   \label{fig:architecture}
-\end{figure}
+\end{figure*}
 
 \subsection{Protocol algorithms}
 \label{sec:algorithms}
@@ -82,7 +82,7 @@ bootstrapping with fresh encryption at already declared boundaries.
 % context/08_implementation_ground_truth.md §4, which carries the file:line citations.
 % Do not paraphrase these; a reviewer reading the released code must find them in agreement.
 
-\begin{algorithm}[t]
+\begin{algorithm*}[!tb]
 \caption{Evaluating one transformer block. $G=13$ token groups; $\odot$ is homomorphic
 multiplication; every operation outside a \textsc{Client} call runs on ciphertexts.}
 \label{alg:block}
@@ -135,7 +135,7 @@ multiplication; every operation outside a \textsc{Client} call runs on ciphertex
 \EndFor
 \State \Return $c'_0,\dots,c'_{G-1}$
 \end{algorithmic}
-\end{algorithm}
+\end{algorithm*}
 
 \begin{algorithm}[t]
 \caption{The client boundary. The data owner is the only party holding $\mathsf{sk}$, and every
@@ -189,8 +189,6 @@ $N_1 = N_2 = 32$ and $N_1N_2 = W = 1024$.}
 \end{algorithmic}
 \end{algorithm}
 
-\clearpage
-
 The algorithms also expose the protocol transcript. Its order and size are determined by the
 circuit and sequence length, never by decrypted content. The evaluated block makes $857$ physical
 client boundary crossings, including $91$ score-tile decryptions and $727$ weight-tile encryptions
@@ -220,14 +218,14 @@ features; baby rotations are shared where the schedule permits. Packing eight to
 reduces the number of dense encrypted products from $1{,}236$ serial-equivalent products to $156$,
 a structural reduction of $7.92\times$. No latency factor follows from that operation count alone.
 
-\begin{figure}[tb]\centering
-  \includegraphics[width=\textwidth]{fig_packing.pdf}
+\begin{figure*}[!tb]\centering
+  \includegraphics[width=\linewidth]{fig_packing.pdf}
   \caption{Slot layout for the genomic-signal task. Each ciphertext carries four copies of 1{,}024
   features across eight token lanes: 768 features are active and the remainder supplies
   power-of-two padding and attention staging. The 103-token prompt occupies 13 groups and generates
   91 lower-triangular causal score tiles.}
   \label{fig:packing}
-\end{figure}
+\end{figure*}
 
 
 \subsection{Causal attention}
@@ -264,5 +262,3 @@ peaks in the first block and does not grow in the second.
 
 The complete evaluation uses the same key lineage with $11$ full-hidden-state refreshes and one
 last-token refresh into the task head; Section~\ref{sec:results} reports the measured outcome.
-
-\clearpage

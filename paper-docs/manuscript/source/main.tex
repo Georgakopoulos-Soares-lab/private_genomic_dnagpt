@@ -9,7 +9,7 @@
 % Read paper-docs/AGENTS.md and paper-docs/context/00_terminology.md before editing.
 % ---------------------------------------------------------------------------
 
-\documentclass[10pt]{article}
+\documentclass[10pt,twocolumn]{article}
 
 \input{preamble}
 
@@ -17,8 +17,8 @@
 
 \begin{document}
 
-% Comment out for the public preprint build.
-\linenumbers
+% Reviewer build only; see the lineno note in preamble.tex.
+\ifreviewbuild\linenumbers\fi
 
 \input{sections/00_frontmatter}
 
@@ -35,6 +35,9 @@
 \input{sections/08_limitations}
 \input{sections/10_conclusion}
 
-\bibliography{refs}
+% Bibliography set small and tightly spaced: at two columns the default spacing
+% spills a couple of entries onto an otherwise blank final page.
+{\small\setlength{\bibsep}{2pt plus 1pt}
+\bibliography{refs}}
 
 \end{document}

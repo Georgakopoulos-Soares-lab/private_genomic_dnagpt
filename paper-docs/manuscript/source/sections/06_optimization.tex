@@ -95,13 +95,13 @@ $25{,}530$~MiB. Attention begins after a flush and uses $12{,}434$~MiB. The MLP 
 matrices and reaches the block peak of $48{,}610$~MiB. The largest live stage, rather than every
 encoded weight in the block, determines peak host memory.
 
-\begin{figure}[tb]\centering
-  \includegraphics[width=0.86\textwidth]{fig_memory.pdf}
+\begin{figure*}[!tb]\centering
+  \includegraphics[width=0.86\linewidth]{fig_memory.pdf}
   \caption{The bars are stage RSS measurements from one 103-token block with bounded caching.
   Flushing limits the live cache to the largest stage. The red line records a separate
   unbounded-cache attempt that the operating system killed at 61{,}863~MiB.}
   \label{fig:memory}
-\end{figure}
+\end{figure*}
 
 \subsection{Placement and parallelism}
 Plaintext preparation also depends on where host work runs. The retained implementation binds
@@ -119,13 +119,13 @@ Affinity and batching address different parts of the same host path: affinity co
 while batching exposes independent diagonals to the available cores. Together they make plaintext
 preparation a core-local parallel batch under the same cryptographic parameters.
 
-\begin{table}[t]\centering\small
+\begin{table*}[!tb]\centering\small
 \caption{Host-side changes at fixed circuit. Every row leaves the operation schedule, packing,
 multiplicative depth, and frozen plaintext reference unchanged. Effects are verified changes in
 executed work or in memory; the table carries no elapsed-time column, because no dedicated-node
 measurement of the pre-optimization configuration exists.}
 \label{tab:optimization}
-\begin{tabularx}{\textwidth}{Y l l}
+\begin{tabularx}{\linewidth}{Y l l}
 \toprule
 Change & Verified effect & Status \\
 \midrule
@@ -138,7 +138,7 @@ Encode at use level, flush between stages & peak $48{,}610$~MiB RSS & enabling \
 \textbf{Net} & \textbf{checked operation schedule unchanged} & \\
 \bottomrule
 \end{tabularx}
-\end{table}
+\end{table*}
 
 % No waterfall figure: it needs two supported timing endpoints, and the pre-optimization
 % baseline has no committed dedicated-node measurement. The generator is retained in

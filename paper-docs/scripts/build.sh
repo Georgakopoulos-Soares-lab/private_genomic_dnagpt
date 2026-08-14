@@ -1,17 +1,30 @@
 #!/usr/bin/env bash
 # Build the manuscript end to end: figures, PDF, lint.
 #
-#   paper-docs/scripts/build.sh            # everything
+#   paper-docs/scripts/build.sh            # everything, preprint (no line numbers)
+#   paper-docs/scripts/build.sh --review   # everything, with reviewer line numbers
 #   paper-docs/scripts/build.sh figures    # figures only
 #   paper-docs/scripts/build.sh pdf        # PDF only
 #   paper-docs/scripts/build.sh lint       # lint only
+#
+# The committed snapshot at manuscript/dnagpt-fhe-paper.pdf is a preprint build.
 set -euo pipefail
 
 PAPER="$(cd "$(dirname "${BASH_SOURCE[0]}")/.." && pwd)"
 VENV="${PAPER}/.venv-paper"
 PY="${VENV}/bin/python"
 SRC="${PAPER}/manuscript/source"
-TARGET="${1:-all}"
+
+REVIEW=0
+ARGS=()
+for arg in "$@"; do
+  case "${arg}" in
+    --review)   REVIEW=1 ;;
+    --preprint) REVIEW=0 ;;
+    *)          ARGS+=("${arg}") ;;
+  esac
+done
+TARGET="${ARGS[0]:-all}"
 
 ensure_venv() {
   if [[ ! -x "${PY}" ]]; then
@@ -30,6 +43,15 @@ build_figures() {
 
 build_pdf() {
   echo "==> pdf"
+  # Regenerate the build-mode flag every time so a stale file can never leak
+  # reviewer line numbers into a preprint build, or vice versa.
+  if [[ "${REVIEW}" -eq 1 ]]; then
+    echo '\reviewbuildtrue' > "${SRC}/buildmode.tex"
+    echo "    mode: reviewer (line numbers on)"
+  else
+    echo '\reviewbuildfalse' > "${SRC}/buildmode.tex"
+    echo "    mode: preprint (no line numbers)"
+  fi
   if command -v latexmk >/dev/null 2>&1; then
     ( cd "${SRC}" && latexmk -pdf main.tex )
     echo "    ${SRC}/main.pdf"

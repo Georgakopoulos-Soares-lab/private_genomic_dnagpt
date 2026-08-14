@@ -9,6 +9,6 @@ published artifacts rather than sources for this repository.
 | `bioETH-PRS.pdf` | `../../../../prs`, branch `rtr-revision`, `RTR_and_paper/` |
 | `bioETH-Beacon.pdf` | `../../../../beaconing`, `Beaconing-prism/` |
 
-This manuscript mirrors the PRS house style: single-column `article`, natbib with `abbrvnat`,
-graphical abstract, Key Points, and closing availability statements. See
-`paper-docs/manuscript/source/preamble.tex`.
+This manuscript mirrors the PRS house style: two-column `article`, natbib with `abbrvnat`,
+graphical abstract, Key Points, and closing availability statements. Figures and wide tables
+span both columns as starred floats. See `paper-docs/manuscript/source/preamble.tex`.

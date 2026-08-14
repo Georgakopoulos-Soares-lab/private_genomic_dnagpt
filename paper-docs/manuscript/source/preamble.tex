@@ -54,9 +54,15 @@
 \renewcommand{\Call}[2]{\textproc{#1}\@ifmtarg{#2}{}{(#2)}}
 \makeatother
 
-% Line numbers for the reviewer-facing build. The submission builder strips both
-% this and \linenumbers for the public preprint.
+% Line numbers belong to the reviewer-facing build only, so referees can cite a
+% page and line. The default build is the clean preprint: scripts/build.sh
+% regenerates buildmode.tex on every run, writing \reviewbuildtrue only when
+% called with --review. The \reviewbuildfalse below is the fallback for a direct
+% latexmk or tectonic invocation that bypasses the script.
 \usepackage[switch]{lineno}
+\newif\ifreviewbuild
+\reviewbuildfalse
+\InputIfFileExists{buildmode.tex}{}{}
 
 \bibliographystyle{abbrvnat}
 
@@ -77,6 +83,34 @@
 % --- Tables -----------------------------------------------------------------
 \newcolumntype{Y}{>{\raggedright\arraybackslash}X}
 \newcolumntype{R}{>{\raggedleft\arraybackslash}X}
+
+% --- Float placement --------------------------------------------------------
+% Every figure is authored at the full 18cm text width and every wide table spans
+% both columns, so this document leans heavily on double-column floats. The LaTeX
+% defaults are tuned for occasional single-column floats and will strand one
+% full-width float on an otherwise blank page rather than let it share with text.
+% These limits let a page carry several floats plus body text.
+\setcounter{topnumber}{3}
+\setcounter{bottomnumber}{2}
+\setcounter{totalnumber}{4}
+\setcounter{dbltopnumber}{3}
+\renewcommand{\topfraction}{0.92}
+\renewcommand{\bottomfraction}{0.6}
+\renewcommand{\textfraction}{0.07}
+\renewcommand{\floatpagefraction}{0.8}
+\renewcommand{\dbltopfraction}{0.92}
+% Only surrender a whole page to double-column floats when they genuinely fill
+% it; otherwise LaTeX strands one figure on a mostly blank page.
+\renewcommand{\dblfloatpagefraction}{0.9}
+\setlength{\dbltextfloatsep}{12pt plus 2pt minus 2pt}
+% Standard LaTeX defers a double-column float to the next page and cannot place
+% one at the bottom, which is what produces the stranded pages. dblfloatfix
+% restores bottom placement and keeps floats in declaration order.
+\usepackage{dblfloatfix}
+% This document declares 19 floats, many of them double-column. Once LaTeX runs
+% out of float storage it force-flushes the queue to float pages and ignores the
+% fractions above, which is what strands a half-full figure on its own page.
+\extrafloats{64}
 
 % --- Page furniture ---------------------------------------------------------
 \pagestyle{fancy}\fancyhf{}\fancyfoot[R]{\small\thepage}

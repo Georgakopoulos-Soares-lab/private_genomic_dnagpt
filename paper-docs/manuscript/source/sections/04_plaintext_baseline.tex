@@ -33,12 +33,12 @@ selected full prompt, the released float32, manual float64, and encrypted lineag
 produce label N; the encrypted margin differs from the released float32 margin by
 $1.61\times10^{-6}$ in relative terms.
 
-\begin{table}[t]\centering\small
+\begin{table*}[!tb]\centering\small
 \caption{Released DNAGPT reproduced locally on three genomic task families, against published
 references. Signal recognition and abundance regression use the released fine-tuned heads;
 the understanding-benchmark rows use a locally fine-tuned head, as no head was released.}
 \label{tab:baseline}
-\begin{tabularx}{\textwidth}{Y l l l l}
+\begin{tabularx}{\linewidth}{Y l l l l}
 \toprule
 Task & Metric & This work & Reference & Source \\
 \midrule
@@ -60,7 +60,7 @@ scope; see Section~\ref{sec:limitations}.\\
 $^{\S}$The released regression head evaluated here is fine-tuned from the human-pretrained
 $0.1$B variant, while the reference is reported for the mammal-pretrained variant, so the
 backbones differ.}
-\end{table}
+\end{table*}
 
 Table~\ref{tab:baseline} shows that the target carries useful signal across classification and
 regression tasks. On the full polyadenylation-signal source corpus of $22{,}604$ examples, the

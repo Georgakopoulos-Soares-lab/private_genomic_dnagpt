@@ -61,7 +61,7 @@ Approximation error accumulates, but it does not change the decision for the eva
 \begin{table}[t]\centering\small
 \caption{Checked operation schedule for the evaluated transformer block.}
 \label{tab:cost}
-\begin{tabularx}{\textwidth}{Y r l}
+\begin{tabularx}{\linewidth}{Y r l}
 \toprule
 Operation & Count & Executor \\
 \midrule
@@ -93,11 +93,11 @@ serial-equivalent dense-product count from $1{,}236$ to $156$, a $7.92\times$ re
 operations. Rotations, masking, client work, and host preparation remain in the packed circuit, so
 the factor describes operation count rather than latency.
 
-\begin{table}[t]\centering\small
+\begin{table*}[!tb]\centering\small
 \caption{Derived ciphertext-object accounting for a complete inference. Counts follow from the
 checked protocol schedule; they are not observed network messages.}
 \label{tab:communication}
-\begin{tabularx}{\textwidth}{Y r l}
+\begin{tabularx}{\linewidth}{Y r l}
 \toprule
 Direction or quantity & Count & Scope \\
 \midrule
@@ -112,7 +112,7 @@ Minimum phases including endpoints & 65 & algorithmic lower bound \\
 Serialized byte volume & unknown & no wire format was measured \\
 \bottomrule
 \end{tabularx}
-\end{table}
+\end{table*}
 
 One block presents $130$ ciphertext objects to the client and receives $766$ in return. Across the
 complete model, ideal batching of independent calls within a protocol stage yields a lower bound of
@@ -139,15 +139,15 @@ Client re-encryption shortens the encrypted segments and resets their depth budg
 accelerator-memory barrier. Stage-bounded caching prevents the resulting host-side plaintext
 templates from becoming an unbounded second barrier.
 
-\begin{figure}[tb]\centering
-  \includegraphics[width=\textwidth]{fig_timeline.pdf}
+\begin{figure*}[!tb]\centering
+  \includegraphics[width=\linewidth]{fig_timeline.pdf}
   \caption{Resource trace of the complete encrypted inference. Sampled GPU utilization reaches a
   maximum of $51\%$, showing underutilization without assigning its cause. Host memory repeats the
   stage pattern of Section~\ref{sec:optimization}; device-wide GPU memory used reaches its peak
   during the first block and does not grow with block index. The plotted curve is thinned from the
   full 653-sample trace; the twelve cycles are the twelve blocks.}
   \label{fig:timeline}
-\end{figure}
+\end{figure*}
 
 The complete model confirms both bounds at full depth. Device-wide GPU memory used rises during
 context and key loading, reaches $9839$~MiB after roughly $400$~s, and then holds that value exactly
@@ -159,12 +159,12 @@ twelve blocks shows this follows from the depth bound rather than from the parti
 
 \subsection{Composition and evaluation boundary}
 
-\begin{table}[t]\centering\small
+\begin{table*}[!tb]\centering\small
 \caption{Encrypted evaluation completed at each reported scope. Hidden-state error is a
 relative infinity norm over the activation; margin error is the scalar the classifier acts on.
 The two are different quantities and are kept in separate columns.}
 \label{tab:scope}
-\begin{tabularx}{\textwidth}{Y l l l}
+\begin{tabularx}{\linewidth}{Y l l l}
 \toprule
 Scope & Status & Hidden-state error & Margin error \\
 \midrule
@@ -175,7 +175,7 @@ Twelve blocks and task head, 103 tokens & measured & $2.07\times10^{-8}$ & $8.56
 Encrypted token-index lookup & out of scope & --- & --- \\
 \bottomrule
 \end{tabularx}
-\end{table}
+\end{table*}
 
 Two consecutive released blocks compose at reduced sequence length through a full-hidden-state
 client refresh, reaching $8.48\times10^{-11}$ relative error after the second block. Device-wide
@@ -193,15 +193,15 @@ expressible at all under these parameters.
 
 \subsection{Cost of a complete encrypted inference}
 
-\begin{figure}[tb]\centering
-  \includegraphics[width=\textwidth]{fig_cost_split.pdf}
+\begin{figure*}[!tb]\centering
+  \includegraphics[width=\linewidth]{fig_cost_split.pdf}
   \caption{Encrypted-evaluation time for one complete inference. The provider-side bucket is the
   residual after client time and includes GPU-backend work plus host preparation,
   synchronization, and evaluator overhead. The data-owner bucket includes declared nonlinear
   boundaries and full-hidden-state refreshes on CPU with no GPU. The two shares sum exactly to
   encrypted evaluation; setup and finalization remain in Table~\ref{tab:fullcost}.}
   \label{fig:costsplit}
-\end{figure}
+\end{figure*}
 
 \begin{table}[t]\centering\small
 \caption{One complete encrypted inference: twelve blocks and the released task head at the
@@ -210,7 +210,7 @@ whole-node allocation with no contention detected in the recorded telemetry; the
 sample's values, not averages over repetitions. Shares are rounded independently and need not sum
 to $100\%$.}
 \label{tab:fullcost}
-\begin{tabularx}{\textwidth}{Y r r}
+\begin{tabularx}{\linewidth}{Y r r}
 \toprule
 Phase & Seconds & Share of wall \\
 \midrule
@@ -252,13 +252,13 @@ execution cannot report.
 
 \subsection{Sequence-length structure}
 
-\begin{figure}[tb]\centering
-  \includegraphics[width=\textwidth]{fig_scaling.pdf}
+\begin{figure*}[!tb]\centering
+  \includegraphics[width=\linewidth]{fig_scaling.pdf}
   \caption{Causal attention score-tile schedules across the encrypted-scope tasks. Counts follow
   from ciphertext groups rather than from a timing model; only genomic-signal recognition has a
   measured complete inference.}
   \label{fig:scaling}
-\end{figure}
+\end{figure*}
 
 Sequence length follows from each task format. Genomic-signal recognition uses $600$ base pairs,
 which become $100$ sequence tokens under $6$-mer tokenization; three task-format tokens produce the
