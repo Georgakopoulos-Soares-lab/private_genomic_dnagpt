@@ -13,31 +13,38 @@ contributor and, through familial relationships, reveal information about people
 a sample; re-identification has been demonstrated even when conventional identifiers were
 removed~\cite{gymrek2013,erlich2018}. A disclosed genome also cannot be replaced in the manner of a
 password or access token. European data-protection law accordingly treats genetic data as a special
-category~\cite{gdpr}. The same sequence is the input on which genomic foundation models derive
-their value: DNAGPT serves classification, regression, and generation tasks through a common
-transformer backbone~\cite{dnagpt2023}. When that model is served rather than distributed, a data
-owner without accelerator hardware must otherwise disclose the sequence to the provider or forgo
-the inference. Nor is handing over an embedding a way out: per-token embeddings from DNA foundation
-models have been shown to permit near-perfect reconstruction of the underlying
-sequence~\cite{dnaembeddinginversion2026}. Homomorphic encryption offers a route for the provider to
-compute without receiving the genomic values in plaintext.
+category~\cite{gdpr}. The same sequence is the input from which genomic foundation models derive
+their value. DNAGPT is one released model of this class, serving classification, regression, and
+generation tasks through a common transformer backbone~\cite{dnagpt2023}; the downstream tasks
+evaluated here are defined over human sequence. When a genomic model is available only as a service,
+conventional inference requires the data owner to send the sequence, or a representation of it, to
+the provider. Sending plaintext embeddings does not necessarily solve the privacy problem: recent
+work has shown that per-token representations from DNA foundation models can permit near-perfect
+reconstruction of the underlying sequence~\cite{dnaembeddinginversion2026}. Homomorphic encryption
+offers a route for the provider to compute without receiving the genomic values in plaintext.
 
-DNAGPT's public release makes the experiment auditable and also makes this particular artifact
-available for local execution. We use it as a reproducible surrogate for a genomic model offered
-only as a service by policy or contract. Under that premise, client-assisted evaluation gives a
-CPU-equipped data owner access to the served model without disclosing the genome.
+DNAGPT is public and can be run locally; we use it because its release makes the experiment
+reproducible and auditable. That is a requirement of the study rather than a convenience. An
+encrypted execution is only meaningful against the exact plaintext prediction it must reproduce, so
+the released weights are what make an independent numerical reference, and therefore an independent
+check of the encrypted result, possible at all. A model reachable only through an interface would
+permit no such reference. We therefore treat DNAGPT as a reproducible surrogate for a genomic model
+that a provider offers only as a service, whether for commercial, licensing, or governance reasons.
+Under that premise, the data owner's alternatives are to disclose the genome, to decline the
+inference, or to use a protocol in which the provider computes without receiving the sequence.
 
-Against this deployment premise, we ask: can inference with a released genomic foundation model be
-executed under homomorphic encryption, and where would correctness, performance, or memory prevent
-a complete encrypted deployment? The question contains two verdicts that should not be collapsed.
-Feasibility asks whether the released computation can be executed faithfully within the available
-cryptographic and memory budget. Practicality asks whether its resource cost supports a target use.
-A correct but slow encrypted path is therefore evidence: it resolves the first question while
-locating the work needed to change the second.
+We therefore ask whether a complete released genomic transformer can be executed under homomorphic
+encryption, and what limits its numerical fidelity, memory use, and runtime. We separate two
+questions. Feasibility asks whether the complete computation can execute within the cryptographic
+and memory budget while meeting the predefined numerical criterion for the evaluated case.
+Practicality asks whether the resulting resource cost is suitable for the intended use. A
+numerically agreeing but slow execution can therefore establish complete-model feasibility for the
+tested case without establishing a practical service.
 
-The technical difficulty is concentrated where a transformer departs from affine arithmetic. CKKS
-supports approximate packed arithmetic and maps naturally to dense projections, rotations, and
-accumulations~\cite{ckks2017}; LayerNorm, softmax, and GELU are not native CKKS operations. A
+The main cryptographic difficulty arises from transformer operations that are not directly
+supported by low-depth CKKS arithmetic. CKKS efficiently supports the packed additions,
+multiplications, and rotations needed for dense linear transformations~\cite{ckks2017}; LayerNorm,
+softmax, and GELU are not native CKKS operations. A
 non-interactive evaluator must approximate them with polynomial circuits, lengthening the
 multiplicative path and increasing the context, bootstrapping, and evaluation-key material that
 must be resident. Moving the exact functions to the key holder shortens those paths and resets the
@@ -67,36 +74,37 @@ non-adaptive boundaries evaluate the released nonlinearities exactly. Instrument
 record where each design stops in correctness and memory, while runtime assertions preserve the
 complete cryptographic operation schedule throughout the systems campaign.
 
-The results separate three candidate barriers and resolve two of them. Correctness holds: the
-client-assisted design evaluates all twelve released blocks and the task head at the $103$-token
+The results separate three candidate barriers and resolve two of them. Numerical agreement holds:
+the client-assisted design evaluates all twelve released blocks and the task head at the $103$-token
 prompt, and for the one input evaluated it reproduces the frozen plaintext label with
 $8.56\times10^{-9}$ relative margin error against a $4\times10^{-2}$ tolerance fixed before
-evaluation. Accelerator memory holds as well, and for a structural reason: because multiplicative
-depth is bounded by the longest segment between client boundaries instead of by network depth, it
-stays at $13$ for the complete model, device-wide GPU memory used reaches $9839$~MiB without growth
-across the twelve blocks, and no homomorphic bootstrap is required at any point. Bounded caching
-separately prevents encoded plaintexts from accumulating across host-side stages. The evaluated
-non-interactive design, by contrast, completes one released-weight block but exceeds the tested
-$80$~GB envelope while loading its composition context and evaluation keys, placing that barrier in
-the nonlinear schedule rather than in the model's dense maps. Cost is the barrier that remains: one
-encrypted classification takes $1.86$~hours on an A100 GPU node, which forecloses interactive use
-in the evaluated form, and sampled GPU utilization peaks at $51\%$, locating headroom without
-attributing it. These memory and timing figures are specific to the evaluated backend, packing, and
-parameters.
+evaluation. Accelerator memory holds as well, and for a structural reason. Each client boundary
+returns the computation to a freshly encrypted activation, so the depth the circuit must support is
+set by the longest stretch between two boundaries and not by the depth of the network. That depth
+stays at $13$ for the complete model, no homomorphic bootstrap is required at any point, and
+device-wide GPU memory used reaches $9839$~MiB without growing across the twelve blocks. Bounded
+caching separately prevents encoded plaintexts from accumulating across host-side stages. The
+evaluated non-interactive design, by contrast, completes one released-weight block but exceeds the
+tested $80$~GB envelope while loading its composition context and evaluation keys, placing that
+barrier in the nonlinear schedule rather than in the model's dense maps. Cost is the barrier that
+remains: one encrypted classification takes $1.86$~hours on an A100 GPU node, which forecloses
+interactive use in the evaluated form, and sampled GPU utilization peaks at $51\%$, locating
+headroom without attributing it. These memory and timing figures are specific to the evaluated
+backend, packing, and parameters.
 
 The paper makes the following contributions:
 
 \begin{itemize}
-  \item \textbf{Complete-model feasibility.} All twelve released DNAGPT blocks and the task head
-        execute at the $103$-token task prompt from encrypted embedded vectors, with unmodified
+  \item \textbf{Complete-model graph feasibility.} All twelve released DNAGPT blocks and the task
+        head execute at the $103$-token task prompt from encrypted embedded vectors, with unmodified
         released weights and nonlinear formulas and without homomorphic bootstrap; the one
         evaluated prompt reproduces the reference label. To our knowledge this is the first
         complete forward pass of a released, pretrained genomic foundation model evaluated under
         CKKS; prior homomorphic transformer evaluations over biological sequence data have targeted
         small, purpose-trained classifiers~\cite{idash24descriptor,encrypteddashformer}.
-  \item \textbf{Model-faithful, reproducible evaluation.} The protocol, packing, checked operation
-        schedule, predeclared tolerance, and three-link float32--float64--encrypted validation
-        chain make the complete execution independently inspectable.
+  \item \textbf{Independently checked numerical evaluation.} The protocol, packing, checked
+        operation schedule, predeclared tolerance, and three-link float32--float64--encrypted
+        validation chain make the complete execution independently inspectable.
   \item \textbf{Measured systems anatomy and scoped negative results.} We report complete-model
         cost, interaction, depth, and memory; the stage-bounded cache that makes host-side reuse
         executable; and the memory boundary reached by the evaluated non-interactive configuration.

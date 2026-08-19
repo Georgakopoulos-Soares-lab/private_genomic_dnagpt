@@ -114,6 +114,10 @@ paper-docs/scripts/__pycache__/
 # Prior published papers: reference only, large, not ours to redistribute here
 paper-docs/context/prior_papers/*.pdf
 
+# Google Docs review exchange copy: generated from source, tables/algorithms
+# stay in LaTeX (see paper-docs/manuscript/mkplaceholders.py). Not a source file.
+paper-docs/manuscript/exchange/
+
 # kimon run/telemetry logs are tracked evidence, not scratch output
 !kimon/logs/
 !kimon/logs/**

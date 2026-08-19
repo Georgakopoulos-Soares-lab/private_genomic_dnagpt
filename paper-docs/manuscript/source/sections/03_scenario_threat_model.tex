@@ -57,15 +57,15 @@ service is the ordinary baseline that the encrypted protocol is intended to chan
 Client must hold the full model & yes & no & no \\
 Server receives genomic input & no & in plaintext & encrypted vectors \\
 Client requires a GPU & deployment-dependent & no & no \\
-Server evaluates model linear algebra & no & in plaintext & on ciphertexts \\
+Server evaluates model arithmetic & no & in plaintext & on ciphertexts \\
 Client evaluates model nonlinearities & locally & no & at boundaries \\
 \bottomrule
 \end{tabularx}
 \end{table*}
 
-The protocol assigns encrypted dense linear algebra to the party with accelerator hardware while
-the key holder evaluates exact nonlinearities on CPU. This allocation protects the genomic input
-without requiring the data owner to operate a GPU.
+The protocol assigns the encrypted model arithmetic between client boundaries to the party with
+accelerator hardware, while the key holder evaluates the exact nonlinearities on CPU. This
+allocation protects the genomic input without requiring the data owner to operate a GPU.
 
 This allocation becomes more server-heavy as model width grows. At fixed sequence structure, the
 client's boundary work scales with the number of activation values, whereas the server's dense

@@ -32,32 +32,40 @@ Model: A Client-Assisted CKKS Evaluation of DNAGPT}\vspace{-0.2cm}}
 % --- Abstract ---------------------------------------------------------------
 \section*{Abstract}
 
-\textbf{Motivation.} Genomic sequence is identifying and cannot be replaced after disclosure. We
-ask whether a provider can execute a released genomic transformer without receiving the genomic
-input in plaintext, and where numerical agreement, memory, or cost limits that deployment.
+\textbf{Motivation.} Genomic sequence identifies its contributor and cannot be replaced once it
+has been disclosed. When a genomic model is available only as a service, using it ordinarily means
+handing that sequence to the provider. We ask whether a provider can instead run a released genomic
+transformer for a data owner who never reveals the input in plaintext, and where numerical
+agreement, memory, or cost would stop such a deployment.
 
-\textbf{Results.} We validate DNAGPT on three genomic task families and construct an independently
-checked numerical reference. In the client-assisted design, the provider evaluates every linear
-operation on ciphertexts under one key lineage; the key holder evaluates LayerNorm inverse square
-roots, causal softmax, and GELU exactly, at boundaries fixed before execution. All $12$ released
-blocks and the task head execute from encrypted embedded vectors with declared client refreshes and
-no homomorphic bootstrap, leaving the released weights and nonlinear formulas unmodified. For the
-one prompt evaluated, the decrypted label matches the reference and its margin has
+\textbf{Results.} We first reproduce DNAGPT on three genomic task families and freeze its
+per-example plaintext predictions, which the encrypted run must then reproduce. The work is then
+split under a single key: the provider evaluates the model's encrypted arithmetic on ciphertexts,
+while the data owner, who holds the secret key in any case, decrypts at points fixed before
+execution to evaluate exactly the three functions CKKS cannot compute directly, the LayerNorm
+inverse square root, causal softmax, and GELU, and returns freshly encrypted values. All $12$
+released blocks and the task head execute this way from encrypted embedded vectors, with the
+released weights and nonlinear formulas unmodified and with no homomorphic bootstrap at any point.
+For the one prompt evaluated, the decrypted label matches the reference, and its margin has
 $8.56\times10^{-9}$ relative error, $6.67$ orders of magnitude below the $4\times10^{-2}$ tolerance
 fixed in advance; no polynomial approximation of a nonlinearity contributes to that residual.
-Client refresh holds multiplicative depth at $13$, and device-wide GPU memory used reaches
-$9839$~MiB without growing by block index. One in-process execution takes $1.86$~hours on an A100
-GPU node. A pure non-interactive configuration completes one released-weight block, then exceeds
-the tested $80$~GB accelerator-memory envelope on its composition context and evaluation keys,
-placing that barrier in the nonlinear schedule rather than in the model's dense maps.
+Because each return to the data owner restarts the computation from a fresh ciphertext, the
+multiplicative depth the circuit must provide is set by the longest stretch between two such points
+rather than by the depth of the whole network: it stays at $13$ for the complete model, and
+device-wide GPU memory used reaches $9839$~MiB without growing from one block to the next. One
+in-process execution takes $1.86$~hours on an A100 GPU node. A pure non-interactive configuration,
+which avoids the interaction altogether, completes one released-weight block but then exceeds the
+tested $80$~GB accelerator-memory envelope while loading the cryptographic material needed to
+compose the next, placing that barrier in the polynomial treatment of the nonlinearities rather than
+in the model's dense maps.
 
 \textbf{Conclusions.} The executed case establishes complete-model graph feasibility and numerical
 agreement for one input, and locates the limiting barrier in throughput rather than in correctness
-or accelerator memory. Client refresh bounds multiplicative depth by the longest encrypted segment
-rather than by network depth, which is what makes the twelve-block lineage expressible without
-bootstrapping; stage-bounded plaintext caching separately prevents host-side accumulation. The
-current single-process implementation is not practical for interactive use and has not been
-evaluated as a networked service, so feasibility and practicality are reported as separate
+or accelerator memory. Returning to the key holder is what makes the twelve-block encrypted
+computation expressible without bootstrapping, because it caps the depth any single encrypted
+stretch has to carry; bounding the cached plaintexts per stage separately keeps host memory from
+accumulating. The current single-process implementation is far too slow for interactive use and has
+not been evaluated as a networked service, so feasibility and practicality are reported as separate
 verdicts.
 
 \textbf{Availability.} Code, evaluation harnesses, and the evidence record are maintained at
@@ -67,30 +75,36 @@ verdicts.
 \section*{Key Points}
 
 \begin{itemize}
-  \item All twelve released DNAGPT blocks and the task head execute from encrypted embedded vectors
-        at the $103$-token task prompt, under one key lineage and without any homomorphic
-        bootstrap. The released weights and nonlinear formulas are preserved unmodified, and the one
-        evaluated prompt reproduces the reference label with $8.56\times10^{-9}$ relative margin
-        error.
-  \item The validation chain separately records released float32 behavior, checks an independent
-        NumPy float64 reference against a float64-cast PyTorch shadow, and compares encrypted
-        execution with that reference.
-  \item Because client refresh bounds depth by the longest encrypted segment rather than by network
-        depth, multiplicative depth stays at $13$ and device-wide GPU memory used stays at
-        $9839$~MiB across the complete model, with no growth by block index. Stage-bounded caching
+  \item \textbf{The complete released model runs on encrypted input.} All twelve DNAGPT blocks and
+        the task head execute from encrypted embedded vectors at the $103$-token task prompt, under
+        one key lineage and without any homomorphic bootstrap. The released weights and nonlinear
+        formulas are preserved unmodified, and the one evaluated prompt reproduces the reference
+        label with $8.56\times10^{-9}$ relative margin error, $6.67$ orders of magnitude below the
+        $4\times10^{-2}$ tolerance.
+  \item \textbf{The encrypted result is checked against a reference that is itself checked.} Two
+        independently written plaintext implementations of the released model must agree in double
+        precision before either is used, and only then is the encrypted output compared with them.
+        Agreement therefore reflects the model's own computation rather than one implementation
+        reproducing its own error.
+  \item \textbf{Returning to the key holder keeps the encrypted circuit shallow.} Multiplicative
+        depth is set by the longest stretch between two client boundaries rather than by the depth
+        of the network, so it stays at $13$ for the complete model and device-wide GPU memory used
+        stays at $9839$~MiB, with no growth from one block to the next. Stage-bounded caching
         separately limits host memory while preserving the asserted operation schedule.
-  \item One in-process execution takes $1.86$~hours and requires an online key holder, so the
-        evaluated form is not interactive. Feasibility and practicality are therefore reported as
-        separate verdicts: complete-model feasibility is established for the evaluated prompt, while
-        encrypted task accuracy, service rate, and networked deployment remain open.
+  \item \textbf{Feasible, not yet practical.} One in-process execution takes $1.86$~hours and needs
+        the key holder online throughout, which is far too slow for interactive use, although the
+        protocol is interactive by design. Complete-model feasibility is established for the
+        evaluated prompt, while encrypted task accuracy, service rate, and networked deployment
+        remain open.
 \end{itemize}
 
 % --- Graphical abstract -----------------------------------------------------
 \begin{figure*}[!tb]\centering
   \includegraphics[width=\linewidth]{fig_graphical_abstract.pdf}
   \caption{The data owner tokenizes and embeds a genomic fragment locally, encrypts the embedded
-  vectors, and retains the secret key. The provider evaluates model linear algebra on ciphertexts;
-  the data owner evaluates declared nonlinear functions on CPU. The measured implementation
+  vectors, and retains the secret key. The provider evaluates the encrypted model arithmetic between
+  client boundaries on ciphertexts; the data owner evaluates the declared nonlinear functions on
+  CPU. The measured implementation
   emulates both roles in one process. The result panel reports one measured execution at the
   103-token genomic-signal prompt.}
   \label{fig:abstract}

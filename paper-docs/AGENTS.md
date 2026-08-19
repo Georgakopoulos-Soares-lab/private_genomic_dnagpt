@@ -100,9 +100,18 @@ paper-docs/
 ```bash
 paper-docs/scripts/build.sh          # figures, PDF, lint — creates the venv on first run
 paper-docs/scripts/build.sh lint     # just the four checks
+paper-docs/scripts/build.sh docx     # regenerate the review exchange copy
 ```
 
 The PDF step uses `latexmk` when present and falls back to `tectonic`.
+
+`docx` writes `manuscript/exchange/dnagpt-fhe-paper.docx`, the copy sent out for comment. It is a
+build artifact, gitignored, and never hand-edited: comments come back as text and are applied to the
+`.tex` sources, then the copy is regenerated. Tables and algorithms travel as placeholders
+(`manuscript/mkplaceholders.py`) so that no checked number can be edited in a word processor, and
+figures are rasterised first because an embedded PDF does not render there. Needs `pandoc` and
+`pdftoppm` (`brew install pandoc poppler`); it stages a temporary copy and never touches
+`manuscript/source/`.
 
 The paper uses its own virtual environment. The repository's pinned `.venv` reproduces Phase-A
 results and must not gain new dependencies.
