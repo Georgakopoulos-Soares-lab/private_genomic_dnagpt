@@ -16,35 +16,25 @@ serves the DNAGPT model rather than distributing it to clients. Keeping the weig
 an operational preference of this deployment, not a model-confidentiality guarantee supplied by
 the protocol.
 
-The released DNAGPT artifact makes the experiment reproducible; it does not itself require this
-service arrangement. A client may run the public release locally. We use it as an auditable
-surrogate for a genomic model whose owner limits access to a service by policy or contract, and the
-deployment conclusions apply under that premise.
+The released artifact does not itself require this arrangement; as Section~\ref{sec:intro} states,
+it serves as an auditable surrogate for a model whose owner limits access to a service.
 
 The protected asset is the genomic input. The data owner encrypts its embedded numeric vectors and
-retains the secret key; the compute provider evaluates the served model on those ciphertexts.
-The protocol is relevant only where these roles are fixed. If a client is allowed to receive and
-run the model, local plaintext inference is the simpler architecture.
-
-The evaluated input path assumes that the provider distributes the tokenizer and embedding table
-so that the data owner can construct embedded vectors locally. This is compatible with the public
-artifact used in the experiment, but it is an explicit service assumption. A provider that will
-not distribute those components would instead need a private token-index lookup, which is outside
-the evaluated protocol.
+retains the secret key; the compute provider evaluates the served model on those ciphertexts. The
+evaluated input path assumes that the provider distributes the tokenizer and embedding table so that
+the data owner can construct those vectors locally, which is compatible with the public artifact
+used here but is an explicit service assumption: a provider unwilling to distribute those components
+would need a private token-index lookup, which is outside the evaluated protocol.
 
 \subsection{Local inference as a comparison}
 Local plaintext inference is preferable whenever the client may hold and run the model. It avoids
-all cryptographic work, and client assistance offers no computational advantage over it. In the
-complete encrypted inference reported in Section~\ref{sec:results}, the data owner spends
-$956.187$~s evaluating LayerNorm inverse square roots, causal softmax, and GELU at the boundaries.
-This study records no comparable local CPU forward-pass time, so it does not quantify the overhead.
-The evaluated weights are also public, and no model-confidentiality argument requires the service
-arrangement.
-
-The protocol instead addresses a served-model deployment in which the client may not hold the
-weights. Under that premise, the choices are to disclose the genome, decline the inference, or use
-a privacy-preserving protocol. Client-assisted CKKS provides access to the served model without
-genomic disclosure; it is not intended to outperform plaintext inference.
+all cryptographic work, and client assistance offers no computational advantage over it; in the
+complete encrypted inference of Section~\ref{sec:results} the data owner alone spends $956.187$~s
+evaluating LayerNorm inverse square roots, causal softmax, and GELU at the boundaries, and this
+study records no comparable local CPU forward-pass time. Where the client may not hold the weights,
+the choices are to disclose the genome, decline the inference, or use a privacy-preserving protocol.
+Client-assisted CKKS provides access to the served model without genomic disclosure; it is not
+intended to outperform plaintext inference.
 
 \begin{table*}[!tb]\centering\small
 \caption{Resource and trust allocation under local and served-model deployment. The plaintext
@@ -64,14 +54,12 @@ Client evaluates model nonlinearities & locally & no & at boundaries \\
 \end{table*}
 
 The protocol assigns the encrypted model arithmetic between client boundaries to the party with
-accelerator hardware, while the key holder evaluates the exact nonlinearities on CPU. This
-allocation protects the genomic input without requiring the data owner to operate a GPU.
-
-This allocation becomes more server-heavy as model width grows. At fixed sequence structure, the
-client's boundary work scales with the number of activation values, whereas the server's dense
-transforms scale quadratically with hidden width. The client fraction therefore decreases as
-$O(1/D)$ with hidden width $D$ under this fixed sequence structure. This is an asymptotic property
-of the work allocation, not a measurement of a wider DNAGPT model.
+accelerator hardware, while the key holder evaluates the exact nonlinearities on CPU, which protects
+the genomic input without requiring the data owner to operate a GPU. The allocation becomes more
+server-heavy as model width grows: at fixed sequence structure the client's boundary work scales
+with the number of activation values, whereas the server's dense transforms scale quadratically with
+hidden width, so the client fraction decreases as $O(1/D)$ with hidden width $D$. That is an
+asymptotic property of the work allocation, not a measurement of a wider DNAGPT model.
 
 \subsection{Adversary model}
 We consider a semi-honest compute provider under $128$-bit classical CKKS parameters. It follows
@@ -98,9 +86,10 @@ Client-evaluated nonlinearities return through fresh encryption rather than as d
 
 \begin{invariant}[Non-adaptive boundaries]
 The circuit and sequence length determine every boundary before execution; decrypted content does
-not select the next operation. The implementation asserts the complete schedule and boundary counts
-for each accepted run and aborts on deviation. Transcript equality across multiple private inputs
-of equal length has not been measured as a separate leakage experiment.
+not select the next operation. The implementation validates the complete schedule and boundary
+counts for each accepted run and aborts on deviation. The boundary schedule is therefore fixed by
+public parameters rather than by the private input, though no separate leakage experiment compares
+transcripts across different inputs of the same length.
 \end{invariant}
 
 \subsection{What is not claimed}

@@ -8,8 +8,8 @@
 \label{sec:limitations}
 
 The complete model has been evaluated once. All $12$ released blocks and the task head run at the
-task's full $103$-token prompt on a whole-node allocation with no contention detected in the
-recorded telemetry, and the reported timings come from that single execution. One sample supports
+task's full $103$-token prompt on a whole-node allocation with no evidence of resource contention
+in the recorded telemetry. One sample supports
 a statement about the cost of that inference; it does not support a mean, a variance, or a
 service-rate claim, and the run has not been repeated. Nor does
 the study report encrypted task accuracy: the encrypted prediction is checked against the frozen
@@ -17,13 +17,12 @@ plaintext reference for one input, not evaluated over a test set. That input was
 deterministically as the first record of the positive genomic-signal input, not randomly or by a
 predeclared margin stratum.
 
-Interaction is a standing requirement rather than an implementation detail, and it is the
-limitation that the cost comparison in Section~\ref{sec:related} makes concrete. The protocol needs
-an available key holder at every one of the $10{,}299$ declared boundaries of a complete inference;
-a data owner that goes offline mid-evaluation has no way to finish it, and no party other than the
-data owner can complete a boundary. Non-interactive designs carry no such dependency. This study
-therefore establishes no advantage over them in latency, throughput, or availability, and the
-cross-system comparison in Section~\ref{sec:related} is not controlled.
+Interaction is a standing requirement rather than an implementation detail. The protocol needs an
+available key holder at every one of the $10{,}299$ declared boundaries of a complete inference; a
+data owner that goes offline mid-evaluation has no way to finish it, and only a holder of the secret
+key can complete a boundary. A non-interactive evaluation does not require the key holder to be
+available while the computation runs, and this study establishes no advantage over such designs in
+latency, throughput, or availability.
 
 Client and server are roles inside one program on one node. Boundary calls perform the
 cryptographic operations directly, without ciphertext serialization, network transport, or a key

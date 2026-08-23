@@ -27,11 +27,9 @@ lineage. Second, a deep-copied float64 PyTorch shadow is compared with an indepe
 re-derivation for every one of the $12$ blocks and the classifier head; generation aborts unless
 relative and absolute differences satisfy $2\times10^{-5}$. Their largest per-block absolute
 difference is $5.22\times10^{-6}$. Third, encrypted execution is compared with the accepted NumPy
-float64 reference. The released float32 path is not subject to the float64-shadow tolerance: its
-largest recorded absolute block drift from the NumPy lineage is $7.997\times10^{-4}$. For the
-selected full prompt, the released float32, manual float64, and encrypted lineages nevertheless all
-produce label N; the encrypted margin differs from the released float32 margin by
-$1.61\times10^{-6}$ in relative terms.
+float64 reference, as Section~\ref{sec:results} reports. The released float32 path is not subject to
+the float64-shadow tolerance: its largest recorded absolute block drift from the NumPy lineage is
+$7.997\times10^{-4}$.
 
 \begin{table*}[!tb]\centering\small
 \caption{Released DNAGPT reproduced locally on three genomic task families, against published

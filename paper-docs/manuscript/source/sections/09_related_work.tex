@@ -22,44 +22,37 @@ changes both the security contract and the allocation of work between the partie
 
 The client-aided division of labor predates transformer work. nGraph-HE2 evaluates standard
 pre-trained networks under CKKS while returning to the client to compute their native activation
-functions, precisely so that those activations need not be replaced by polynomials~\cite{ngraphhe2}.
-THE-X carries the pattern to transformers: the server evaluates HE-compatible
-operations and the client decrypts and re-encrypts around nonlinear functions~\cite{thex2022}.
-Safhire is the closest architectural antecedent~\cite{safhire2025}. It likewise places
-homomorphically evaluated linear layers on the server, then has the client decrypt an
-intermediate, apply the nonlinearity in plaintext, and return a fresh encryption. Safhire
-studies convolutional networks and adds randomized output permutation to make reconstruction
-from released intermediates harder. The client-assisted pattern is thus established prior art, and
-we adopt rather than propose it. What this study adds is its application to a complete forward pass
-of a released genomic transformer at that model's task-defined prompt, preserving the released
-weights and exact nonlinearities, together with an independently checked plaintext reference that
-makes the resulting arithmetic, boundary schedule, and memory behavior reproducible.
+functions, precisely so that those activations need not be replaced by polynomials~\cite{ngraphhe2},
+and THE-X carries the pattern to transformers: the server evaluates HE-compatible operations and the
+client decrypts and re-encrypts around nonlinear functions~\cite{thex2022}. Safhire is the closest
+architectural antecedent~\cite{safhire2025}: it likewise places homomorphically evaluated linear
+layers on the server and has the client decrypt an intermediate, apply the nonlinearity in
+plaintext, and return a fresh encryption, though it studies convolutional networks and adds
+randomized output permutation to make reconstruction from released intermediates harder. The
+client-assisted pattern is thus established prior art, and we adopt rather than propose it. What
+this study adds is its application to a complete forward pass of a released genomic transformer at
+that model's task-defined prompt, preserving the released weights and exact nonlinearities, together
+with an independently checked plaintext reference that makes the resulting arithmetic, boundary
+schedule, and memory behavior reproducible.
 
 The non-interactive line of work supplies useful cost context. THOR evaluates a $12$-layer,
-$768$-wide encoder at $128$ tokens on a
-single A100, at ring degree $2^{16}$, depth $13$, and $128$-bit security, in $602$~s end to end,
-with no client interaction at any point~\cite{thor}. Its headline configuration overlaps with
-this study in several dimensions, but the workload, protocol, and implementation differ from the
-$6683$~s execution measured here. NEXUS reaches non-interactivity over RNS-CKKS with SIMD
-ciphertext compression and a secure
-argmax~\cite{nexus2025}; its headline per-inference figure is amortized over a batch, and its
-single-prediction latency is substantially higher, so the two readings should not be conflated.
-MOAI reports a further $52.8\%$ reduction in evaluation time against THOR by holding one packing
-convention across all layers and removing rotations from softmax and
-normalization~\cite{moai2025}.
+$768$-wide encoder at $128$ tokens on a single A100, at ring degree $2^{16}$, depth $13$, and
+$128$-bit security, in $602$~s end to end, with no client interaction at any
+point~\cite{thor}. NEXUS reaches non-interactivity over RNS-CKKS with SIMD ciphertext compression
+and a secure argmax~\cite{nexus2025}; its headline per-inference figure is amortized over a batch
+and its single-prediction latency is substantially higher, so the two readings should not be
+conflated. MOAI reports a further $52.8\%$ reduction in evaluation time against THOR by holding one
+packing convention across all layers and removing rotations from softmax and
+normalization~\cite{moai2025}. Powerformer instead modifies the model, training HE-suitable
+polynomial components rather than preserving a released transformer unchanged~\cite{powerformer2025},
+and ELLMo treats packing and depth as coupled design choices~\cite{ellmo2026}.
 
-These are uncontrolled cross-system comparisons. Model semantics, prompt length, nonlinear
-circuits, bootstrapping, packing, libraries, CPU paths, and measurement endpoints differ. They
-establish that the present implementation is not performance-leading, but they do not isolate the
-cost of client assistance. The evaluated design occupies a different point in that space: it
-retains the released nonlinear formulas exactly, requires no homomorphic bootstrap, and pairs its
-execution with a frozen, independently checked plaintext reference.
-
-Powerformer represents a complementary model-modifying direction, training HE-suitable polynomial
-components rather than preserving the released transformer unchanged~\cite{powerformer2025}.
-ELLMo further shows how packing and depth-aware design can restructure encrypted transformer
-inference~\cite{ellmo2026}. These systems reinforce that performance comparisons must account for
-model and circuit changes, not only headline dimensions.
+Model semantics, prompt length, nonlinear circuits, bootstrapping, packing, libraries, CPU paths,
+and measurement endpoints differ across these systems, so they establish that the present
+implementation is not performance-leading without isolating the cost of client assistance. The
+evaluated design occupies a different point in that space: it retains the released nonlinear
+formulas exactly, requires no homomorphic bootstrap, and pairs its execution with a frozen,
+independently checked plaintext reference.
 
 \subsection{Homomorphic encryption for genomics}
 
@@ -88,31 +81,25 @@ replaced by data-driven non-polynomial fits rather than preserved. To our knowle
 pretrained genomic foundation model has previously been evaluated under homomorphic encryption for
 a complete forward pass.
 
-\subsection{GPU-accelerated homomorphic encryption}
+\subsection{GPU acceleration and homomorphic matrix primitives}
 
 GPU CKKS libraries move number-theoretic transforms, key switching, rotations, and
 ciphertext arithmetic onto accelerators; the evaluated backend supplies those primitives and
-interoperates with the host cryptographic runtime~\cite{gpu-ckks-backend,openfhe}. Its API
-also shaped the available systems designs. In particular, the absence of ciphertext
-serialization prevented process-sharded evaluation, leaving thread-level concurrency and
-in-process device placement as the implementable paths for this implementation.
-
-Recent multi-GPU transformer work treats placement and communication--computation overlap as
-first-class scheduling problems~\cite{aegis}. That literature motivates the placement and overlap
-options discussed in Section~\ref{sec:optimization}. The current implementation neither serializes
-ciphertexts between processes nor exercises a networked client/server transport, so those paths
-must be evaluated directly before adopting a multi-device schedule.
-
-\subsection{Homomorphic matrix primitives}
+interoperates with the host cryptographic runtime~\cite{gpu-ckks-backend,openfhe}. Its API also
+shaped the available systems designs: the absence of ciphertext serialization prevented
+process-sharded evaluation, leaving thread-level concurrency and in-process device placement as the
+implementable paths. Recent multi-GPU transformer work treats placement and
+communication--computation overlap as first-class scheduling problems~\cite{aegis}, but the current
+implementation neither serializes ciphertexts between processes nor exercises a networked transport,
+so those paths must be evaluated directly before adopting a multi-device schedule.
 
 Matrix layout determines which rotations, plaintext encodings, and reductions an encrypted
 linear layer requires. THOR's diagonal-major representation and compact packing specialize
 that layout for transformer inference~\cite{thor}; HE-BLAS develops a broader library of
 homomorphic linear-algebra kernels and shape-aware algorithms~\cite{heblas2025}. These works
 motivate the remaining targets in Section~\ref{sec:optimization}, as does MOAI's rotation-free
-formulation of softmax and normalization~\cite{moai2025}. Those targets include reducing repeated
-packing work, copying fewer distinct diagonal plaintexts, and replacing segmented slot reductions
-with kernels matched to the tensor shapes. ELLMo likewise treats packing and depth as coupled
-optimization choices~\cite{ellmo2026}. Because packing, key material, level consumption, and the
-operation schedule interact, each candidate primitive must be revalidated against the frozen
-plaintext reference and checked schedule before its performance is compared.
+formulation of softmax and normalization~\cite{moai2025}: reducing repeated packing work, copying
+fewer distinct diagonal plaintexts, and replacing segmented slot reductions with kernels matched to
+the tensor shapes. Because packing, key material, level consumption, and the operation schedule
+interact, each candidate primitive must be revalidated against the frozen plaintext reference and
+checked schedule before its performance is compared.

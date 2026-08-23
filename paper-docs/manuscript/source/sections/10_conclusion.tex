@@ -9,30 +9,32 @@ executes all twelve released blocks and the task head at the $103$-token prompt 
 embedded vectors. For the one input evaluated, the decrypted label matches the frozen reference and
 its margin has $8.56\times10^{-9}$ relative error against the $4\times10^{-2}$ predeclared tolerance.
 Graph feasibility is established for the complete released computation; numerical generality
-beyond this input is not. Client refresh bounds depth by the longest encrypted segment,
-device-wide GPU memory used stays at $9839$~MiB across the blocks, and no homomorphic bootstrap is
-required. A stage-bounded plaintext cache separately prevents host-memory accumulation.
+beyond this input is not. Client refresh bounds depth by the longest encrypted segment, so device
+memory stays flat across the blocks and no homomorphic bootstrap is required, while a stage-bounded
+plaintext cache prevents host-memory accumulation.
 
 Cost is the constraint that remains. One encrypted classification of one $600$-base-pair sequence
-was measured at $1.86$~hours on an A100 GPU node, which forecloses interactive use in the evaluated
-form. It is a single-process, single-input, single-execution result rather than a service-rate or
-network measurement, and sampled GPU utilization peaking at $51\%$ indicates unclaimed headroom
-without identifying its cause. The two verdicts are therefore separate, and both are informative:
-complete-model feasibility is established for the executed case, practicality is not, and the
-obstacle between them is engineering throughput on the provider's encrypted path rather than
-correctness, multiplicative depth, or accelerator memory.
+was measured at $1.86$~hours on an A100 GPU node, which does not enable interactive use in the
+evaluated form. It is a single-process, single-input, single-execution result rather than a
+service-rate or network measurement, and sampled GPU utilization peaking at $51\%$ shows spare
+accelerator capacity without identifying the limiting resource. The two verdicts are therefore
+separate, and both are informative: complete-model graph feasibility is established for the executed
+case, practicality is not, and the obstacle between them is engineering throughput on the provider's
+encrypted path rather than an observed correctness failure.
 
 \subsection*{Future work}
 
-Further empirical work would require additional prompts, repeated timings, and a paired
-pre-optimization measurement; none is inferred from the present run. Systems work should extend the
-encode-once strategy from weight diagonals to mask plaintexts. Distinct transforms across the
-packed activation copies are the larger circuit opportunity. Before mask and copy-repair overhead,
-the derived schedule for that layout projects a reduction of roughly $60\%$ in the block's total
-ciphertext--plaintext count. A thread-safe cryptographic context would permit concurrent independent
-client boundaries. Protocol closure also requires a noise-flooding budget for re-encryption. A
-deployment study must add serialized network transport and private token-index lookup before
-measuring the complete service.
+Repeated execution comes first. The cost reported here is one sample, so a confidence interval for
+complete-model latency requires repeating the same inference on the same allocation; numerical
+generality requires additional prompts, and an attributable optimization gain requires a paired
+pre-optimization measurement on a dedicated node. The present run supports none of the three.
+Systems work could extend the encode-once strategy from weight diagonals to mask plaintexts.
+Distinct transforms across the packed activation copies are the larger circuit opportunity. Before
+mask and copy-repair overhead, the derived schedule for that layout projects a reduction of roughly
+$60\%$ in the block's total ciphertext--plaintext count. A thread-safe cryptographic context would
+remove one barrier to concurrent boundary processing. Protocol closure also requires a
+noise-flooding budget for re-encryption. A deployment study must add serialized network transport
+and private token-index lookup before measuring the complete service.
 
 \section*{Ethics statement}
 
@@ -50,5 +52,6 @@ model weights, and cryptographic keys are not redistributed.
 
 The evaluation harnesses, encrypted-evaluation implementation, environment definitions, and the
 evidence record for the paper are maintained at
-\url{https://github.com/Georgakopoulos-Soares-lab/private_genomic_dnagpt}. No repository-level
-reuse license has yet been assigned.
+\url{https://github.com/Georgakopoulos-Soares-lab/private_genomic_dnagpt}, released under the MIT
+license. Upstream model code, released weights, and evaluation datasets retain the licenses of
+their original distributors and are not redistributed here.

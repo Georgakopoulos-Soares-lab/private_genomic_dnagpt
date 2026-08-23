@@ -45,6 +45,8 @@ function exactly in double precision, and encrypts the result afresh. The data o
 the secret key and is the only party that decrypts. The compute provider receives neither a
 plaintext activation nor the secret key. Between these declared calls, the ciphertext lineage
 remains on the server and every model operation is evaluated homomorphically.
+Figure~\ref{fig:architecture} shows the resulting evaluation order for one transformer block and
+which party performs each step.
 
 \subsection{Non-interactive design}
 The non-interactive design keeps a single ciphertext lineage and replaces every
@@ -55,16 +57,14 @@ and evaluation-key loading exceeded the tested 80~GB GPU memory envelope before 
 arithmetic began.
 
 The mechanism matters more than the failure location. Repeated polynomial approximation lengthens
-the multiplicative path, which requires a deeper modulus budget and a bootstrapping schedule. The
-associated context and evaluation-key material must be resident before evaluation, so composition
-failed as a memory problem rather than as a numerical-correctness problem. This finding is specific
-to the evaluated library, parameters, packing, and hardware; it does not establish a general lower
-bound for non-interactive CKKS. Published non-interactive systems evaluate encoders of comparable
-depth and width on a single accelerator at these parameters, as Section~\ref{sec:related} records,
-so this subsection reports where our non-interactive configuration stopped and not where the
-approach stops. It does identify the measured pressure that the client-assisted
-design removes: exact client evaluation shortens each encrypted segment and replaces encrypted
-bootstrapping with fresh encryption at already declared boundaries.
+the multiplicative path, which requires a deeper modulus budget and a bootstrapping schedule, and
+the associated context and evaluation-key material must be resident before evaluation; composition
+therefore failed as a memory problem rather than as a numerical-correctness problem. Since published
+non-interactive systems evaluate encoders of comparable depth and width on a single accelerator at
+these parameters (Section~\ref{sec:related}), this reports where our non-interactive configuration
+stopped, not where the approach stops. It does identify the measured pressure that the
+client-assisted design removes: exact client evaluation shortens each encrypted segment and replaces
+encrypted bootstrapping with fresh encryption at already declared boundaries.
 
 \begin{figure*}[!tb]\centering
   \includegraphics[width=\linewidth]{fig_architecture.pdf}
@@ -196,7 +196,7 @@ for attention. Attention therefore accounts for $818$ of the $857$ client calls,
 In directional object accounting it contributes $818$ of the block's $896$ boundary ciphertext
 objects, or $91.3\%$. These homogeneous counts identify attention as the main boundary-schedule
 target without treating the implementation's mixed-unit logical-instance counter as scalar work.
-The implementation asserts the complete operation schedule, boundary counts, and remaining depth
+The implementation validates the complete operation schedule, boundary counts, and remaining depth
 on every run and aborts when any differs. Section~\ref{sec:optimization} can thus treat an
 unchanged circuit as a checked invariant rather than as an assurance.
 
@@ -256,9 +256,6 @@ parameter space; parameter optimization is a separate experiment.
 \subsection{Composition across blocks}
 Composition uses a declared full-hidden-state client refresh between blocks. The data owner decrypts
 the packed block output, restores its token-vector layout, and encrypts fresh level-$0$ inputs for
-the next block under the same context and key lineage. Two consecutive released blocks compose by
-this mechanism at two tokens with relative error $8.48\times10^{-11}$. Device-wide GPU memory used
-peaks in the first block and does not grow in the second.
-
-The complete evaluation uses the same key lineage with $11$ full-hidden-state refreshes and one
-last-token refresh into the task head; Section~\ref{sec:results} reports the measured outcome.
+the next block under the same context and key lineage. The complete evaluation uses that mechanism
+throughout, with $11$ full-hidden-state refreshes and one last-token refresh into the task head;
+Section~\ref{sec:results} reports the measured outcome.

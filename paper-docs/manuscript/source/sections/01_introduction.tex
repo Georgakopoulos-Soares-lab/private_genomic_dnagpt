@@ -7,6 +7,7 @@
 % ---------------------------------------------------------------------------
 
 \section{Introduction}
+\label{sec:intro}
 
 Human genomic sequence carries an unusually persistent confidentiality risk. It can identify its
 contributor and, through familial relationships, reveal information about people who never supplied
@@ -56,41 +57,35 @@ art. What has not been reported is an auditable account of the numerical behavio
 interaction, and executed work that results when it is applied end to end to a released genomic
 transformer, at that model's own task prompt, with its weights and nonlinear formulas unmodified.
 
-That choice buys exactness and depth. Evaluating LayerNorm, softmax, and GELU at the key holder
-keeps the released formulas intact, so no polynomial approximation of a nonlinearity enters the
-model, and it bounds multiplicative depth by the longest encrypted segment rather than by network
-depth. The price is an online key holder and a protocol that is not the fastest available:
-non-interactive systems report lower cost for transformer inference, and Section~\ref{sec:related}
-treats those figures as cross-paper context rather than as a controlled benchmark.
+Figure~\ref{fig:abstract} summarizes the resulting deployment, the division of work between the
+two parties, and the measured outcome.
 
 We begin by establishing that the target computation is meaningful and independently reproducible.
 The released DNAGPT paths are evaluated across genomic-signal recognition, promoter and splice-site
 classification, and mRNA abundance regression, with task outputs frozen before encrypted work.
 The validation records the released float32 path, checks an independent NumPy float64 lineage
-against a float64-cast PyTorch shadow at $2\times10^{-5}$ for every released block and the task
-head, and then compares encrypted execution with the NumPy reference. We build two CKKS designs: a
+against a float64-cast PyTorch shadow for every released block and the task head, and then compares
+encrypted execution with that reference. We build two CKKS designs: a
 non-interactive circuit with polynomial nonlinearities, and a client-assisted circuit whose fixed,
 non-adaptive boundaries evaluate the released nonlinearities exactly. Instrumented evaluations
-record where each design stops in correctness and memory, while runtime assertions preserve the
+record where each design stops in correctness and memory, while runtime validation preserves the
 complete cryptographic operation schedule throughout the systems campaign.
 
 The results separate three candidate barriers and resolve two of them. Numerical agreement holds:
 the client-assisted design evaluates all twelve released blocks and the task head at the $103$-token
 prompt, and for the one input evaluated it reproduces the frozen plaintext label with
 $8.56\times10^{-9}$ relative margin error against a $4\times10^{-2}$ tolerance fixed before
-evaluation. Accelerator memory holds as well, and for a structural reason. Each client boundary
+evaluation. Accelerator memory holds as well, and for a structural reason: each client boundary
 returns the computation to a freshly encrypted activation, so the depth the circuit must support is
-set by the longest stretch between two boundaries and not by the depth of the network. That depth
-stays at $13$ for the complete model, no homomorphic bootstrap is required at any point, and
-device-wide GPU memory used reaches $9839$~MiB without growing across the twelve blocks. Bounded
-caching separately prevents encoded plaintexts from accumulating across host-side stages. The
-evaluated non-interactive design, by contrast, completes one released-weight block but exceeds the
-tested $80$~GB envelope while loading its composition context and evaluation keys, placing that
-barrier in the nonlinear schedule rather than in the model's dense maps. Cost is the barrier that
-remains: one encrypted classification takes $1.86$~hours on an A100 GPU node, which forecloses
-interactive use in the evaluated form, and sampled GPU utilization peaks at $51\%$, locating
-headroom without attributing it. These memory and timing figures are specific to the evaluated
-backend, packing, and parameters.
+set by the longest stretch between two boundaries and not by the depth of the network, and
+device-wide GPU memory used does not grow across the twelve blocks. Bounded caching separately
+prevents encoded plaintexts from accumulating across host-side stages. The evaluated non-interactive
+design, by contrast, completes one released-weight block but exceeds the tested $80$~GB envelope
+while loading its composition context and evaluation keys, placing that barrier in the nonlinear
+schedule rather than in the model's dense maps. Cost is the barrier that remains: one encrypted
+classification takes $1.86$~hours on an A100 GPU node, which does not enable interactive use in the
+evaluated form. These memory and timing figures are specific to the evaluated backend, packing, and
+parameters.
 
 The paper makes the following contributions:
 
@@ -103,8 +98,8 @@ The paper makes the following contributions:
         CKKS; prior homomorphic transformer evaluations over biological sequence data have targeted
         small, purpose-trained classifiers~\cite{idash24descriptor,encrypteddashformer}.
   \item \textbf{Independently checked numerical evaluation.} The protocol, packing, checked
-        operation schedule, predeclared tolerance, and three-link float32--float64--encrypted
-        validation chain make the complete execution independently inspectable.
+        operation schedule, predeclared tolerance, and validation chain make the complete execution
+        independently inspectable.
   \item \textbf{Measured systems anatomy and scoped negative results.} We report complete-model
         cost, interaction, depth, and memory; the stage-bounded cache that makes host-side reuse
         executable; and the memory boundary reached by the evaluated non-interactive configuration.

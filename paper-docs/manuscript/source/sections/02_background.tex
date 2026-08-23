@@ -54,12 +54,11 @@ approximations consume additional multiplicative depth; across repeated blocks, 
 provide a deeper context, a bootstrapping schedule, or both. Larger modulus chains and refresh
 operations also increase the context and evaluation-key material that must remain resident.
 
-The alternative is to place exact functions at declared client boundaries. The key holder decrypts
-only values derived from its query, evaluates the nonlinearity, and returns a fresh ciphertext. This
-removes approximation-range calibration and resets the encrypted depth budget, but it requires an
-online client and exposes intermediate activations to that client. The choice between polynomial
-approximation and client evaluation therefore determines memory, interaction, depth, and the threat
-model. Section~\ref{sec:protocol} evaluates both designs and reports where each stops.
+The alternative is to place exact functions at declared client boundaries, which removes
+approximation-range calibration and resets the encrypted depth budget but requires an online client
+and exposes intermediate activations to it. The choice between polynomial approximation and client
+evaluation therefore determines memory, interaction, depth, and the threat model.
+Section~\ref{sec:protocol} evaluates both designs and reports where each stops.
 
 \subsection{Evaluated software backends}
 We separate correctness semantics from the performance path. OpenFHE provides CKKS context and
@@ -71,10 +70,8 @@ accelerator measurements use that path. Python, NumPy, and PyTorch construct and
 plaintext reference, but they do not participate in encrypted performance measurements.
 
 We also evaluated the Boolean/integer-oriented TFHE-rs path and Concrete ML's client/server
-workflow~\cite{concreteml,tfhers}. In this project's backend comparison, their available GPU
-acceleration and ciphertext expansion were less suitable for this matrix-heavy graph than the
-already validated CKKS path. A separate CKKS wrapper was not selected because its public interface
-lacked the refresh and general
-nonlinear-function support required by the non-interactive baseline. These decisions select among
-the software paths tested in this project. They do not establish that CKKS is the only scheme able
-to express encrypted transformer inference.
+workflow~\cite{concreteml,tfhers}; their available GPU acceleration and ciphertext expansion were
+less suitable for this matrix-heavy graph than the already validated CKKS path, and a separate CKKS
+wrapper lacked the refresh and general nonlinear-function support the non-interactive baseline
+needs. These decisions select among the software paths tested here. They do not establish that CKKS
+is the only scheme able to express encrypted transformer inference.

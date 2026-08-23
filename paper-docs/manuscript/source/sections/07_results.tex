@@ -19,20 +19,18 @@ task-set sample. Local tokenization and embedding produce the $103$-token prompt
 the measured encrypted endpoint contains all $12$ released blocks and the released task head.
 
 The complete model is executed once on a whole-node allocation with one $40$~GB A100 GPU and $32$
-CPU threads; no contention is detected in the recorded telemetry, although scheduler exclusivity
-was not requested. Timing starts before weight and reference loading and ends after final
+CPU threads; the recorded telemetry shows no evidence of resource contention, although scheduler
+exclusivity was not requested. Timing starts before weight and reference loading and ends after final
 decryption. Server and client roles share one process and node, so boundary calls include
 cryptographic work but no serialization or network transport. That single execution supplies
-every complete-model timing below; it supports neither a mean nor a service rate. Earlier
-contended timings are excluded.
+every complete-model timing below; earlier contended timings are excluded.
 
 \subsection{Correctness}
 
-Correctness follows the three-link chain in Section~\ref{sec:baseline}. The released float32 path is
-recorded separately. The independent NumPy float64 reference is then checked against a float64-cast
-PyTorch shadow at $2\times10^{-5}$ for all $12$ blocks and the head, after which encrypted execution
-is compared with the NumPy reference. This distinguishes model-dtype drift from CKKS error and
-prevents an unchecked reimplementation from judging its encrypted counterpart.
+Encrypted output is accepted against the checked NumPy float64 reference of
+Section~\ref{sec:baseline}, never against the released float32 path, which is recorded separately.
+The separation distinguishes model-dtype drift from CKKS error and prevents an unchecked
+reimplementation from judging its encrypted counterpart.
 
 For one block at the $103$-token task prompt, the decrypted output has relative infinity-norm error
 $4.64\times10^{-9}$ against an acceptance tolerance of $4\times10^{-2}$ fixed before the run,
@@ -76,22 +74,15 @@ Attention-related client calls & 818 (95.4\%) & data owner \\
 \end{tabularx}
 \end{table}
 
-The implementation asserts every count in Table~\ref{tab:cost}, the boundary sequence, and the
-remaining multiplicative depth before the MLP. Any deviation aborts the run. This turns the
-operation schedule into evidence that the optimized implementation executes the same circuit, not
-an assurance inferred from a passing output.
+Every count in Table~\ref{tab:cost} is validated at run time under the checks of
+Section~\ref{sec:protocol}, so the schedule is evidence that the optimized implementation executes
+the same circuit rather than an assurance inferred from a passing output.
 
-Attention dominates the homogeneous boundary-schedule measures: it accounts for $818$ of the
-$857$ client calls per block and $818$ of the $896$ ciphertext objects sent across block
-boundaries. Boundary optimization is therefore principally an attention problem, even though the
-protocol contains three nonlinearity classes. The implementation also checks a heterogeneous
-logical-instance counter, but its LayerNorm, GELU, and attention increments have different units
-and are not interpreted as scalar work or traffic.
-
-The dense schedule also records the benefit of token packing. Eight-token packing reduces the
-serial-equivalent dense-product count from $1{,}236$ to $156$, a $7.92\times$ reduction in
-operations. Rotations, masking, client work, and host preparation remain in the packed circuit, so
-the factor describes operation count rather than latency.
+The counts locate the boundary cost in attention, as Section~\ref{sec:protocol} sets out, and the
+benefit of token packing in the dense schedule: eight-token packing reduces the serial-equivalent
+dense-product count from $1{,}236$ to $156$, a $7.92\times$ reduction in operations. Rotations,
+masking, client work, and host preparation remain in the packed circuit, so that factor describes
+operation count rather than latency.
 
 \begin{table*}[!tb]\centering\small
 \caption{Derived ciphertext-object accounting for a complete inference. Counts follow from the
@@ -125,31 +116,33 @@ from the object count.
 
 Device-wide GPU memory used during the evaluating run reaches $9839$~MiB, within the $40$~GB
 device. The GPU was empty at allocation, making attribution to the run reasonable, but the sampler
-does not expose a per-process memory metric.
-
-Host memory follows the lifetime of encoded plaintext templates. Query/key/value projection reaches
-$25{,}530$~MiB of target-process resident memory. A cache flush precedes attention, whose recorded
-resident memory is $12{,}434$~MiB. The MLP holds the largest live weight set and reaches the block
-peak of $48{,}610$~MiB. These stage transitions match the explicit flush points in
-Section~\ref{sec:optimization}; encoded weights do not accumulate across the entire block.
-
-The two memory results have different mechanisms. The non-interactive composition configuration
-exceeded its tested $80$~GB GPU envelope while loading the deep context and evaluation keys.
-Client re-encryption shortens the encrypted segments and resets their depth budget, moving that
-accelerator-memory barrier. Stage-bounded caching prevents the resulting host-side plaintext
-templates from becoming an unbounded second barrier.
+does not expose a per-process memory metric. Host memory follows the stage lifetime of encoded
+plaintext templates measured in Section~\ref{sec:optimization}, peaking in the MLP stage of each
+block rather than accumulating across the block.
 
 \begin{figure*}[!tb]\centering
-  \includegraphics[width=\linewidth]{fig_timeline.pdf}
-  \caption{Resource trace of the complete encrypted inference. Sampled GPU utilization reaches a
-  maximum of $51\%$, showing underutilization without assigning its cause. Host memory repeats the
-  stage pattern of Section~\ref{sec:optimization}; device-wide GPU memory used reaches its peak
-  during the first block and does not grow with block index. The plotted curve is thinned from the
-  full 653-sample trace; the twelve cycles are the twelve blocks.}
-  \label{fig:timeline}
+  \includegraphics[width=\linewidth]{fig_systems.pdf}
+  \caption{Systems behavior of one complete encrypted inference at the $103$-token
+  genomic-signal prompt. (a) Sampled GPU utilization reaches a maximum of $51\%$, which does not
+  identify the limiting resource. (b) Host and device memory over the same run: host memory
+  repeats the stage pattern of Section~\ref{sec:optimization} once per block, while device-wide
+  GPU memory used reaches its peak during the first block and does not grow with block index.
+  Both curves are thinned from the full 653-sample trace, and the twelve cycles are the twelve
+  blocks. (c) The encrypted-evaluation interval divided between the two parties. The
+  provider-side bucket is the residual after client time and includes GPU-backend work plus host
+  preparation, synchronization, and evaluator overhead; the data-owner bucket includes the
+  declared nonlinear boundaries and full-hidden-state refreshes on CPU with no GPU. The two
+  shares sum exactly to encrypted evaluation; setup and finalization remain in
+  Table~\ref{tab:fullcost}. (d) Stage host memory for one block under the bounded plaintext
+  cache, with the separate unbounded-cache attempt that the operating system killed at
+  $61{,}863$~MiB. (e) Causal score-tile schedules across the encrypted-scope tasks, following
+  from ciphertext groups rather than from a timing model; only genomic-signal recognition has a
+  measured complete inference.}
+  \label{fig:systems}
 \end{figure*}
 
-The complete model confirms both bounds at full depth. Device-wide GPU memory used rises during
+The complete model confirms both bounds at full depth, as the resource trace in
+Figure~\ref{fig:systems}(a) and (b) records. Device-wide GPU memory used rises during
 context and key loading, reaches $9839$~MiB after roughly $400$~s, and then holds that value exactly
 for the remainder of the run. This matches the single-block footprint, with no growth by block
 index. Host resident memory peaks at $50{,}930$~MiB, consistent with the MLP-stage maximum recurring
@@ -178,35 +171,21 @@ Encrypted token-index lookup & out of scope & --- & --- \\
 \end{table*}
 
 Two consecutive released blocks compose at reduced sequence length through a full-hidden-state
-client refresh, reaching $8.48\times10^{-11}$ relative error after the second block. Device-wide
-GPU memory used peaks in the first block and does not increase in the second. This experiment checks the mechanism
-used for deeper composition: a fresh encryption starts the next block at level~$0$ without
-carrying forward the preceding block's multiplicative depth or GPU-resident temporaries.
-
-The complete model uses that mechanism throughout. All $12$ blocks and the task head
-run in one key lineage, separated by $11$ full-hidden-state refreshes between consecutive blocks
-and one further refresh of the final token into the head. Multiplicative depth stays at $13$
-throughout, the same budget the single block requires, and the run performs no homomorphic
-bootstrap at any point. Depth is thus a property of the longest segment between two client
-boundaries rather than of network depth, which is what makes the twelve-block key lineage
+client refresh, reaching $8.48\times10^{-11}$ relative error after the second block, with no growth
+in device-wide GPU memory used. The complete model uses that mechanism throughout: all $12$ blocks
+and the task head run in one key lineage, separated by $11$ full-hidden-state refreshes between
+consecutive blocks and one further refresh of the final token into the head. Multiplicative depth
+stays at $13$ throughout, the same budget the single block requires, and the run performs no
+homomorphic bootstrap at any point. Depth is thus a property of the longest segment between two
+client boundaries rather than of network depth, which is what makes the twelve-block key lineage
 expressible at all under these parameters.
 
 \subsection{Cost of a complete encrypted inference}
 
-\begin{figure*}[!tb]\centering
-  \includegraphics[width=\linewidth]{fig_cost_split.pdf}
-  \caption{Encrypted-evaluation time for one complete inference. The provider-side bucket is the
-  residual after client time and includes GPU-backend work plus host preparation,
-  synchronization, and evaluator overhead. The data-owner bucket includes declared nonlinear
-  boundaries and full-hidden-state refreshes on CPU with no GPU. The two shares sum exactly to
-  encrypted evaluation; setup and finalization remain in Table~\ref{tab:fullcost}.}
-  \label{fig:costsplit}
-\end{figure*}
-
 \begin{table}[t]\centering\small
 \caption{One complete encrypted inference: twelve blocks and the released task head at the
 $103$-token task prompt, on one A100 GPU node using 32 CPU threads. Single execution on a
-whole-node allocation with no contention detected in the recorded telemetry; these are one
+whole-node allocation with no evidence of resource contention in the recorded telemetry; these are one
 sample's values, not averages over repetitions. Shares are rounded independently and need not sum
 to $100\%$.}
 \label{tab:fullcost}
@@ -235,7 +214,8 @@ The instrumented phases are a decomposition rather than a partition, leaving $59
 of wall clock, outside them; Table~\ref{tab:fullcost} shows that remainder rather than distributing
 it silently.
 
-Within encrypted evaluation the split between the two parties is exact: the residual provider-side
+Within encrypted evaluation the split between the two parties is exact
+(Figure~\ref{fig:systems}(c)): the residual provider-side
 bucket uses $5638.561$~s and the data owner's boundary work uses $956.187$~s, and the two sum to the
 evaluation total without residue. The provider bucket includes GPU-backend work and the host
 support around it; it is not GPU-kernel time. The compute provider therefore carries $85.5\%$ of
@@ -252,19 +232,10 @@ execution cannot report.
 
 \subsection{Sequence-length structure}
 
-\begin{figure*}[!tb]\centering
-  \includegraphics[width=\linewidth]{fig_scaling.pdf}
-  \caption{Causal attention score-tile schedules across the encrypted-scope tasks. Counts follow
-  from ciphertext groups rather than from a timing model; only genomic-signal recognition has a
-  measured complete inference.}
-  \label{fig:scaling}
-\end{figure*}
-
-Sequence length follows from each task format. Genomic-signal recognition uses $600$ base pairs,
-which become $100$ sequence tokens under $6$-mer tokenization; three task-format tokens produce the
-$103$-token encrypted anchor. Eight-token packing maps that prompt to $13$ ciphertext groups. The
-shorter promoter and splice-site prompts use fewer groups under the same layout, yielding smaller
-causal schedules.
+Prompt length follows from each task format, as Section~\ref{sec:baseline} derives. Eight-token
+packing maps the $103$-token anchor to $13$ ciphertext groups; the shorter promoter and splice-site
+prompts use fewer groups under the same layout, yielding the smaller causal schedules shown in
+Figure~\ref{fig:systems}(e).
 
 The abundance-regression task lies outside the encrypted scope. Its $10{,}500$ base pairs produce
 $1{,}755$ tokens and $220$ ciphertext groups under the same tokenization rule. The causal attention
@@ -274,11 +245,10 @@ regime from the classification prompts.
 \subsection{Feasibility}
 \label{sec:verdict-feasibility}
 
-Complete-model graph feasibility is established under the stated protocol. All $12$ released
+Complete-model graph feasibility is established under the stated protocol: all $12$ released
 blocks and the task head execute at the task's $103$-token prompt under one key lineage with
-declared refreshes. Multiplicative depth remains $13$, device-wide GPU memory used remains
-$9839$~MiB after loading, and no homomorphic bootstrap is performed. These are measurements of the
-complete computation, not projections from a block.
+declared refreshes, at unchanged multiplicative depth and device memory and with no homomorphic
+bootstrap. These are measurements of the complete computation, not projections from a block.
 
 Numerical generality has a narrower scope. The one selected prompt reproduces the frozen label with
 $8.56\times10^{-9}$ relative margin error, but one prompt does not establish encrypted task
@@ -296,18 +266,18 @@ one $600$-base-pair genomic fragment occupies an A100 node for $1.86$~hours and 
 key holder throughout, which rules out interactive per-query use in the evaluated form. Suitability
 for a specified non-interactive workload has not been measured.
 
-Cross-paper results provide context rather than a controlled verdict. THOR reports $602$~s for a
-non-interactive encrypted forward pass of a $12$-layer, $768$-wide encoder at $128$ tokens on a
-single A100, at the ring degree, multiplicative depth, and security level used here, with no client
-participation at any point~\cite{thor}; the $6683$~s measured here is roughly an order of magnitude
-above it at a shorter prompt. Model semantics, nonlinear treatment, packing, software, and
-measurement endpoints differ, so this implementation is not performance-leading and the gap does
-not isolate the cost of client assistance; Section~\ref{sec:related} sets out the differences.
+Cross-paper results provide context rather than a controlled verdict. The $6683$~s measured here is
+roughly an order of magnitude above the $602$~s THOR reports for a non-interactive encrypted forward
+pass at comparable depth, width, and cryptographic parameters~\cite{thor}, at a shorter prompt.
+Section~\ref{sec:related} sets out the differences that make the comparison uncontrolled: this
+implementation is not performance-leading, and the gap does not isolate the cost of client
+assistance.
 
-The measured trace does, however, indicate where that cost sits. Sampled GPU utilization has a
-median of $32\%$ and a maximum of $51\%$, so the accelerator is not the saturated resource, even
-though the trace does not attribute wall time among encoding, synchronization, memory behavior,
-kernel efficiency, and boundary work. Read with the $85.5/14.5$ provider--client split and the
+The measured trace does, however, indicate where that cost sits. Sampled GPU utilization
+(Figure~\ref{fig:systems}(a)) has a
+median of $32\%$ and a maximum of $51\%$; this does not identify the limiting resource, since the
+trace does not attribute wall time among encoding, synchronization, memory behavior, kernel
+efficiency, and boundary work. Read with the $85.5/14.5$ provider--client split and the
 $0.3\%$ cost of the refresh mechanism, this places the optimization target in the provider-side
 encrypted path rather than in the interaction the protocol adds. The practicality verdict is
 nonetheless negative for the evaluated form: it is too slow for interactive use, and throughput,

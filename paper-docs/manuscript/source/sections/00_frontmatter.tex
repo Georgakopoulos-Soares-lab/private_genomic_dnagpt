@@ -39,25 +39,24 @@ transformer for a data owner who never reveals the input in plaintext, and where
 agreement, memory, or cost would stop such a deployment.
 
 \textbf{Results.} We first reproduce DNAGPT on three genomic task families and freeze its
-per-example plaintext predictions, which the encrypted run must then reproduce. The work is then
-split under a single key: the provider evaluates the model's encrypted arithmetic on ciphertexts,
-while the data owner, who holds the secret key in any case, decrypts at points fixed before
-execution to evaluate exactly the three functions CKKS cannot compute directly, the LayerNorm
-inverse square root, causal softmax, and GELU, and returns freshly encrypted values. All $12$
-released blocks and the task head execute this way from encrypted embedded vectors, with the
-released weights and nonlinear formulas unmodified and with no homomorphic bootstrap at any point.
-For the one prompt evaluated, the decrypted label matches the reference, and its margin has
-$8.56\times10^{-9}$ relative error, $6.67$ orders of magnitude below the $4\times10^{-2}$ tolerance
-fixed in advance; no polynomial approximation of a nonlinearity contributes to that residual.
-Because each return to the data owner restarts the computation from a fresh ciphertext, the
-multiplicative depth the circuit must provide is set by the longest stretch between two such points
-rather than by the depth of the whole network: it stays at $13$ for the complete model, and
-device-wide GPU memory used reaches $9839$~MiB without growing from one block to the next. One
-in-process execution takes $1.86$~hours on an A100 GPU node. A pure non-interactive configuration,
-which avoids the interaction altogether, completes one released-weight block but then exceeds the
-tested $80$~GB accelerator-memory envelope while loading the cryptographic material needed to
-compose the next, placing that barrier in the polynomial treatment of the nonlinearities rather than
-in the model's dense maps.
+per-example plaintext predictions; the encrypted run must then reproduce them. The work is then
+split under a single key. The provider evaluates the model's encrypted arithmetic on ciphertexts.
+The data owner, who holds the secret key in any case, decrypts at points fixed before execution,
+evaluates exactly the three functions CKKS cannot compute directly, the LayerNorm inverse square
+root, causal softmax, and GELU, and returns freshly encrypted values. All $12$ released blocks and
+the task head execute this way from encrypted embedded vectors, with the released weights and
+nonlinear formulas unmodified and with no homomorphic bootstrap at any point. For the one prompt
+evaluated, the decrypted label matches the reference. Its margin has $8.56\times10^{-9}$ relative
+error, $6.67$ orders of magnitude below the $4\times10^{-2}$ tolerance fixed in advance, and no
+polynomial approximation of a nonlinearity contributes to that residual. Each return to the data
+owner restarts the computation from a fresh ciphertext, so the multiplicative depth the circuit must
+provide is set by the longest stretch between two such points rather than by the depth of the whole
+network. It stays at $13$ for the complete model, and device-wide GPU memory used peaks at
+$9839$~MiB without growing from one block to the next. One in-process execution takes $1.86$~hours
+on an A100 GPU node. A pure non-interactive configuration, which avoids the interaction altogether,
+completes one released-weight block but then exceeds the tested $80$~GB accelerator-memory envelope
+while loading the cryptographic material needed to compose the next. That barrier therefore lies in
+the polynomial treatment of the nonlinearities rather than in the model's dense maps.
 
 \textbf{Conclusions.} The executed case establishes complete-model graph feasibility and numerical
 agreement for one input, and locates the limiting barrier in throughput rather than in correctness
@@ -76,26 +75,29 @@ verdicts.
 
 \begin{itemize}
   \item \textbf{The complete released model runs on encrypted input.} All twelve DNAGPT blocks and
-        the task head execute from encrypted embedded vectors at the $103$-token task prompt, under
-        one key lineage and without any homomorphic bootstrap. The released weights and nonlinear
-        formulas are preserved unmodified, and the one evaluated prompt reproduces the reference
-        label with $8.56\times10^{-9}$ relative margin error, $6.67$ orders of magnitude below the
-        $4\times10^{-2}$ tolerance.
+        the task head run at the task's own $103$-token prompt, starting from encrypted input
+        vectors, under one key and with no bootstrapping step. Nothing in the released model is
+        changed to make this possible. For the one prompt evaluated, the encrypted run returns the
+        same label as the plaintext model, with $8.56\times10^{-9}$ relative error on the
+        classification margin, $6.67$ orders of magnitude below the $4\times10^{-2}$ tolerance set
+        in advance.
   \item \textbf{The encrypted result is checked against a reference that is itself checked.} Two
         independently written plaintext implementations of the released model must agree in double
         precision before either is used, and only then is the encrypted output compared with them.
         Agreement therefore reflects the model's own computation rather than one implementation
         reproducing its own error.
-  \item \textbf{Returning to the key holder keeps the encrypted circuit shallow.} Multiplicative
-        depth is set by the longest stretch between two client boundaries rather than by the depth
-        of the network, so it stays at $13$ for the complete model and device-wide GPU memory used
-        stays at $9839$~MiB, with no growth from one block to the next. Stage-bounded caching
-        separately limits host memory while preserving the asserted operation schedule.
+  \item \textbf{Handing the nonlinear steps back to the key holder keeps the encrypted circuit
+        shallow.} Each return restarts the computation from a fresh ciphertext, so the circuit only
+        has to be deep enough for the longest stretch between two returns rather than for the whole
+        network. That depth stays at $13$ for the complete model, and device-wide GPU memory used
+        peaks at $9839$~MiB with no growth from one block to the next. A separate limit on how many
+        encoded weights stay in memory at once keeps host memory bounded, with the checked operation
+        schedule unchanged.
   \item \textbf{Feasible, not yet practical.} One in-process execution takes $1.86$~hours and needs
-        the key holder online throughout, which is far too slow for interactive use, although the
-        protocol is interactive by design. Complete-model feasibility is established for the
-        evaluated prompt, while encrypted task accuracy, service rate, and networked deployment
-        remain open.
+        the key holder online throughout, which is far too slow for interactive use. The protocol is
+        interactive by design, so what rules out interactive use is its speed rather than the
+        interaction itself. Complete-model feasibility is established for the evaluated prompt,
+        while encrypted task accuracy, service rate, and networked deployment remain open.
 \end{itemize}
 
 % --- Graphical abstract -----------------------------------------------------

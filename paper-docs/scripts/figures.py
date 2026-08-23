@@ -725,11 +725,35 @@ def fig_waterfall(out: pathlib.Path) -> pathlib.Path:
     return emit(fig, out, "fig_waterfall")
 
 
-# --- 5. Resource trace ------------------------------------------------------
+# --- 5. Systems behaviour of one complete inference (panels of fig_systems) -
+#
+# Review feedback asked for one composite figure rather than four standalone ones, so the
+# resource trace, cost split, stage memory, and prompt-length schedule are panels (a)-(e) of
+# fig_systems. Each panel keeps its own evidence source; no panel hard-codes a measurement.
 
 
-def fig_timeline(out: pathlib.Path) -> pathlib.Path:
-    """Resource trace of the complete encrypted inference.
+def _panel_letter(ax, letter: str, x: float = -0.055, y: float = 1.06) -> None:
+    ax.text(
+        x,
+        y,
+        f"({letter})",
+        transform=ax.transAxes,
+        fontsize=9.2,
+        fontweight="bold",
+        color=BLACK,
+        ha="left",
+        va="bottom",
+    )
+
+
+def _panel_title(ax, text: str, size: float = 8.4, pad: float = 6) -> None:
+    ax.set_title(
+        text, fontsize=size, fontweight="bold", color=BLACK, loc="left", pad=pad
+    )
+
+
+def _panel_trace(ax1, ax2) -> None:
+    """(a) and (b): resource trace of the complete encrypted inference.
 
     Drawn from the complete-model run, which is the only clean dedicated-node artifact. The
     earlier per-block stage trace came from a shared partition and is therefore not plotted.
@@ -745,15 +769,6 @@ def fig_timeline(out: pathlib.Path) -> pathlib.Path:
     gpu_pct = np.array([r["gpu_pct"] for r in trace], dtype=float)
     rss = np.array([r["rss_mib"] for r in trace], dtype=float)
     gpu_mem = np.array([r["gpu_mib"] for r in trace], dtype=float)
-
-    fig, (ax1, ax2) = plt.subplots(
-        2,
-        1,
-        figsize=(7.0, 3.85),
-        dpi=DPI,
-        sharex=True,
-        gridspec_kw={"height_ratios": [1.0, 1.0], "hspace": 0.12},
-    )
 
     # No block-boundary guides: the twelve cycles are legible in the data itself, and drawn
     # boundaries would be nominal (equal division) rather than measured start times.
@@ -792,22 +807,16 @@ def fig_timeline(out: pathlib.Path) -> pathlib.Path:
     ax2.set_axisbelow(True)
 
     ax1.set_xlim(0, total)
-    ax1.set_title(
-        f"Sampled GPU use stays below saturation; memory remains bounded across {blocks} blocks\n"
-        f"The plotted curve is thinned from the full {full_samples}-sample trace.",
-        fontsize=8.7,
-        fontweight="bold",
-        color=BLACK,
-        loc="left",
-        pad=10,
+    _panel_title(
+        ax1,
+        f"Sampled GPU use over one complete inference "
+        f"(thinned from {full_samples} samples)",
     )
-    return emit(fig, out, "fig_timeline")
+    _panel_title(ax2, f"Memory over the same run, across {blocks} blocks")
 
 
-# --- 6. Memory bounding -----------------------------------------------------
-
-
-def fig_memory(out: pathlib.Path) -> pathlib.Path:
+def _panel_stage_memory(ax) -> None:
+    """(d): stage-local host memory under the bounded plaintext cache."""
     fail = Ledger().value("mem.unbounded_failure")
     bounded = next(
         o
@@ -816,12 +825,11 @@ def fig_memory(out: pathlib.Path) -> pathlib.Path:
     )
     values = bounded["effect_mib"]
     labels = [
-        "Query / key / value\n3 weight matrices resident",
-        "Attention\nnone resident",
-        "MLP\n8 weight matrices resident",
+        "Query / key / value\n(3 matrices)",
+        "Attention\n(none)",
+        "MLP\n(8 matrices)",
     ]
 
-    fig, ax = plt.subplots(figsize=(6.0, 3.65), dpi=DPI)
     bars = ax.bar(
         range(3), values, width=0.5, facecolor=SERVER, **MEASURED_KW, zorder=3
     )
@@ -839,38 +847,30 @@ def fig_memory(out: pathlib.Path) -> pathlib.Path:
 
     ax.axhline(fail, color=FAILURE, linewidth=1.6, linestyle="--", zorder=2)
     ax.text(
-        2.52,
-        fail - 1400,
+        2.60,
+        fail + 1400,
         f"Separate unbounded-cache attempt:\n{fail:,} MiB at operating-system kill",
         color=FAILURE,
-        fontsize=7.2,
+        fontsize=6.6,
         ha="right",
-        va="top",
+        va="bottom",
         fontweight="bold",
     )
 
     ax.set_xticks(range(3))
-    ax.set_xticklabels(labels, fontsize=7.3)
-    ax.set_ylabel("Peak process RSS (MiB)", fontsize=8)
+    ax.set_xticklabels(labels, fontsize=6.8)
+    ax.set_ylabel("Peak process RSS (MiB)", fontsize=7.5)
     ax.tick_params(axis="y", labelsize=7)
     ax.set_ylim(0, fail * 1.22)
     ax.set_xlim(-0.62, 2.62)
     despine(ax)
     ax.grid(axis="y", color=LIGHT_GRAY, linewidth=0.8)
     ax.set_axisbelow(True)
-    title(
-        ax,
-        "Bounded-cache run: stage-local host-memory peaks",
-        "One 103-token GSR block; the red line comes from a separate unbounded-cache attempt.",
-        size=9.5,
-    )
-    return emit(fig, out, "fig_memory")
+    _panel_title(ax, "Host memory per stage, one block, bounded cache")
 
 
-# --- 7. Cost split ----------------------------------------------------------
-
-
-def fig_cost_split(out: pathlib.Path) -> pathlib.Path:
+def _panel_cost_split(ax) -> None:
+    """(c): how the encrypted evaluation interval divides between the two parties."""
     # The complete-model run is the only clean dedicated-node timing artifact, so the split is
     # drawn from it rather than from the single block.
     L = Ledger()
@@ -878,16 +878,6 @@ def fig_cost_split(out: pathlib.Path) -> pathlib.Path:
     client = L.value("full.client_boundaries")
     evaluation = L.value("full.encrypted_evaluation")
     wall = L.value("full.wall")
-    crossings = L.value("full.crossings_physical")
-    gpu_mib = L.value("full.gpu_peak_mib")
-
-    fig, (ax, axr) = plt.subplots(
-        1,
-        2,
-        figsize=(7.0, 3.25),
-        dpi=DPI,
-        gridspec_kw={"width_ratios": [1.45, 1.0], "wspace": 0.17},
-    )
 
     # Segments are labelled in place, so the figure needs no legend and nothing can collide
     # with the axis.
@@ -937,62 +927,14 @@ def fig_cost_split(out: pathlib.Path) -> pathlib.Path:
     ax.set_xlabel("Seconds of encrypted evaluation", fontsize=7.5)
     ax.tick_params(axis="x", labelsize=7)
     despine(ax, keep=("bottom",))
-    title(
+    _panel_title(
         ax,
         f"Encrypted evaluation: {evaluation:,.0f} s of {wall:,.0f} s wall clock",
-        "One measured 12-block + task-head execution at the 103-token GSR prompt.",
-        size=9.1,
     )
 
-    axr.axis("off")
-    axr.set_xlim(0, 100)
-    axr.set_ylim(0, 100)
-    labelled_box(
-        axr,
-        1,
-        56,
-        98,
-        34,
-        "Data owner",
-        f"{client:,.0f} s  \u00b7  CPU only  \u00b7  no GPU\n"
-        f"declared boundaries + refreshes",
-        facecolor=CLIENT_PALE,
-        edgecolor=CLIENT,
-        title_size=9.5,
-        sub_size=7.0,
-    )
-    labelled_box(
-        axr,
-        1,
-        6,
-        98,
-        34,
-        "Compute provider",
-        f"{server:,.0f} s  \u00b7  one A100  \u00b7  {gpu_mib:,} MiB peak\n"
-        f"GPU backend + host support",
-        facecolor=SERVER_PALE,
-        edgecolor=SERVER,
-        title_size=9.5,
-        sub_size=7.0,
-    )
-    arrow(axr, 50, 55, 50, 41, color=GRAY, lw=1.6, style="<|-|>")
-    axr.text(
-        53,
-        48,
-        f"{crossings:,} in-process boundary calls",
-        fontsize=6.8,
-        color=GRAY,
-        va="center",
-    )
 
-    return emit(fig, out, "fig_cost_split")
-
-
-# --- 8. Sequence-length scaling ---------------------------------------------
-
-
-def fig_scaling(out: pathlib.Path) -> pathlib.Path:
-    """Causal score-tile schedule across tasks, with the measured inference marked.
+def _panel_scaling(ax) -> None:
+    """(e): causal score-tile schedule across tasks, with the measured inference marked.
 
     This plots one schedule component, not total circuit size or time. Per-task time estimates
     were removed from the ledger:
@@ -1008,7 +950,6 @@ def fig_scaling(out: pathlib.Path) -> pathlib.Path:
     measured = [t.get("full_pass_tag") == "[V]" for t in tasks]
 
     y = np.arange(len(tasks))
-    fig, ax = plt.subplots(figsize=(6.7, 3.7), dpi=DPI)
 
     for i, (tv, m) in enumerate(zip(tiles, measured)):
         ax.barh(
@@ -1082,24 +1023,62 @@ def fig_scaling(out: pathlib.Path) -> pathlib.Path:
     excl = sc["out_of_encrypted_scope"][0]
     ax.text(
         0.0,
-        -0.185,
+        -0.30,
         f"Outside the encrypted scope: {excl['name']} needs {excl['tokens']:,} tokens and "
         f"{excl['token_groups']} groups, or {excl['causal_score_tiles']:,} score tiles — "
         f"a different regime, not a longer prompt.",
         transform=ax.transAxes,
-        fontsize=6.8,
+        fontsize=6.6,
         color=GRAY,
         ha="left",
         va="top",
     )
 
-    title(
+    _panel_title(
         ax,
-        "Prompt length sets the causal score-tile schedule",
-        "Derived per-block schedule only; neither total operation count nor a timing model.",
-        size=9.5,
+        "Prompt length sets the causal score-tile schedule (derived, not timed)",
     )
-    return emit(fig, out, "fig_scaling")
+
+
+def fig_systems(out: pathlib.Path) -> pathlib.Path:
+    """The systems behaviour of one complete encrypted inference, as five panels.
+
+    (a) sampled GPU use and (b) memory over the run; (c) how the encrypted-evaluation
+    interval divides between the two parties; (d) host memory per stage under the bounded
+    plaintext cache, against the separate unbounded-cache attempt; (e) the causal score-tile
+    schedule implied by each task's prompt length.
+    """
+    fig = plt.figure(figsize=(7.1, 7.35), dpi=DPI)
+    gs = fig.add_gridspec(
+        4,
+        2,
+        height_ratios=[0.80, 0.80, 1.35, 1.55],
+        hspace=0.62,
+        wspace=0.38,
+    )
+    ax_gpu = fig.add_subplot(gs[0, :])
+    ax_mem = fig.add_subplot(gs[1, :], sharex=ax_gpu)
+    ax_cost = fig.add_subplot(gs[2, 0])
+    ax_stage = fig.add_subplot(gs[2, 1])
+    ax_scale = fig.add_subplot(gs[3, :])
+
+    _panel_trace(ax_gpu, ax_mem)
+    _panel_cost_split(ax_cost)
+    _panel_stage_memory(ax_stage)
+    _panel_scaling(ax_scale)
+
+    # Half-width panels need a wider letter offset: the axes are narrower, so the same
+    # fraction of axes width lands on top of the panel title.
+    for ax, letter, dx in (
+        (ax_gpu, "a", -0.055),
+        (ax_mem, "b", -0.055),
+        (ax_cost, "c", -0.13),
+        (ax_stage, "d", -0.22),
+        (ax_scale, "e", -0.055),
+    ):
+        _panel_letter(ax, letter, x=dx, y=1.10)
+
+    return emit(fig, out, "fig_systems")
 
 
 # --- 9. Plaintext baseline --------------------------------------------------
@@ -1211,10 +1190,9 @@ FIGURES = {
     # the pre-optimization baseline has no committed dedicated-node measurement -- only an
     # attested value (see open_provenance in optimizations.yaml). The generator is kept so the
     # figure can be restored if that measurement ever lands.
-    "timeline": fig_timeline,
-    "memory": fig_memory,
-    "cost_split": fig_cost_split,
-    "scaling": fig_scaling,
+    # The resource trace, cost split, stage memory, and prompt-length schedule are panels of
+    # one composite figure; they are no longer generated as standalone PDFs.
+    "systems": fig_systems,
 }
 
 
