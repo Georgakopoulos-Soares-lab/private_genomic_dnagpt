@@ -16,9 +16,6 @@ serves the DNAGPT model rather than distributing it to clients. Keeping the weig
 an operational preference of this deployment, not a model-confidentiality guarantee supplied by
 the protocol.
 
-The released artifact does not itself require this arrangement; as Section~\ref{sec:intro} states,
-it serves as an auditable surrogate for a model whose owner limits access to a service.
-
 The protected asset is the genomic input. The data owner encrypts its embedded numeric vectors and
 retains the secret key; the compute provider evaluates the served model on those ciphertexts. The
 evaluated input path assumes that the provider distributes the tokenizer and embedding table so that
@@ -33,8 +30,10 @@ complete encrypted inference of Section~\ref{sec:results} the data owner alone s
 evaluating LayerNorm inverse square roots, causal softmax, and GELU at the boundaries, and this
 study records no comparable local CPU forward-pass time. Where the client may not hold the weights,
 the choices are to disclose the genome, decline the inference, or use a privacy-preserving protocol.
-Client-assisted CKKS provides access to the served model without genomic disclosure; it is not
-intended to outperform plaintext inference.
+Client-assisted CKKS targets deployments in which the provider retains the model server-side and
+the data owner prioritizes genomic confidentiality over latency. Under the semi-honest threat model,
+the provider performs inference without receiving the genomic input or intermediate activations in
+plaintext. The protocol is not intended to outperform local plaintext inference.
 
 \begin{table*}[!tb]\centering\small
 \caption{Resource and trust allocation under local and served-model deployment. The plaintext
@@ -47,22 +46,19 @@ service is the ordinary baseline that the encrypted protocol is intended to chan
 Client must hold the full model & yes & no & no \\
 Server receives genomic input & no & in plaintext & encrypted vectors \\
 Client requires a GPU & deployment-dependent & no & no \\
-Server evaluates model arithmetic & no & in plaintext & on ciphertexts \\
+Server evaluates transformer operations & no & in plaintext & on ciphertexts \\
 Client evaluates model nonlinearities & locally & no & at boundaries \\
 \bottomrule
 \end{tabularx}
 \end{table*}
 
-The protocol assigns the encrypted model arithmetic between client boundaries to the party with
-accelerator hardware, while the key holder evaluates the exact nonlinearities on CPU, which protects
-the genomic input without requiring the data owner to operate a GPU. The allocation becomes more
-server-heavy as model width grows: at fixed sequence structure the client's boundary work scales
-with the number of activation values, whereas the server's dense transforms scale quadratically with
-hidden width, so the client fraction decreases as $O(1/D)$ with hidden width $D$. That is an
-asymptotic property of the work allocation, not a measurement of a wider DNAGPT model.
+The protocol assigns transformer operations on encrypted activations between client boundaries to
+the party with accelerator hardware, while the key holder evaluates the exact nonlinearities on
+CPU. This allocation protects the genomic input without requiring the data owner to operate a GPU.
 
 \subsection{Adversary model}
-We consider a semi-honest compute provider under $128$-bit classical CKKS parameters. It follows
+We consider a semi-honest (honest-but-curious) compute provider under $128$-bit classical CKKS
+parameters. It follows
 the prescribed circuit but may inspect everything it legitimately receives: public and evaluation
 keys, model parameters, ciphertexts, sequence length, message sizes, operation order, boundary
 schedule, and timing. It does not alter ciphertexts to probe the client or deviate from the

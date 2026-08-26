@@ -165,7 +165,18 @@ def labelled_box(
 
 
 def arrow(
-    ax, x1, y1, x2, y2, color=GRAY, lw=1.6, style="-|>", mutation=16, linestyle="-"
+    ax,
+    x1,
+    y1,
+    x2,
+    y2,
+    color=GRAY,
+    lw=1.6,
+    style="-|>",
+    mutation=16,
+    linestyle="-",
+    shrink_a=0,
+    shrink_b=0,
 ):
     ax.add_patch(
         FancyArrowPatch(
@@ -176,8 +187,8 @@ def arrow(
             color=color,
             linewidth=lw,
             linestyle=linestyle,
-            shrinkA=0,
-            shrinkB=0,
+            shrinkA=shrink_a,
+            shrinkB=shrink_b,
         )
     )
 

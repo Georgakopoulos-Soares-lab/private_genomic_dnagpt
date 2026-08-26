@@ -30,8 +30,8 @@ layers on the server and has the client decrypt an intermediate, apply the nonli
 plaintext, and return a fresh encryption, though it studies convolutional networks and adds
 randomized output permutation to make reconstruction from released intermediates harder. The
 client-assisted pattern is thus established prior art, and we adopt rather than propose it. What
-this study adds is its application to a complete forward pass of a released genomic transformer at
-that model's task-defined prompt, preserving the released weights and exact nonlinearities, together
+this study adds is its application to a complete forward pass of a pretrained genomic transformer at
+the model's task-defined prompt, preserving the original weights and exact nonlinearities, together
 with an independently checked plaintext reference that makes the resulting arithmetic, boundary
 schedule, and memory behavior reproducible.
 
@@ -44,15 +44,12 @@ and its single-prediction latency is substantially higher, so the two readings s
 conflated. MOAI reports a further $52.8\%$ reduction in evaluation time against THOR by holding one
 packing convention across all layers and removing rotations from softmax and
 normalization~\cite{moai2025}. Powerformer instead modifies the model, training HE-suitable
-polynomial components rather than preserving a released transformer unchanged~\cite{powerformer2025},
+polynomial components rather than preserving a pretrained transformer unchanged~\cite{powerformer2025},
 and ELLMo treats packing and depth as coupled design choices~\cite{ellmo2026}.
 
-Model semantics, prompt length, nonlinear circuits, bootstrapping, packing, libraries, CPU paths,
-and measurement endpoints differ across these systems, so they establish that the present
-implementation is not performance-leading without isolating the cost of client assistance. The
-evaluated design occupies a different point in that space: it retains the released nonlinear
-formulas exactly, requires no homomorphic bootstrap, and pairs its execution with a frozen,
-independently checked plaintext reference.
+Direct latency comparisons with these systems are not controlled because the evaluated models and
+cryptographic circuits differ. Our protocol preserves DNAGPT's original nonlinear functions through
+client evaluation and requires no homomorphic bootstrapping.
 
 \subsection{Homomorphic encryption for genomics}
 
@@ -63,7 +60,7 @@ homomorphic encryption with hashing and set-intersection techniques to test for 
 without disclosing either the stored genome or the query~\cite{privategenomicqueries2017}.
 Those workloads center on searches or prescribed statistics over genomic records. DNAGPT inference
 instead composes dense projections, attention, normalization, and a feed-forward network while
-preserving the numerical behavior of a released foundation model. This study extends the genomic
+preserving the numerical behavior of a pretrained foundation model. This study extends the genomic
 HE lineage to the feasibility boundary of that transformer forward pass.
 
 The iDASH series has since moved from encrypted statistics toward encrypted neural evaluation, and
@@ -76,9 +73,9 @@ point, classifying a batch of $163$ encrypted sequences in about $165$~s at $128
 security~\cite{encrypteddashformer}. On interaction that result is strictly stronger than the
 design evaluated here, which returns to the key holder at every nonlinearity. It reaches that
 strength under different constraints: one transformer block against twelve, a purpose-trained
-competition classifier against a released $0.1$-billion-parameter backbone, and nonlinearities
-replaced by data-driven non-polynomial fits rather than preserved. To our knowledge, no released,
-pretrained genomic foundation model has previously been evaluated under homomorphic encryption for
+competition classifier against a $0.1$-billion-parameter backbone, and nonlinearities
+replaced by data-driven non-polynomial fits rather than preserved. To our knowledge, no publicly
+available pretrained genomic foundation model has previously been evaluated under homomorphic encryption for
 a complete forward pass.
 
 \subsection{GPU acceleration and homomorphic matrix primitives}
@@ -97,9 +94,7 @@ Matrix layout determines which rotations, plaintext encodings, and reductions an
 linear layer requires. THOR's diagonal-major representation and compact packing specialize
 that layout for transformer inference~\cite{thor}; HE-BLAS develops a broader library of
 homomorphic linear-algebra kernels and shape-aware algorithms~\cite{heblas2025}. These works
-motivate the remaining targets in Section~\ref{sec:optimization}, as does MOAI's rotation-free
-formulation of softmax and normalization~\cite{moai2025}: reducing repeated packing work, copying
-fewer distinct diagonal plaintexts, and replacing segmented slot reductions with kernels matched to
-the tensor shapes. Because packing, key material, level consumption, and the operation schedule
-interact, each candidate primitive must be revalidated against the frozen plaintext reference and
-checked schedule before its performance is compared.
+motivate future work on packed transforms and attention reductions, as does MOAI's rotation-free
+formulation of softmax and normalization~\cite{moai2025}. Because packing, key material, level
+consumption, and the operation schedule interact, each candidate primitive must be revalidated
+against the plaintext reference and checked schedule before its performance is compared.

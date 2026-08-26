@@ -11,96 +11,68 @@
 
 Human genomic sequence carries an unusually persistent confidentiality risk. It can identify its
 contributor and, through familial relationships, reveal information about people who never supplied
-a sample; re-identification has been demonstrated even when conventional identifiers were
-removed~\cite{gymrek2013,erlich2018}. A disclosed genome also cannot be replaced in the manner of a
-password or access token. European data-protection law accordingly treats genetic data as a special
-category~\cite{gdpr}. The same sequence is the input from which genomic foundation models derive
-their value. DNAGPT is one released model of this class, serving classification, regression, and
-generation tasks through a common transformer backbone~\cite{dnagpt2023}; the downstream tasks
-evaluated here are defined over human sequence. When a genomic model is available only as a service,
-conventional inference requires the data owner to send the sequence, or a representation of it, to
-the provider. Sending plaintext embeddings does not necessarily solve the privacy problem: recent
-work has shown that per-token representations from DNA foundation models can permit near-perfect
-reconstruction of the underlying sequence~\cite{dnaembeddinginversion2026}. Homomorphic encryption
-offers a route for the provider to compute without receiving the genomic values in plaintext.
+a sample; re-identification has been demonstrated even after conventional identifiers were
+removed~\cite{gymrek2013,erlich2018}. A disclosed genome also cannot be replaced like a password or
+access token. European data-protection law accordingly treats genetic data as a special
+category~\cite{gdpr}. Genomic foundation models derive their value from that same sequence. DNAGPT
+supports classification, regression, and generation through a common transformer
+backbone~\cite{dnagpt2023}; the downstream tasks evaluated here use human sequence. When such a
+model is offered only as a service, conventional inference requires the data owner to send the
+sequence or a representation of it to the provider. Plaintext embeddings do not necessarily remove
+the risk: per-token representations from DNA foundation models can permit near-perfect sequence
+reconstruction~\cite{dnaembeddinginversion2026}. Homomorphic encryption offers a way for the
+provider to compute without receiving those genomic values in plaintext.
 
-DNAGPT is public and can be run locally; we use it because its release makes the experiment
-reproducible and auditable. That is a requirement of the study rather than a convenience. An
-encrypted execution is only meaningful against the exact plaintext prediction it must reproduce, so
-the released weights are what make an independent numerical reference, and therefore an independent
-check of the encrypted result, possible at all. A model reachable only through an interface would
-permit no such reference. We therefore treat DNAGPT as a reproducible surrogate for a genomic model
-that a provider offers only as a service, whether for commercial, licensing, or governance reasons.
-Under that premise, the data owner's alternatives are to disclose the genome, to decline the
-inference, or to use a protocol in which the provider computes without receiving the sequence.
+DNAGPT is publicly available and can be run locally; public weights make the encrypted computation
+auditable. The deployment studied here represents a provider that retains a genomic model
+server-side for commercial, licensing, or governance reasons. In that setting, the data owner must
+either disclose the genomic input, forgo the inference, or use a privacy-preserving protocol. We
+therefore ask whether a complete DNAGPT transformer can be evaluated under homomorphic encryption,
+and what limits its numerical fidelity, memory use, and runtime. Feasibility asks whether the
+complete computation executes within the cryptographic and memory budget while meeting a
+predeclared numerical criterion. Practicality asks whether the resulting cost suits the intended
+deployment.
 
-We therefore ask whether a complete released genomic transformer can be executed under homomorphic
-encryption, and what limits its numerical fidelity, memory use, and runtime. We separate two
-questions. Feasibility asks whether the complete computation can execute within the cryptographic
-and memory budget while meeting the predefined numerical criterion for the evaluated case.
-Practicality asks whether the resulting resource cost is suitable for the intended use. A
-numerically agreeing but slow execution can therefore establish complete-model feasibility for the
-tested case without establishing a practical service.
+CKKS supports the packed additions, multiplications, and rotations used by transformer linear
+layers and attention products~\cite{ckks2017}, but LayerNorm, softmax, and GELU require functions
+that are expensive to evaluate homomorphically. A fully non-interactive design must approximate
+them with polynomial circuits and provide a larger depth and refresh budget. In our evaluated
+non-interactive configuration, one transformer block completes, but multi-block composition
+exceeds the tested memory envelope. This motivates the client-assisted protocol evaluated here:
+the data owner evaluates the three nonlinear functions exactly at predetermined boundaries and
+returns fresh ciphertexts. The refreshes reset the multiplicative-depth budget and avoid
+homomorphic bootstrapping in the retained protocol. Client-assisted nonlinear evaluation is
+established prior art~\cite{thex2022,safhire2025}; our study measures its numerical behavior,
+memory, interaction, and executed work for a complete genomic transformer whose weights and
+nonlinear formulas remain unchanged.
 
-The main cryptographic difficulty arises from transformer operations that are not directly
-supported by low-depth CKKS arithmetic. CKKS efficiently supports the packed additions,
-multiplications, and rotations needed for dense linear transformations~\cite{ckks2017}; LayerNorm,
-softmax, and GELU are not native CKKS operations. A
-non-interactive evaluator must approximate them with polynomial circuits, lengthening the
-multiplicative path and increasing the context, bootstrapping, and evaluation-key material that
-must be resident. Moving the exact functions to the key holder shortens those paths and resets the
-depth budget, but introduces interaction and a different threat model. Earlier systems establish
-both directions: THOR demonstrates non-interactive homomorphic transformer inference; THE-X and
-Safhire use interactive workflows in which the client evaluates nonlinear
-functions~\cite{thor,thex2022,safhire2025}. The division of labor is therefore established prior
-art. What has not been reported is an auditable account of the numerical behavior, memory,
-interaction, and executed work that results when it is applied end to end to a released genomic
-transformer, at that model's own task prompt, with its weights and nonlinear formulas unmodified.
+We first reproduce DNAGPT on genomic-signal recognition, promoter and splice-site classification,
+and mRNA abundance regression. For numerical validation, we implement the forward computation
+independently in PyTorch float64 and NumPy float64 and compare their outputs after every transformer
+block and the task head. Once these implementations agree, the NumPy output becomes the plaintext
+reference for encrypted evaluation. We then evaluate non-interactive and client-assisted CKKS
+designs under checked operation schedules.
 
-Figure~\ref{fig:abstract} summarizes the resulting deployment, the division of work between the
-two parties, and the measured outcome.
-
-We begin by establishing that the target computation is meaningful and independently reproducible.
-The released DNAGPT paths are evaluated across genomic-signal recognition, promoter and splice-site
-classification, and mRNA abundance regression, with task outputs frozen before encrypted work.
-The validation records the released float32 path, checks an independent NumPy float64 lineage
-against a float64-cast PyTorch shadow for every released block and the task head, and then compares
-encrypted execution with that reference. We build two CKKS designs: a
-non-interactive circuit with polynomial nonlinearities, and a client-assisted circuit whose fixed,
-non-adaptive boundaries evaluate the released nonlinearities exactly. Instrumented evaluations
-record where each design stops in correctness and memory, while runtime validation preserves the
-complete cryptographic operation schedule throughout the systems campaign.
-
-The results separate three candidate barriers and resolve two of them. Numerical agreement holds:
-the client-assisted design evaluates all twelve released blocks and the task head at the $103$-token
-prompt, and for the one input evaluated it reproduces the frozen plaintext label with
-$8.56\times10^{-9}$ relative margin error against a $4\times10^{-2}$ tolerance fixed before
-evaluation. Accelerator memory holds as well, and for a structural reason: each client boundary
-returns the computation to a freshly encrypted activation, so the depth the circuit must support is
-set by the longest stretch between two boundaries and not by the depth of the network, and
-device-wide GPU memory used does not grow across the twelve blocks. Bounded caching separately
-prevents encoded plaintexts from accumulating across host-side stages. The evaluated non-interactive
-design, by contrast, completes one released-weight block but exceeds the tested $80$~GB envelope
-while loading its composition context and evaluation keys, placing that barrier in the nonlinear
-schedule rather than in the model's dense maps. Cost is the barrier that remains: one encrypted
-classification takes $1.86$~hours on an A100 GPU node, which does not enable interactive use in the
-evaluated form. These memory and timing figures are specific to the evaluated backend, packing, and
-parameters.
+The client-assisted protocol executes all twelve transformer blocks and the task head at the
+$103$-token benchmark while maintaining a maximum multiplicative depth of $13$ and bounded
+accelerator memory. Its output satisfies the predeclared numerical tolerance by several orders of
+magnitude. The complete execution takes $1.86$~hours on one A100, making runtime instead of
+correctness or accelerator capacity the main limitation of the current implementation.
 
 The paper makes the following contributions:
 
 \begin{itemize}
-  \item \textbf{Complete-model graph feasibility.} All twelve released DNAGPT blocks and the task
-        head execute at the $103$-token task prompt from encrypted embedded vectors, with unmodified
-        released weights and nonlinear formulas and without homomorphic bootstrap; the one
-        evaluated prompt reproduces the reference label. To our knowledge this is the first
-        complete forward pass of a released, pretrained genomic foundation model evaluated under
-        CKKS; prior homomorphic transformer evaluations over biological sequence data have targeted
-        small, purpose-trained classifiers~\cite{idash24descriptor,encrypteddashformer}.
+  \item \textbf{Complete-model graph feasibility.} All twelve DNAGPT transformer blocks and the
+        task head execute at the $103$-token maximum encrypted-scope classification benchmark from
+        encrypted embedded vectors, with the original weights and nonlinear formulas and without
+        homomorphic bootstrapping. To our knowledge this is the first complete CKKS forward pass of
+        a pretrained genomic foundation model; prior homomorphic transformer evaluations over
+        biological sequence data have targeted small, purpose-trained
+        classifiers~\cite{idash24descriptor,encrypteddashformer}.
   \item \textbf{Independently checked numerical evaluation.} The protocol, packing, checked
         operation schedule, predeclared tolerance, and validation chain make the complete execution
         independently inspectable.
-  \item \textbf{Measured systems anatomy and scoped negative results.} We report complete-model
-        cost, interaction, depth, and memory; the stage-bounded cache that makes host-side reuse
+  \item \textbf{Measured resource behavior.} We report complete-model cost, interaction,
+        multiplicative depth, and memory; the stage-bounded cache that makes host-side reuse
         executable; and the memory boundary reached by the evaluated non-interactive configuration.
 \end{itemize}

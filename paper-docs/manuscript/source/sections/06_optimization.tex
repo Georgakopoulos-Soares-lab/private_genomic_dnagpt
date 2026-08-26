@@ -13,22 +13,16 @@
 \section{Host-side systems work at fixed circuit}
 \label{sec:optimization}
 
-Encoding each distinct weight diagonal once removes redundant host work but creates a memory
-lifetime problem. An implementation that retained every encoded template was terminated by the
-operating system at $61{,}863$~MiB resident, when the MLP began building templates on top of those
-cached by earlier stages. Bounding the cache to one live stage makes reuse executable within the
-tested host-memory envelope. Peak host memory is then determined by the largest stage, not by every
-encoded weight in the block. The remaining changes govern when host data are prepared, how long
-they remain resident, and where CPU work executes.
+Reusing encoded weight diagonals removes redundant host encoding, but retaining every encoded
+plaintext causes host memory to accumulate across stages. An unbounded-cache implementation was
+terminated by the operating system at $61{,}863$~MiB when the MLP began building templates on top of
+earlier stages. The retained implementation caches encoded diagonals only for the stage in which
+they are reused, so the largest live stage determines peak host memory.
 
-Every change in this section holds the encrypted circuit fixed: the retained implementation executes
-the same checked operation schedule before and after each change, with packing, multiplicative
-depth, boundary order, and the frozen plaintext reference unchanged, and the run-time checks of
-Section~\ref{sec:protocol} abort on any deviation. No retained change removes a dense transform,
-reduces the number of attention tiles, moves linear algebra to the client, or relaxes the acceptance
-criterion. The section therefore reports verified changes in executed work and memory but no
-elapsed-time comparison, because no dedicated-node measurement of the pre-optimization configuration
-exists.
+All retained host-side optimizations preserve the encrypted operation schedule, packing, boundary
+order, multiplicative depth, and numerical acceptance criterion. Because no dedicated-node
+measurement of the pre-optimization implementation is available, we report verified changes in
+executed work and memory instead of a latency speedup.
 
 \subsection{Host-side encoding redundancy}
 The baseline rebuilt and encoded every packed diagonal for every dense product. Its $156$ products
@@ -73,12 +67,10 @@ the implementation flushes the cache after query/key/value projection and after 
 projection, which are the final use sites for their respective weight sets: no weight matrix recurs
 across either boundary, so retaining those templates cannot produce another hit.
 
-The lifetime policy follows the block topology. Within a stage, the group-major loop revisits its
-weights as it advances through token groups, so early eviction would discard real reuse; across
-stages, the next operation consumes a different set of weights, so eviction there releases memory
-without creating a later re-encoding.
-
-The target-process resident-set trace follows this policy, as
+Within a stage, the group-major loop revisits its weights as it advances through token groups, so
+early eviction would discard real reuse. Across stages, the next operation consumes a different set
+of weights, so eviction releases memory without creating a later re-encoding. The target-process
+resident-set trace follows this policy, as
 Figure~\ref{fig:systems}(d) shows. Query/key/value projection reaches
 $25{,}530$~MiB. Attention begins after a flush and uses $12{,}434$~MiB. The MLP holds eight
 matrices and reaches the block peak of $48{,}610$~MiB. The largest live stage, rather than every
@@ -97,10 +89,8 @@ a core-local parallel batch under the same cryptographic parameters. Their elaps
 awaits a sourced paired measurement.
 
 \begin{table*}[!tb]\centering\small
-\caption{Host-side changes at fixed circuit. Every row leaves the operation schedule, packing,
-multiplicative depth, and frozen plaintext reference unchanged. Effects are verified changes in
-executed work or in memory; the table carries no elapsed-time column, because no dedicated-node
-measurement of the pre-optimization configuration exists.}
+\caption{Host-side optimizations that preserve the encrypted circuit. Effects report verified
+changes in executed work or memory; no controlled latency comparison is available.}
 \label{tab:optimization}
 \begin{tabularx}{\linewidth}{Y l l}
 \toprule
@@ -120,24 +110,3 @@ Encode at use level, flush between stages & peak $48{,}610$~MiB RSS & enabling \
 % No waterfall figure: it needs two supported timing endpoints, and the pre-optimization
 % baseline has no committed dedicated-node measurement. The generator is retained in
 % scripts/figures.py but is not registered in FIGURES.
-
-\subsection{Remaining optimization targets}
-Mask plaintexts are still encoded afresh at approximately $17{,}400$ uses per block. Head masks,
-score-isolation masks, lane masks, and copy-activity masks all have fixed values under the declared
-layout, so host templates could remove the same class of repeated work already eliminated for
-weight diagonals. This target remains unimplemented.
-
-A second opportunity lies in the four packed activation copies. They currently carry duplicates
-through a dense transform. An analyzed layout would apply distinct transforms to those copies,
-placing query, key, and value projections together and likewise combining the MLP expansion
-chunks. At fixed model arithmetic, the projected schedule reduces dense products from $156$ to
-approximately $52$ and dense ciphertext--plaintext multiplications from $159{,}744$ to
-approximately $53{,}248$; the total ciphertext--plaintext count falls by roughly $60\%$ before mask
-and copy-repair overhead. This is a derived projection for an unimplemented layout, and it requires
-an exact reconstruction proof before implementation.
-
-Client work has a separate opportunity. Attention dominates the boundary schedule
-(Section~\ref{sec:protocol}), and each attention tile's cryptographic work is independent.
-Concurrent client boundaries were unsafe under the evaluated shared crypto context, so the retained
-implementation executes them sequentially. A thread-safe context would expose this independent work
-to concurrency.

@@ -8,7 +8,7 @@
 
 \subsection{DNAGPT and the genomic task families}
 DNAGPT is an autoregressive transformer adapted to sequence and numerical tasks over
-DNA~\cite{dnagpt2023}. We evaluate its released $0.1$-billion-parameter configuration. The backbone has
+DNA~\cite{dnagpt2023}. We evaluate its $0.1$-billion-parameter configuration. The backbone has
 $12$ transformer blocks, hidden width $768$, and $12$ causal-attention heads of width $64$. Its
 feed-forward sublayer expands to width $3{,}072$. DNA is represented through $6$-mer tokenization
 and combined with task-format tokens before entering the transformer.
@@ -43,8 +43,9 @@ masks remain plaintext, while every query-derived operand remains encrypted at t
 CKKS controls approximate fixed-point scale through rescaling. A multiplication consumes a level
 from a finite modulus chain, and the computation fails once that multiplicative budget is exhausted.
 Bootstrapping can refresh a ciphertext without decryption, while fresh client encryption can reset
-the budget in an interactive protocol. Both choices carry system costs, so multiplicative depth is
-an architectural resource rather than only a cryptographic parameter.
+the budget in an interactive protocol. The latter is used by the client-assisted protocol in this
+study, which therefore requires no homomorphic bootstrapping. Both choices carry system costs, so
+multiplicative depth is an architectural resource rather than only a cryptographic parameter.
 
 \subsection{Why the nonlinearities are the architecture}
 CKKS directly supplies polynomial arithmetic, but a transformer requires inverse square root in
@@ -59,19 +60,3 @@ approximation-range calibration and resets the encrypted depth budget but requir
 and exposes intermediate activations to it. The choice between polynomial approximation and client
 evaluation therefore determines memory, interaction, depth, and the threat model.
 Section~\ref{sec:protocol} evaluates both designs and reports where each stops.
-
-\subsection{Evaluated software backends}
-We separate correctness semantics from the performance path. OpenFHE provides CKKS context and
-security-parameter construction, encoding, rotations, polynomial evaluation, and approximate
-bootstrapping~\cite{openfhe}. It supplies the reference behavior used to validate local encrypted
-operators and the non-interactive design. The evaluated GPU backend interoperates with those
-representations and provides CUDA implementations of the server-side CKKS operations; all reported
-accelerator measurements use that path. Python, NumPy, and PyTorch construct and validate the frozen
-plaintext reference, but they do not participate in encrypted performance measurements.
-
-We also evaluated the Boolean/integer-oriented TFHE-rs path and Concrete ML's client/server
-workflow~\cite{concreteml,tfhers}; their available GPU acceleration and ciphertext expansion were
-less suitable for this matrix-heavy graph than the already validated CKKS path, and a separate CKKS
-wrapper lacked the refresh and general nonlinear-function support the non-interactive baseline
-needs. These decisions select among the software paths tested here. They do not establish that CKKS
-is the only scheme able to express encrypted transformer inference.

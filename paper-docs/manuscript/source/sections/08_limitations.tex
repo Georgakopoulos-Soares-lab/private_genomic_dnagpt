@@ -7,22 +7,13 @@
 \section{Limitations}
 \label{sec:limitations}
 
-The complete model has been evaluated once. All $12$ released blocks and the task head run at the
-task's full $103$-token prompt on a whole-node allocation with no evidence of resource contention
-in the recorded telemetry. One sample supports
-a statement about the cost of that inference; it does not support a mean, a variance, or a
-service-rate claim, and the run has not been repeated. Nor does
-the study report encrypted task accuracy: the encrypted prediction is checked against the frozen
-plaintext reference for one input, not evaluated over a test set. That input was selected
-deterministically as the first record of the positive genomic-signal input, not randomly or by a
-predeclared margin stratum.
+Complete-model timing and numerical agreement are based on a single execution of the $103$-token
+benchmark. This supports the reported execution cost and correctness comparison but not run-to-run
+variance, encrypted task accuracy, or input-domain numerical generality. The input was selected
+deterministically as the first positive genomic-signal record, not randomly or by prediction margin.
 
-Interaction is a standing requirement rather than an implementation detail. The protocol needs an
-available key holder at every one of the $10{,}299$ declared boundaries of a complete inference; a
-data owner that goes offline mid-evaluation has no way to finish it, and only a holder of the secret
-key can complete a boundary. A non-interactive evaluation does not require the key holder to be
-available while the computation runs, and this study establishes no advantage over such designs in
-latency, throughput, or availability.
+The protocol requires the key holder to remain available at the predetermined nonlinear and refresh
+boundaries. Availability and throughput therefore differ from non-interactive HE systems.
 
 Client and server are roles inside one program on one node. Boundary calls perform the
 cryptographic operations directly, without ciphertext serialization, network transport, or a key
@@ -35,24 +26,15 @@ table, and construction of the initial embedding occur before the encrypted boun
 deployment assumes that the tokenizer and embedding table are distributed to the client. Private
 lookup is required if a provider will not make those components available.
 
-Model confidentiality remains operational rather than cryptographic. Because the data owner sees
-full activations at every nonlinearity, the transcript divides the network into shallow segments
-with known nonlinearities. This creates a chosen-query extraction surface, and some affine segments
-may be identifiable from sufficiently diverse queries. Attention exposes composite relationships,
-however, and this study provides neither an extraction experiment nor a general recovery claim.
-Server-side weight placement may discourage casual copying, but it is not a cryptographic
-model-protection mechanism.
+Model confidentiality is not a cryptographic goal of the protocol. The data owner observes
+intermediate activations at the client boundaries, which may expose information useful for model
+extraction. We do not evaluate such attacks; server-side model placement is an operational
+deployment choice rather than model protection.
 
 CKKS decryption is approximate. The client never returns a decoded value to the server, only a
 freshly encrypted result, but the server selects the ciphertext supplied to each declared
 boundary. Security analyses of approximate homomorphic encryption show why adversarially selected
 decryption queries require care~\cite{limicciancio2021}. The semi-honest threat model rules out
 deviations from the declared schedule, and the current re-encryption path applies no noise
-flooding. The measured single-block error
-of $4.64\times10^{-9}$ leaves seven orders of magnitude inside the $4\times10^{-2}$ acceptance
-tolerance, and the twelfth-block hidden state leaves six, but numerical headroom alone does not
-establish a secure flooding parameter. Selecting
-and validating that budget remains future work.
-
-The adversary exclusions are defined in Section~\ref{sec:threat-model}. The results do not extend
-beyond that threat model.
+flooding. Numerical headroom alone does not establish a secure flooding parameter. Selecting and
+validating that budget remains future work.

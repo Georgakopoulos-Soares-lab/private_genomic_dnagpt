@@ -29,7 +29,6 @@ sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
 
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
-from matplotlib.patches import Patch  # noqa: E402
 
 from figstyle import (  # noqa: E402
     AMBER,
@@ -186,16 +185,16 @@ def fig_graphical_abstract(out: pathlib.Path) -> pathlib.Path:
         32,
         23,
         "Client-assisted CKKS",
-        "server: encrypted linear algebra\nclient: declared nonlinear boundaries",
+        "provider: transformer on ciphertexts\ndata owner: exact nonlinearities",
         facecolor="white",
         edgecolor=BLACK,
         title_size=9.3,
-        sub_size=7.2,
+        sub_size=6.5,
     )
 
-    arrow(ax, 15.5, 67, 15.5, 59, color=CLIENT, lw=1.5)
-    arrow(ax, 29.5, 50.5, 33.5, 50.5, color=CLIENT, lw=1.5)
-    arrow(ax, 84.5, 67, 66.5, 57.5, color=SERVER, lw=1.5)
+    arrow(ax, 15.5, 68, 15.5, 58, color=CLIENT, lw=1.5, shrink_a=3, shrink_b=3)
+    arrow(ax, 29, 50.5, 34, 50.5, color=CLIENT, lw=1.5, shrink_a=2, shrink_b=2)
+    arrow(ax, 75.5, 68, 66, 59, color=SERVER, lw=1.5, shrink_a=3, shrink_b=3)
 
     ax.text(
         50,
@@ -211,11 +210,17 @@ def fig_graphical_abstract(out: pathlib.Path) -> pathlib.Path:
     # Every headline value below comes from the complete-model run, the only clean
     # dedicated-node artifact. The earlier per-block timing and the client peak-memory
     # figure are not used here because neither has committed dedicated-node evidence.
+    margin_mantissa, margin_exponent = (
+        f"{L.value('full.margin_rel_error'):.2e}".split("e")
+    )
+    margin_math = (
+        rf"$\mathbf{{{margin_mantissa}\times10^{{{int(margin_exponent)}}}}}$"
+    )
     results = [
-        (f"{L.value('prompt.gsr_total')} tokens", "GSR prompt"),
-        (f"{L.value('full.wall_hours')} h", "one measured run"),
+        (f"{L.value('prompt.gsr_total')} tokens", "benchmark"),
+        (f"{L.value('full.wall_hours')} h", "complete benchmark"),
         (
-            rf"${L.value('full.margin_rel_error'):.2e}$",
+            margin_math,
             "vs. float64 reference",
         ),
         (
@@ -263,7 +268,7 @@ def fig_architecture(out: pathlib.Path) -> pathlib.Path:
         ("server", "MLP down-projection, residual"),
     ]
 
-    top, bottom = 86.0, 18.0
+    top, bottom = 86.0, 24.0
     n = len(steps)
     pitch = (top - bottom) / n
     height = pitch * 0.72
@@ -307,7 +312,7 @@ def fig_architecture(out: pathlib.Path) -> pathlib.Path:
 
     ax.plot(
         [boundary, boundary],
-        [4.0, 88.5],
+        [8.0, 88.5],
         color=GRAY,
         linewidth=1.1,
         linestyle=(0, (6, 5)),
@@ -330,58 +335,85 @@ def fig_architecture(out: pathlib.Path) -> pathlib.Path:
         centres.append((who, x, y, y + height / 2))
 
     for i in range(n - 1):
-        who_a, xa, ya, mid_a = centres[i]
-        who_b, xb, yb, mid_b = centres[i + 1]
+        who_a, xa, ya, _ = centres[i]
+        who_b, xb, yb, _ = centres[i + 1]
+        cx_a = xa + width / 2
+        cx_b = xb + width / 2
         if who_a == who_b:  # same column: drop straight down
-            cx = xa + width / 2
-            arrow(ax, cx, ya, cx, yb + height, color=GRAY, lw=1.3)
-        else:  # cross the boundary
-            x1 = xa + width if who_a == "client" else xa
-            x2 = xb if who_b == "server" else xb + width
-            arrow(
-                ax,
-                x1,
-                mid_a - height * 0.15,
-                x2,
-                mid_b + height * 0.15,
+            ax.plot(
+                [cx_a, cx_b],
+                [ya, yb + height],
                 color=GRAY,
-                lw=1.3,
+                linewidth=1.3,
+            )
+        else:  # route below one row, then horizontally, never diagonally through a box
+            route_y = (ya + yb + height) / 2
+            ax.plot(
+                [cx_a, cx_a, cx_b, cx_b],
+                [ya, route_y, route_y, yb + height],
+                color=GRAY,
+                linewidth=1.3,
             )
 
-    # The retained implementation has two distinct block-end actions. A one-block validation
-    # may decrypt the output for comparison; composition decrypts and freshly re-encrypts the
-    # full hidden state before the next block. They are alternatives, not one generic readout.
-    last_x = rx + width / 2
-    last_y = centres[-1][3]
-    box_h = 7.2
+    # Composition returns the hidden state to the key holder for a fresh level-0 encryption.
+    # Validation is a secondary branch from that client-side action.
+    last_cx = rx + width / 2
+    last_bottom = centres[-1][2]
+    box_h = 7.4
     labelled_box(
         ax,
         4,
-        6.5,
+        10.0,
         42,
         box_h,
-        "Validation only: decrypt output",
+        "Refresh hidden state",
+        "data owner decrypts + re-encrypts at level 0",
         facecolor=CLIENT_PALE,
         edgecolor=CLIENT,
         title_size=7.3,
+        sub_size=5.8,
     )
     labelled_box(
         ax,
         54,
-        6.5,
+        10.0,
         42,
         box_h,
-        "Composition: decrypt + re-encrypt hidden state",
-        facecolor=CLIENT_PALE,
-        edgecolor=CLIENT,
-        title_size=7.1,
+        "Next transformer block",
+        "fresh ciphertext returns to the provider",
+        facecolor=SERVER_PALE,
+        edgecolor=SERVER,
+        title_size=7.3,
+        sub_size=5.8,
     )
-    arrow(ax, last_x, last_y - height / 2, 25, 14.1, color=GRAY, lw=1.1)
-    arrow(ax, last_x, last_y - height / 2, 75, 14.1, color=GRAY, lw=1.1)
+    route_y = 20.5
+    ax.plot(
+        [last_cx, last_cx, 25, 25],
+        [last_bottom, route_y, route_y, 17.4],
+        color=GRAY,
+        linewidth=1.2,
+    )
+    ax.plot([46, 54], [13.7, 13.7], color=GRAY, linewidth=1.2)
+    ax.plot(
+        [25, 25],
+        [10.0, 6.8],
+        color=GRAY,
+        linewidth=1.0,
+        linestyle="--",
+    )
+    ax.text(
+        25,
+        5.8,
+        "validation only: decrypt the final output",
+        fontsize=6.2,
+        color=GRAY,
+        ha="center",
+        va="center",
+    )
     ax.text(
         boundary,
-        1.2,
-        "Only ciphertexts cross the in-process role boundary; fresh encryption resets level to 0.",
+        1.4,
+        "Fresh encryption resets the CKKS depth budget; no homomorphic bootstrapping is used.",
         fontsize=6.8,
         color=BLACK,
         ha="center",
@@ -433,7 +465,8 @@ def fig_packing(out: pathlib.Path) -> pathlib.Path:
     w = (96.0 - gap * (copies - 1)) / copies
     for c in range(copies):
         x = x0 + c * (w + gap)
-        labelled_box(ax, x, 56, w, 26, "", facecolor=SERVER_PALE, edgecolor=SERVER)
+        # Extend the copy box below the lane label so the label does not sit on its border.
+        labelled_box(ax, x, 54, w, 28, "", facecolor=SERVER_PALE, edgecolor=SERVER)
         ax.text(
             x + w / 2,
             78.0,
@@ -488,8 +521,8 @@ def fig_packing(out: pathlib.Path) -> pathlib.Path:
         ax.text(
             x + pad + active_w + (inner - active_w) / 2,
             67.8,
-            f"{width_feat - active}\npad + stage",
-            fontsize=5.2,
+            f"{width_feat - active}\npadding",
+            fontsize=4.8,
             color=BLACK,
             ha="center",
             va="center",
@@ -520,7 +553,7 @@ def fig_packing(out: pathlib.Path) -> pathlib.Path:
     ax.text(
         2,
         46,
-        f"GSR: {bp} bp become {tokens} tokens in {groups} groups",
+        f"{tokens}-token genomic-signal benchmark: {bp} bp → {groups} ciphertext groups",
         fontsize=10.0,
         fontweight="bold",
         color=BLACK,
@@ -529,10 +562,10 @@ def fig_packing(out: pathlib.Path) -> pathlib.Path:
     ax.text(
         2,
         40.5,
-        f"{bp} bp ÷ {kmer}-mer = {bp // kmer} tokens, plus {specials} task specials = "
-        f"{tokens}.   {tokens} tokens across {lanes} lanes rounds up to {groups} groups; "
-        f"the final group is partly padded.",
-        fontsize=7.0,
+        f"{bp} bp ÷ {kmer}-mer = {bp // kmer} tokens + {specials} task specials = {tokens}. "
+        "Longest encrypted-scope classification prompt.\n"
+        f"{lanes} token lanes give {groups} groups; the final group has one padded lane.",
+        fontsize=6.8,
         color=GRAY,
         va="center",
     )
@@ -700,7 +733,7 @@ def fig_waterfall(out: pathlib.Path) -> pathlib.Path:
         "156 dense products  ·  177,734 ciphertext–plaintext and\n"
         "1,506 ciphertext–ciphertext multiplications  ·  8,173 rotations\n"
         "857 client boundary crossings  ·  multiplicative depth 13\n"
-        "the same frozen plaintext reference, reproduced to $4.6\\times10^{-9}$",
+        "the same precomputed plaintext reference, reproduced to $4.6\\times10^{-9}$",
         fontsize=10.2,
         color=GRAY,
         va="center",
@@ -781,14 +814,14 @@ def _panel_trace(ax1, ax2) -> None:
     ax1.grid(axis="y", color=LIGHT_GRAY, linewidth=0.8)
     ax1.set_axisbelow(True)
 
-    ax2.plot(t, rss, color=CHART_BLUE, linewidth=1.7, label="host memory", zorder=3)
+    ax2.plot(t, rss, color=CHART_BLUE, linewidth=1.7, label="host RSS", zorder=3)
     ax2.plot(
         t,
         gpu_mem,
         color=GREEN,
         linewidth=1.7,
         linestyle="--",
-        label="GPU memory",
+        label="device-wide GPU memory used",
         zorder=3,
     )
     ax2.set_ylabel("Memory (MiB)", fontsize=8)
@@ -798,9 +831,10 @@ def _panel_trace(ax1, ax2) -> None:
     ax2.legend(
         frameon=False,
         fontsize=7.2,
-        loc="upper left",
+        loc="lower left",
         ncol=2,
-        bbox_to_anchor=(0.0, 1.04),
+        bbox_to_anchor=(0.0, 1.01),
+        borderaxespad=0.0,
     )
     despine(ax2)
     ax2.grid(axis="y", color=LIGHT_GRAY, linewidth=0.8)
@@ -812,7 +846,12 @@ def _panel_trace(ax1, ax2) -> None:
         f"Sampled GPU use over one complete inference "
         f"(thinned from {full_samples} samples)",
     )
-    _panel_title(ax2, f"Memory over the same run, across {blocks} blocks")
+    # Reserve a separate band for the legend so neither trace runs through its labels.
+    _panel_title(
+        ax2,
+        f"Host RSS and device-wide GPU memory used across {blocks} blocks",
+        pad=25,
+    )
 
 
 def _panel_stage_memory(ax) -> None:
@@ -849,7 +888,7 @@ def _panel_stage_memory(ax) -> None:
     ax.text(
         2.60,
         fail + 1400,
-        f"Separate unbounded-cache attempt:\n{fail:,} MiB at operating-system kill",
+        f"unbounded cache:\nOS kill at {fail:,} MiB",
         color=FAILURE,
         fontsize=6.6,
         ha="right",
@@ -866,7 +905,7 @@ def _panel_stage_memory(ax) -> None:
     despine(ax)
     ax.grid(axis="y", color=LIGHT_GRAY, linewidth=0.8)
     ax.set_axisbelow(True)
-    _panel_title(ax, "Host memory per stage, one block, bounded cache")
+    _panel_title(ax, "Peak host RSS by stage")
 
 
 def _panel_cost_split(ax) -> None:
@@ -877,7 +916,6 @@ def _panel_cost_split(ax) -> None:
     server = L.value("full.server_linear_algebra")
     client = L.value("full.client_boundaries")
     evaluation = L.value("full.encrypted_evaluation")
-    wall = L.value("full.wall")
 
     # Segments are labelled in place, so the figure needs no legend and nothing can collide
     # with the axis.
@@ -929,7 +967,7 @@ def _panel_cost_split(ax) -> None:
     despine(ax, keep=("bottom",))
     _panel_title(
         ax,
-        f"Encrypted evaluation: {evaluation:,.0f} s of {wall:,.0f} s wall clock",
+        f"Encrypted evaluation by party ({evaluation:,.0f} s)",
     )
 
 
@@ -942,8 +980,14 @@ def _panel_scaling(ax) -> None:
     may not use. Only genomic signal recognition has a measured complete inference.
     """
     sc = load("scaling")
-    tasks = list(reversed(sc["tasks"]))  # longest prompt at the top
-    names = [t["name"] for t in tasks]
+    tasks = list(sc["tasks"])  # longest prompt at the top of the horizontal chart
+    short_names = {
+        "gue_prom_core": "Core promoter",
+        "gue_prom_300": "300 bp promoter",
+        "gue_splice": "Splice site",
+        "gsr": "Genomic signal",
+    }
+    names = [short_names[t["id"]] for t in tasks]
     tiles = [t["causal_score_tiles"] for t in tasks]
     toks = [t["tokens"] for t in tasks]
     groups = [t["token_groups"] for t in tasks]
@@ -974,11 +1018,12 @@ def _panel_scaling(ax) -> None:
         )
 
     anchor = next(t for t in tasks if t.get("full_pass_tag") == "[V]")
-    ai = names.index(anchor["name"])
+    ai = [t["id"] for t in tasks].index(anchor["id"])
     ax.text(
         max(tiles) * 0.035,
         ai,
-        f"measured complete inference: {anchor['full_pass_human']}",
+        f"{anchor['tokens']}-token benchmark — complete inference measured: "
+        f"{anchor['full_pass_human']}",
         va="center",
         ha="left",
         fontsize=7.3,
@@ -1001,32 +1046,12 @@ def _panel_scaling(ax) -> None:
     ax.grid(axis="x", color=LIGHT_GRAY, linewidth=0.8)
     ax.set_axisbelow(True)
 
-    ax.legend(
-        handles=[
-            Patch(
-                facecolor=SERVER, edgecolor=SERVER, label="complete inference measured"
-            ),
-            Patch(
-                facecolor="white",
-                edgecolor=GRAY,
-                hatch="///",
-                label="score-tile schedule only, not timed",
-            ),
-        ],
-        frameon=False,
-        fontsize=7.0,
-        loc="upper right",
-        bbox_to_anchor=(1.0, 0.94),
-        ncol=1,
-    )
-
     excl = sc["out_of_encrypted_scope"][0]
     ax.text(
         0.0,
         -0.30,
-        f"Outside the encrypted scope: {excl['name']} needs {excl['tokens']:,} tokens and "
-        f"{excl['token_groups']} groups, or {excl['causal_score_tiles']:,} score tiles — "
-        f"a different regime, not a longer prompt.",
+        f"Outside encrypted scope: mRNA abundance · {excl['tokens']:,} tokens · "
+        f"{excl['token_groups']} groups · {excl['causal_score_tiles']:,} score tiles.",
         transform=ax.transAxes,
         fontsize=6.6,
         color=GRAY,
@@ -1036,7 +1061,7 @@ def _panel_scaling(ax) -> None:
 
     _panel_title(
         ax,
-        "Prompt length sets the causal score-tile schedule (derived, not timed)",
+        "Causal score-tile schedule (solid = measured; hatched = derived)",
     )
 
 
@@ -1048,13 +1073,13 @@ def fig_systems(out: pathlib.Path) -> pathlib.Path:
     plaintext cache, against the separate unbounded-cache attempt; (e) the causal score-tile
     schedule implied by each task's prompt length.
     """
-    fig = plt.figure(figsize=(7.1, 7.35), dpi=DPI)
+    fig = plt.figure(figsize=(7.1, 7.65), dpi=DPI)
     gs = fig.add_gridspec(
         4,
         2,
         height_ratios=[0.80, 0.80, 1.35, 1.55],
-        hspace=0.62,
-        wspace=0.38,
+        hspace=0.82,
+        wspace=0.62,
     )
     ax_gpu = fig.add_subplot(gs[0, :])
     ax_mem = fig.add_subplot(gs[1, :], sharex=ax_gpu)
@@ -1067,16 +1092,15 @@ def fig_systems(out: pathlib.Path) -> pathlib.Path:
     _panel_stage_memory(ax_stage)
     _panel_scaling(ax_scale)
 
-    # Half-width panels need a wider letter offset: the axes are narrower, so the same
-    # fraction of axes width lands on top of the panel title.
-    for ax, letter, dx in (
-        (ax_gpu, "a", -0.055),
-        (ax_mem, "b", -0.055),
-        (ax_cost, "c", -0.13),
-        (ax_stage, "d", -0.22),
-        (ax_scale, "e", -0.055),
+    # Place each letter independently so it clears the panel title at the rendered width.
+    for ax, letter, dx, dy in (
+        (ax_gpu, "a", -0.055, 1.10),
+        (ax_mem, "b", -0.055, 1.25),
+        (ax_cost, "c", -0.15, 1.10),
+        (ax_stage, "d", -0.18, 1.10),
+        (ax_scale, "e", -0.055, 1.10),
     ):
-        _panel_letter(ax, letter, x=dx, y=1.10)
+        _panel_letter(ax, letter, x=dx, y=dy)
 
     return emit(fig, out, "fig_systems")
 
@@ -1172,7 +1196,7 @@ def fig_baseline(out: pathlib.Path) -> pathlib.Path:
 
     title(
         ax,
-        "The released model, reproduced locally",
+        "DNAGPT, reproduced locally",
         "Signal recognition and abundance regression use the released fine-tuned heads. "
         "The promoter and splice-site rows use a locally fine-tuned head, as none was "
         "released.",

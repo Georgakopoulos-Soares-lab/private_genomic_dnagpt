@@ -13,46 +13,47 @@ memory, and complete-inference cost.
 
 \subsection{Evaluation setup and endpoints}
 
-The encrypted input is selected deterministically as the first record in the verified positive
-genomic-signal FASTA input. It is one $600$-base-pair fragment, not a random, margin-stratified, or
-task-set sample. Local tokenization and embedding produce the $103$-token prompt before encryption;
-the measured encrypted endpoint contains all $12$ released blocks and the released task head.
+We evaluate complete encrypted inference at the $103$-token genomic-signal benchmark, the longest
+prompt among the encrypted-scope classification tasks. The complete run uses the first verified
+positive genomic-signal example, selected deterministically instead of by its prediction margin.
+Local tokenization and embedding occur before encryption; the encrypted endpoint contains all $12$
+transformer blocks and the task head.
 
 The complete model is executed once on a whole-node allocation with one $40$~GB A100 GPU and $32$
 CPU threads; the recorded telemetry shows no evidence of resource contention, although scheduler
 exclusivity was not requested. Timing starts before weight and reference loading and ends after final
 decryption. Server and client roles share one process and node, so boundary calls include
 cryptographic work but no serialization or network transport. That single execution supplies
-every complete-model timing below; earlier contended timings are excluded.
+every complete-model timing below.
 
 \subsection{Correctness}
 
-Encrypted output is accepted against the checked NumPy float64 reference of
-Section~\ref{sec:baseline}, never against the released float32 path, which is recorded separately.
-The separation distinguishes model-dtype drift from CKKS error and prevents an unchecked
-reimplementation from judging its encrypted counterpart.
+Before encrypted evaluation, we fixed the relative-error acceptance threshold at
+$4\times10^{-2}$. As Section~\ref{sec:baseline} describes, the NumPy float64 reference first agrees
+with an independent PyTorch float64 execution after every transformer block and the task head. The
+encrypted output is then compared with that checked NumPy reference; the original float32
+implementation is recorded separately to distinguish dtype drift from CKKS error.
 
-For one block at the $103$-token task prompt, the decrypted output has relative infinity-norm error
-$4.64\times10^{-9}$ against an acceptance tolerance of $4\times10^{-2}$ fixed before the run,
-leaving seven orders of magnitude of headroom. The worst token-relative error is
+For one block at the $103$-token benchmark, the decrypted output has relative infinity-norm error
+$4.64\times10^{-9}$, leaving seven orders of magnitude of headroom. The worst token-relative error is
 $4.7\times10^{-9}$, and the largest absolute deviation is $7.44\times10^{-8}$. These values
-establish numerical agreement for the encrypted block with the released weights and exact client
+establish numerical agreement for the encrypted block with the DNAGPT weights and exact client
 nonlinearities.
 
-The complete model is held to the same unchanged tolerance. Evaluating all $12$ released blocks
-and the released task head at the $103$-token task prompt yields a decrypted classification margin
-that differs from the manual NumPy float64 margin by $8.56\times10^{-9}$ in relative terms and
-$1.05\times10^{-7}$ in absolute terms. The encrypted, manual float64, and released float32 paths all
-produce label N for this prompt; relative to the released float32 margin, the encrypted margin
-differs by $1.61\times10^{-6}$.
+The complete model is held to the same unchanged tolerance. Evaluating all $12$ transformer blocks
+and the task head at the $103$-token benchmark produces the same classification label as the
+plaintext reference. The relative classification-margin error is $8.56\times10^{-9}$, or $6.67$
+orders of magnitude below the predeclared threshold, and the absolute margin error is
+$1.05\times10^{-7}$. The encrypted, NumPy float64, and original float32 paths all produce label N;
+relative to the original float32 margin, the encrypted margin differs by $1.61\times10^{-6}$.
 
-Error accumulates with depth. The
+CKKS numerical error increases across blocks. The
 hidden-state relative infinity norm is $4.09\times10^{-9}$ after the first block and
 $2.07\times10^{-8}$ after the twelfth, while the largest absolute deviation grows from
 $6.56\times10^{-8}$ to $7.97\times10^{-6}$, roughly two orders of magnitude across the model.
-Growth of that rate leaves the twelfth-block activation six orders of magnitude inside the
-acceptance tolerance. The classification-margin error is $6.67$ orders below the same threshold.
-Approximation error accumulates, but it does not change the decision for the evaluated prompt.
+The twelfth-block activation remains six orders of magnitude inside the acceptance tolerance. The
+nonlinear functions are evaluated exactly at client boundaries and therefore contribute no
+polynomial-approximation error.
 
 \subsection{Executed work}
 
@@ -73,10 +74,6 @@ Attention-related client calls & 818 (95.4\%) & data owner \\
 \bottomrule
 \end{tabularx}
 \end{table}
-
-Every count in Table~\ref{tab:cost} is validated at run time under the checks of
-Section~\ref{sec:protocol}, so the schedule is evidence that the optimized implementation executes
-the same circuit rather than an assurance inferred from a passing output.
 
 The counts locate the boundary cost in attention, as Section~\ref{sec:protocol} sets out, and the
 benefit of token packing in the dense schedule: eight-token packing reduces the serial-equivalent
@@ -114,7 +111,7 @@ from the object count.
 
 \subsection{Memory}
 
-Device-wide GPU memory used during the evaluating run reaches $9839$~MiB, within the $40$~GB
+Device-wide GPU memory used during the complete run reaches $9839$~MiB, within the $40$~GB
 device. The GPU was empty at allocation, making attribution to the run reasonable, but the sampler
 does not expose a per-process memory metric. Host memory follows the stage lifetime of encoded
 plaintext templates measured in Section~\ref{sec:optimization}, peaking in the MLP stage of each
@@ -122,38 +119,26 @@ block rather than accumulating across the block.
 
 \begin{figure*}[!tb]\centering
   \includegraphics[width=\linewidth]{fig_systems.pdf}
-  \caption{Systems behavior of one complete encrypted inference at the $103$-token
-  genomic-signal prompt. (a) Sampled GPU utilization reaches a maximum of $51\%$, which does not
-  identify the limiting resource. (b) Host and device memory over the same run: host memory
-  repeats the stage pattern of Section~\ref{sec:optimization} once per block, while device-wide
-  GPU memory used reaches its peak during the first block and does not grow with block index.
-  Both curves are thinned from the full 653-sample trace, and the twelve cycles are the twelve
-  blocks. (c) The encrypted-evaluation interval divided between the two parties. The
-  provider-side bucket is the residual after client time and includes GPU-backend work plus host
-  preparation, synchronization, and evaluator overhead; the data-owner bucket includes the
-  declared nonlinear boundaries and full-hidden-state refreshes on CPU with no GPU. The two
-  shares sum exactly to encrypted evaluation; setup and finalization remain in
-  Table~\ref{tab:fullcost}. (d) Stage host memory for one block under the bounded plaintext
-  cache, with the separate unbounded-cache attempt that the operating system killed at
-  $61{,}863$~MiB. (e) Causal score-tile schedules across the encrypted-scope tasks, following
-  from ciphertext groups rather than from a timing model; only genomic-signal recognition has a
-  measured complete inference.}
+  \caption{Systems behavior of the complete $103$-token benchmark. (a) Sampled GPU utilization.
+  (b) Host and device memory across all twelve transformer blocks; GPU memory is device-wide, not
+  per-process. (c) The encrypted-evaluation interval divided between provider and data owner.
+  Provider time includes GPU-backend work and its host support; data-owner time contains the CPU
+  boundaries and refreshes. (d) Stage host memory for one block under the bounded plaintext cache,
+  with the separate unbounded-cache attempt. (e) Derived causal score-tile schedules across the
+  encrypted-scope tasks; only genomic-signal recognition has a measured complete inference.}
   \label{fig:systems}
 \end{figure*}
 
-The complete model confirms both bounds at full depth, as the resource trace in
-Figure~\ref{fig:systems}(a) and (b) records. Device-wide GPU memory used rises during
-context and key loading, reaches $9839$~MiB after roughly $400$~s, and then holds that value exactly
-for the remainder of the run. This matches the single-block footprint, with no growth by block
-index. Host resident memory peaks at $50{,}930$~MiB, consistent with the MLP-stage maximum recurring
-once per block instead of accumulating. Client assistance therefore removes the accelerator-memory
-barrier that stopped the evaluated non-interactive configuration, and the flat device profile across
-twelve blocks shows this follows from the depth bound rather than from the particular input.
+GPU memory reaches $9839$~MiB during initial context and key loading and remains flat across the
+twelve transformer blocks. Host resident memory peaks at $50{,}930$~MiB and repeats the same
+stage-level pattern in each block instead of accumulating. This behavior is consistent with the
+bounded multiplicative depth and stage-scoped plaintext cache used by the client-assisted protocol.
 
 \subsection{Composition and evaluation boundary}
 
 \begin{table*}[!tb]\centering\small
-\caption{Encrypted evaluation completed at each reported scope. Hidden-state error is a
+\caption{Encrypted evaluation completed at each reported scope. The $103$-token benchmark is the
+longest prompt among the encrypted-scope classification tasks. Hidden-state error is a
 relative infinity norm over the activation; margin error is the scalar the classifier acts on.
 The two are different quantities and are kept in separate columns.}
 \label{tab:scope}
@@ -163,28 +148,26 @@ Scope & Status & Hidden-state error & Margin error \\
 \midrule
 One block, 2 tokens & measured & --- & --- \\
 Two consecutive blocks, 2 tokens, client refresh & measured & $8.48\times10^{-11}$ & --- \\
-One block, 103 tokens (task length) & measured & $4.64\times10^{-9}$ & --- \\
-Twelve blocks and task head, 103 tokens & measured & $2.07\times10^{-8}$ & $8.56\times10^{-9}$ \\
+One block, 103-token benchmark & measured & $4.64\times10^{-9}$ & --- \\
+Twelve blocks + task head, 103-token benchmark & measured & $2.07\times10^{-8}$ & $8.56\times10^{-9}$ \\
 Encrypted token-index lookup & out of scope & --- & --- \\
 \bottomrule
 \end{tabularx}
 \end{table*}
 
-Two consecutive released blocks compose at reduced sequence length through a full-hidden-state
+Two consecutive transformer blocks compose at reduced sequence length through a full-hidden-state
 client refresh, reaching $8.48\times10^{-11}$ relative error after the second block, with no growth
 in device-wide GPU memory used. The complete model uses that mechanism throughout: all $12$ blocks
 and the task head run in one key lineage, separated by $11$ full-hidden-state refreshes between
-consecutive blocks and one further refresh of the final token into the head. Multiplicative depth
-stays at $13$ throughout, the same budget the single block requires, and the run performs no
-homomorphic bootstrap at any point. Depth is thus a property of the longest segment between two
-client boundaries rather than of network depth, which is what makes the twelve-block key lineage
-expressible at all under these parameters.
+consecutive blocks and one further refresh of the final token into the head. Fresh client encryption
+prevents multiplicative depth from accumulating across transformer blocks: the maximum required
+depth remains $13$ throughout the twelve-block execution, and no homomorphic bootstrapping is used.
 
 \subsection{Cost of a complete encrypted inference}
 
 \begin{table}[t]\centering\small
-\caption{One complete encrypted inference: twelve blocks and the released task head at the
-$103$-token task prompt, on one A100 GPU node using 32 CPU threads. Single execution on a
+\caption{One complete encrypted inference: twelve transformer blocks and the task head at the
+$103$-token benchmark, on one A100 GPU node using 32 CPU threads. Single execution on a
 whole-node allocation with no evidence of resource contention in the recorded telemetry; these are one
 sample's values, not averages over repetitions. Shares are rounded independently and need not sum
 to $100\%$.}
@@ -193,7 +176,7 @@ to $100\%$.}
 \toprule
 Phase & Seconds & Share of wall \\
 \midrule
-Load released weights and verified reference & 23.494 & 0.4\% \\
+Load DNAGPT weights and plaintext reference & 23.494 & 0.4\% \\
 Crypto context, key generation, GPU key upload & 3.945 & 0.1\% \\
 Encrypt the embedded input & 1.265 & 0.0\% \\
 \textbf{Encrypted evaluation} & \textbf{6594.748} & \textbf{98.7\%} \\
@@ -207,78 +190,32 @@ Uninstrumented remainder & 59.504 & 0.9\% \\
 \end{tabularx}
 \end{table}
 
-A complete encrypted inference takes $6683$~s of wall clock, or $1.86$~hours. Encrypted evaluation
-accounts for $6594.748$~s of that, and setup is negligible at this scale: context construction and
-key generation together take under four seconds, and the single final decryption takes $0.044$~s.
-The instrumented phases are a decomposition rather than a partition, leaving $59.504$~s, or $0.9\%$
-of wall clock, outside them; Table~\ref{tab:fullcost} shows that remainder rather than distributing
-it silently.
+A complete $103$-token benchmark takes $6683$~s, or $1.86$~hours. Encrypted evaluation accounts for
+$6594.748$~s ($98.7\%$) of wall time; setup and final decryption are negligible at this scale.
 
-Within encrypted evaluation the split between the two parties is exact
-(Figure~\ref{fig:systems}(c)): the residual provider-side
-bucket uses $5638.561$~s and the data owner's boundary work uses $956.187$~s, and the two sum to the
-evaluation total without residue. The provider bucket includes GPU-backend work and the host
-support around it; it is not GPU-kernel time. The compute provider therefore carries $85.5\%$ of
-the encrypted-evaluation interval and the data owner $14.5\%$, with the data owner's share running
-on CPU alone. Across $10{,}299$ in-process boundary calls the mean call costs $0.093$~s.
+Within encrypted evaluation, the compute provider accounts for $85.5\%$ and the data owner for
+$14.5\%$ (Figure~\ref{fig:systems}(c)); the data-owner share runs on CPU alone. The provider bucket
+includes the GPU backend and its host-side preparation, synchronization, and evaluator overhead.
 
-The twelve blocks account for $6565.993$~s and the encrypted task head for $9.046$~s, so the head
-is not a meaningful part of the cost. The twelve refreshes together cost $19.710$~s, which places
-the price of the composition mechanism at roughly $0.3\%$ of encrypted evaluation. Dividing block
-evaluation by twelve gives $547.166$~s per block. The twelve individual block times span
-$533.869$~s to $558.943$~s, a spread of $4.7\%$ across architecturally identical blocks on one
-node. That bounds within-run scheduling jitter; it is not run-to-run variance, which a single
-execution cannot report.
-
-\subsection{Sequence-length structure}
-
-Prompt length follows from each task format, as Section~\ref{sec:baseline} derives. Eight-token
-packing maps the $103$-token anchor to $13$ ciphertext groups; the shorter promoter and splice-site
-prompts use fewer groups under the same layout, yielding the smaller causal schedules shown in
-Figure~\ref{fig:systems}(e).
-
-The abundance-regression task lies outside the encrypted scope. Its $10{,}500$ base pairs produce
-$1{,}755$ tokens and $220$ ciphertext groups under the same tokenization rule. The causal attention
-schedule grows quadratically in the number of groups, placing this task in a different circuit-size
-regime from the classification prompts.
+The $1{,}755$-token abundance-regression prompt is outside the encrypted scope and would induce a
+substantially larger causal-attention circuit under the current packing.
 
 \subsection{Feasibility}
 \label{sec:verdict-feasibility}
 
-Complete-model graph feasibility is established under the stated protocol: all $12$ released
-blocks and the task head execute at the task's $103$-token prompt under one key lineage with
-declared refreshes, at unchanged multiplicative depth and device memory and with no homomorphic
-bootstrap. These are measurements of the complete computation, not projections from a block.
-
-Numerical generality has a narrower scope. The one selected prompt reproduces the frozen label with
-$8.56\times10^{-9}$ relative margin error, but one prompt does not establish encrypted task
-accuracy or input-independent stability. The affirmative result is that the executed case meets
-the predeclared numerical criterion while composing the complete released graph.
-
-Encrypted token-index lookup and network transport remain outside this verdict, as detailed in
-Section~\ref{sec:limitations}.
+Under the stated client-assisted protocol, all $12$ transformer blocks and the task head execute at
+the $103$-token benchmark under one key lineage, with a maximum multiplicative depth of $13$,
+bounded accelerator memory, and no homomorphic bootstrapping. The resulting prediction satisfies
+the predeclared numerical criterion. This establishes complete-model graph feasibility for the
+evaluated benchmark; encrypted task accuracy across additional examples remains outside the present
+evidence.
 
 \subsection{Practicality, judged separately}
 \label{sec:verdict-practicality}
 
-Feasibility does not make the current implementation practical. One encrypted classification of
-one $600$-base-pair genomic fragment occupies an A100 node for $1.86$~hours and requires an online
-key holder throughout, which rules out interactive per-query use in the evaluated form. Suitability
-for a specified non-interactive workload has not been measured.
-
-Cross-paper results provide context rather than a controlled verdict. The $6683$~s measured here is
-roughly an order of magnitude above the $602$~s THOR reports for a non-interactive encrypted forward
-pass at comparable depth, width, and cryptographic parameters~\cite{thor}, at a shorter prompt.
-Section~\ref{sec:related} sets out the differences that make the comparison uncontrolled: this
-implementation is not performance-leading, and the gap does not isolate the cost of client
-assistance.
-
-The measured trace does, however, indicate where that cost sits. Sampled GPU utilization
-(Figure~\ref{fig:systems}(a)) has a
-median of $32\%$ and a maximum of $51\%$; this does not identify the limiting resource, since the
-trace does not attribute wall time among encoding, synchronization, memory behavior, kernel
-efficiency, and boundary work. Read with the $85.5/14.5$ provider--client split and the
-$0.3\%$ cost of the refresh mechanism, this places the optimization target in the provider-side
-encrypted path rather than in the interaction the protocol adds. The practicality verdict is
-nonetheless negative for the evaluated form: it is too slow for interactive use, and throughput,
-serialization, and networked deployment remain unmeasured.
+The complete $103$-token benchmark takes $1.86$~hours on one A100 and is therefore unsuitable for
+conventional interactive querying in its current form. The intended deployment presents a
+different trade-off: a provider retains the model server-side while a data owner accepts additional
+latency to prevent a semi-honest provider from observing the genomic input or intermediate
+activations in plaintext. For low-volume, privacy-sensitive inference, such a trade-off may still
+be useful; this study does not establish production throughput or service-level practicality.

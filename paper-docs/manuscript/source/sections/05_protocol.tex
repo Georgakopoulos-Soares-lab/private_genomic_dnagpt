@@ -15,10 +15,10 @@
 \toprule
 Symbol & Value & Meaning \\
 \midrule
-$D$        & 768    & hidden width of the released model \\
+$D$        & 768    & DNAGPT hidden width \\
 $H$        & 12     & attention heads, of $D/H = 64$ dimensions each \\
 $D_{\text{mlp}}$ & 3072 & MLP expansion width, $4D$ \\
-$T$        & 103    & tokenized prompt length for the genomic-signal task \\
+$T$        & 103    & maximum encrypted-scope classification prompt length \\
 $B$        & 8      & tokens packed per ciphertext (token lanes) \\
 $G$        & 13     & ciphertext groups, $\lceil T/B \rceil$ \\
 $W$        & 1024   & feature width padded to a power of two \\
@@ -31,47 +31,37 @@ $\lambda$  & 128    & classical security level, in bits \\
 \end{tabularx}
 \end{table}
 
-\subsection{Nonlinearity boundaries}
+\subsection{Why client assistance is needed}
+A fully non-interactive CKKS transformer must replace the LayerNorm inverse square root, softmax,
+and GELU with homomorphic approximations. Our evaluated non-interactive configuration completes one
+transformer block, but the deeper modulus and evaluation-key requirements needed for multi-block
+composition exceed the tested $80$~GB accelerator-memory envelope before composition arithmetic
+begins. We therefore use client assistance to evaluate these nonlinearities exactly and return
+fresh ciphertexts. This resets the multiplicative-depth budget and avoids homomorphic bootstrapping
+in the retained protocol. The non-interactive result is specific to the evaluated library,
+parameters, packing, and hardware.
+
+\subsection{Client nonlinearity boundaries}
 CKKS carries the affine maps, reductions, residual additions, and attention products without
-exposing an activation to the compute provider. The difficulty lies in three nonlinearity classes:
-the inverse square root in LayerNorm, causal softmax, and GELU. We place a declared client boundary
-at each class. For LayerNorm, the server computes the encrypted mean and variance and sends only the
-variance term needed for the inverse square root. For attention, it sends encrypted causal score
-tiles and receives encrypted softmax weights. The GELU boundary operates on the packed MLP
-activations.
+exposing an activation to the compute provider. We place predetermined client boundaries at the
+three nonlinearity classes. For LayerNorm, the provider computes the encrypted mean and variance and
+sends only the variance term needed for the inverse square root. For attention, it sends encrypted
+causal score tiles and receives encrypted softmax weights. The GELU boundary operates on the packed
+MLP activations.
 
-At every boundary, the data owner decrypts values derived from its own query, evaluates the declared
-function exactly in double precision, and encrypts the result afresh. The data owner already holds
-the secret key and is the only party that decrypts. The compute provider receives neither a
-plaintext activation nor the secret key. Between these declared calls, the ciphertext lineage
-remains on the server and every model operation is evaluated homomorphically.
-Figure~\ref{fig:architecture} shows the resulting evaluation order for one transformer block and
-which party performs each step.
-
-\subsection{Non-interactive design}
-The non-interactive design keeps a single ciphertext lineage and replaces every
-nonlinearity with a polynomial approximation. It completed one released-weight transformer block,
-establishing that the block arithmetic can be expressed without intermediate decryption. The
-stopping point appeared when the same design was configured for multi-block composition: context
-and evaluation-key loading exceeded the tested 80~GB GPU memory envelope before useful composition
-arithmetic began.
-
-The mechanism matters more than the failure location. Repeated polynomial approximation lengthens
-the multiplicative path, which requires a deeper modulus budget and a bootstrapping schedule, and
-the associated context and evaluation-key material must be resident before evaluation; composition
-therefore failed as a memory problem rather than as a numerical-correctness problem. Since published
-non-interactive systems evaluate encoders of comparable depth and width on a single accelerator at
-these parameters (Section~\ref{sec:related}), this reports where our non-interactive configuration
-stopped, not where the approach stops. It does identify the measured pressure that the
-client-assisted design removes: exact client evaluation shortens each encrypted segment and replaces
-encrypted bootstrapping with fresh encryption at already declared boundaries.
+At each boundary, the data owner decrypts the relevant intermediate value, evaluates the function in
+double precision, and returns a fresh encryption. Only the data owner holds the secret key. The
+compute provider therefore receives neither the plaintext genomic input nor plaintext intermediate
+activations. Fresh encryption restarts the CKKS level budget, so the protocol does not require
+homomorphic bootstrapping. Figure~\ref{fig:architecture} shows the evaluation order for one
+transformer block and the party responsible for each step.
 
 \begin{figure*}[!tb]\centering
   \includegraphics[width=\linewidth]{fig_architecture.pdf}
-  \caption{Evaluation order for one transformer block and party allocation. The provider computes
-  both LayerNorm statistics under encryption; the data owner evaluates the inverse square root,
-  causal softmax, and GELU at declared boundaries. A validation readout decrypts the output, while
-  composition decrypts and freshly re-encrypts the hidden state before the next block.}
+  \caption{Evaluation order for one transformer block. The provider performs transformer operations
+  on encrypted activations, while the data owner evaluates the LayerNorm inverse square root,
+  causal softmax, and GELU at fixed boundaries and returns fresh ciphertexts. These refreshes reset
+  the multiplicative-depth budget before subsequent encrypted computation.}
   \label{fig:architecture}
 \end{figure*}
 
@@ -152,13 +142,13 @@ value it decrypts derives from its own query.}
 \end{algorithm}
 
 Fresh encryption in Algorithm~\ref{alg:boundary} returns the activation to level~$0$, so every
-client boundary fully resets the multiplicative budget. The configured depth of $13$ therefore
-bounds the longest encrypted run between consecutive boundaries. It does not accumulate across the
-$12$ transformer blocks.
+client boundary resets the multiplicative budget. The required parameter set is therefore
+determined by the maximum multiplicative depth between consecutive refreshes. In the evaluated
+circuit this maximum is $13$, and it does not accumulate across the $12$ transformer blocks.
 
 \begin{algorithm}[t]
 \caption{LayerNorm. The server computes both statistics under encryption; only the inverse square
-root crosses the boundary. The released checkpoint carries no bias term.}
+root crosses the boundary. The DNAGPT checkpoint carries no bias term.}
 \label{alg:layernorm}
 \begin{algorithmic}[1]
 \Function{LayerNorm}{$x$, $\gamma$}
@@ -189,22 +179,15 @@ $N_1 = N_2 = 32$ and $N_1N_2 = W = 1024$.}
 \end{algorithmic}
 \end{algorithm}
 
-The algorithms also expose the protocol transcript. Its order and size are determined by the
-circuit and sequence length, never by decrypted content. The evaluated block makes $857$ physical
-client boundary crossings, including $91$ score-tile decryptions and $727$ weight-tile encryptions
-for attention. Attention therefore accounts for $818$ of the $857$ client calls, or $95.4\%$.
-In directional object accounting it contributes $818$ of the block's $896$ boundary ciphertext
-objects, or $91.3\%$. These homogeneous counts identify attention as the main boundary-schedule
-target without treating the implementation's mixed-unit logical-instance counter as scalar work.
-The implementation validates the complete operation schedule, boundary counts, and remaining depth
-on every run and aborts when any differs. Section~\ref{sec:optimization} can thus treat an
-unchanged circuit as a checked invariant rather than as an assurance.
+The boundary schedule is determined entirely by the public circuit structure and sequence length,
+never by decrypted content. The implementation validates the operation schedule, boundary counts,
+and remaining multiplicative depth on every run and aborts when any differs.
 
 \subsection{Packing}
 Each ciphertext has $32{,}768$ usable slots, indexed by activation copy, padded feature, and token
 lane. The layout assigns these slots as $4$ copies by $1{,}024$ features by $8$ token lanes, with
 the token lane as the innermost index. Rotations by whole-lane strides can therefore move features
-without mixing tokens, while smaller rotations align tokens within a group. The released hidden
+without mixing tokens, while smaller rotations align tokens within a group. The DNAGPT hidden
 width of $768$ occupies part of the padded feature region; the remainder supplies the
 power-of-two width required by the linear transform and staging space for per-head attention
 scores. In dense transforms, rows and columns outside the active width contribute zeros; padding
@@ -212,17 +195,19 @@ therefore affects cost without changing the numerical result.
 
 The four copies match the MLP expansion from width $768$ to $3{,}072$. They let its expansion
 chunks occupy parallel regions of one ciphertext rather than requiring a separate wide layout.
-The $103$ tokens fill $13$ ciphertext groups, with padding in the final group. Within a
-dense transform, a $32\times32$ baby-step giant-step decomposition covers the $1{,}024$ padded
+At the $103$-token benchmark, the tokens fill $13$ ciphertext groups, with padding in the final
+group. Within a dense transform, a $32\times32$ baby-step giant-step decomposition covers the
+$1{,}024$ padded
 features; baby rotations are shared where the schedule permits. Packing eight tokens together
 reduces the number of dense encrypted products from $1{,}236$ serial-equivalent products to $156$,
 a structural reduction of $7.92\times$. No latency factor follows from that operation count alone.
 
 \begin{figure*}[!tb]\centering
   \includegraphics[width=\linewidth]{fig_packing.pdf}
-  \caption{Slot layout for the genomic-signal task. Each ciphertext carries four copies of 1{,}024
+  \caption{Slot layout for the $103$-token genomic-signal benchmark, the longest encrypted-scope
+  classification prompt. Each ciphertext carries four copies of 1{,}024
   features across eight token lanes: 768 features are active and the remainder supplies
-  power-of-two padding and attention staging. The 103-token prompt occupies 13 groups and generates
+  power-of-two padding and attention staging. The benchmark occupies 13 groups and generates
   91 lower-triangular causal score tiles.}
   \label{fig:packing}
 \end{figure*}
@@ -251,11 +236,14 @@ $128$-bit classical security level. It uses $50$-bit scaling, a $60$-bit first m
 hybrid key-switching digits, and $80$ rotation keys. Multiplicative depth $13$ is the smallest
 demonstrated passing depth for this scale, digit count, ring, and packing. The block completes with
 $6$ of the $13$ levels remaining. The retained setting is the demonstrated feasible point in this
-parameter space; parameter optimization is a separate experiment.
+parameter space; parameter optimization is a separate experiment. CKKS contexts are constructed
+with OpenFHE, while encrypted server-side operations use the evaluated CUDA
+backend~\cite{openfhe,gpu-ckks-backend}.
 
 \subsection{Composition across blocks}
 Composition uses a declared full-hidden-state client refresh between blocks. The data owner decrypts
 the packed block output, restores its token-vector layout, and encrypts fresh level-$0$ inputs for
 the next block under the same context and key lineage. The complete evaluation uses that mechanism
 throughout, with $11$ full-hidden-state refreshes and one last-token refresh into the task head;
-Section~\ref{sec:results} reports the measured outcome.
+Section~\ref{sec:results} reports the measured outcome. Fresh level-$0$ ciphertexts prevent
+multiplicative depth from accumulating over all twelve blocks.

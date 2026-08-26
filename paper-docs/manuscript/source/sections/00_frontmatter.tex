@@ -34,38 +34,35 @@ Model: A Client-Assisted CKKS Evaluation of DNAGPT}\vspace{-0.2cm}}
 
 \textbf{Motivation.} Genomic sequence identifies its contributor and cannot be replaced once it
 has been disclosed. When a genomic model is available only as a service, using it ordinarily means
-handing that sequence to the provider. We ask whether a provider can instead run a released genomic
-transformer for a data owner who never reveals the input in plaintext, and where numerical
-agreement, memory, or cost would stop such a deployment.
+handing that sequence to the provider. We ask whether a provider can instead evaluate a genomic
+transformer without receiving the genomic input in plaintext, and where numerical agreement,
+memory, or cost would stop such a deployment.
 
-\textbf{Results.} We first reproduce DNAGPT on three genomic task families and freeze its
-per-example plaintext predictions; the encrypted run must then reproduce them. The work is then
-split under a single key. The provider evaluates the model's encrypted arithmetic on ciphertexts.
-The data owner, who holds the secret key in any case, decrypts at points fixed before execution,
-evaluates exactly the three functions CKKS cannot compute directly, the LayerNorm inverse square
-root, causal softmax, and GELU, and returns freshly encrypted values. All $12$ released blocks and
-the task head execute this way from encrypted embedded vectors, with the released weights and
-nonlinear formulas unmodified and with no homomorphic bootstrap at any point. For the one prompt
-evaluated, the decrypted label matches the reference. Its margin has $8.56\times10^{-9}$ relative
-error, $6.67$ orders of magnitude below the $4\times10^{-2}$ tolerance fixed in advance, and no
-polynomial approximation of a nonlinearity contributes to that residual. Each return to the data
-owner restarts the computation from a fresh ciphertext, so the multiplicative depth the circuit must
-provide is set by the longest stretch between two such points rather than by the depth of the whole
-network. It stays at $13$ for the complete model, and device-wide GPU memory used peaks at
-$9839$~MiB without growing from one block to the next. One in-process execution takes $1.86$~hours
-on an A100 GPU node. A pure non-interactive configuration, which avoids the interaction altogether,
-completes one released-weight block but then exceeds the tested $80$~GB accelerator-memory envelope
-while loading the cryptographic material needed to compose the next. That barrier therefore lies in
-the polynomial treatment of the nonlinearities rather than in the model's dense maps.
+\textbf{Results.} We first reproduce DNAGPT on three genomic task families and record its plaintext
+predictions as the numerical reference for encrypted evaluation. A fully non-interactive CKKS
+implementation must approximate the transformer nonlinearities homomorphically. In our evaluated
+configuration, one transformer block completes, but multi-block composition exceeds the tested
+$80$~GB accelerator-memory envelope. We therefore use a client-assisted protocol: the provider
+evaluates the transformer on encrypted input representations, while the data owner evaluates the
+LayerNorm inverse square root, causal softmax, and GELU at predetermined boundaries. The client
+decrypts only its own intermediate values and returns fresh encryptions. These refreshes reset the
+multiplicative-depth budget and remove the need for homomorphic bootstrapping in the evaluated
+protocol. All $12$ transformer blocks and the task head execute from encrypted embedded vectors
+without modifying the model. At the $103$-token benchmark---the longest prompt among the
+encrypted-scope classification tasks---the decrypted prediction matches the plaintext reference.
+We fixed a relative-error tolerance of $4\times10^{-2}$ before encrypted evaluation. The observed
+classification-margin error is $8.56\times10^{-9}$, $6.67$ orders of magnitude below that threshold;
+the exact client-side nonlinear functions contribute no polynomial-approximation error. The maximum
+multiplicative depth between consecutive refreshes remains $13$. Device-wide GPU memory used peaks
+at $9839$~MiB and does not increase across transformer blocks. The complete benchmark takes
+$1.86$~hours on one A100 GPU node.
 
-\textbf{Conclusions.} The executed case establishes complete-model graph feasibility and numerical
-agreement for one input, and locates the limiting barrier in throughput rather than in correctness
-or accelerator memory. Returning to the key holder is what makes the twelve-block encrypted
-computation expressible without bootstrapping, because it caps the depth any single encrypted
-stretch has to carry; bounding the cached plaintexts per stage separately keeps host memory from
-accumulating. The current single-process implementation is far too slow for interactive use and has
-not been evaluated as a networked service, so feasibility and practicality are reported as separate
-verdicts.
+\textbf{Conclusions.} Client-assisted CKKS makes complete DNAGPT transformer inference from
+encrypted embeddings feasible within the tested accelerator-memory envelope. Client-side
+evaluation of the nonlinearities bounds multiplicative depth and avoids homomorphic bootstrapping,
+while stage-scoped plaintext caching controls host memory. The $1.86$-hour runtime of the
+$103$-token benchmark is unsuitable for conventional interactive inference, making provider-side
+encrypted throughput the principal remaining systems limitation.
 
 \textbf{Availability.} Code, evaluation harnesses, and the evidence record are maintained at
 \url{https://github.com/Georgakopoulos-Soares-lab/private_genomic_dnagpt}.
@@ -74,40 +71,34 @@ verdicts.
 \section*{Key Points}
 
 \begin{itemize}
-  \item \textbf{The complete released model runs on encrypted input.} All twelve DNAGPT blocks and
-        the task head run at the task's own $103$-token prompt, starting from encrypted input
-        vectors, under one key and with no bootstrapping step. Nothing in the released model is
-        changed to make this possible. For the one prompt evaluated, the encrypted run returns the
-        same label as the plaintext model, with $8.56\times10^{-9}$ relative error on the
-        classification margin, $6.67$ orders of magnitude below the $4\times10^{-2}$ tolerance set
-        in advance.
-  \item \textbf{The encrypted result is checked against a reference that is itself checked.} Two
-        independently written plaintext implementations of the released model must agree in double
-        precision before either is used, and only then is the encrypted output compared with them.
-        Agreement therefore reflects the model's own computation rather than one implementation
-        reproducing its own error.
-  \item \textbf{Handing the nonlinear steps back to the key holder keeps the encrypted circuit
-        shallow.} Each return restarts the computation from a fresh ciphertext, so the circuit only
-        has to be deep enough for the longest stretch between two returns rather than for the whole
-        network. That depth stays at $13$ for the complete model, and device-wide GPU memory used
-        peaks at $9839$~MiB with no growth from one block to the next. A separate limit on how many
-        encoded weights stay in memory at once keeps host memory bounded, with the checked operation
-        schedule unchanged.
-  \item \textbf{Feasible, not yet practical.} One in-process execution takes $1.86$~hours and needs
-        the key holder online throughout, which is far too slow for interactive use. The protocol is
-        interactive by design, so what rules out interactive use is its speed rather than the
-        interaction itself. Complete-model feasibility is established for the evaluated prompt,
-        while encrypted task accuracy, service rate, and networked deployment remain open.
+  \item \textbf{The complete model runs on encrypted input.} All twelve transformer blocks and the
+        task head execute at the $103$-token benchmark, the longest prompt among the encrypted-scope
+        classification tasks. The numerical tolerance was fixed at $4\times10^{-2}$ before encrypted
+        evaluation; the observed classification-margin error is $8.56\times10^{-9}$, $6.67$ orders
+        of magnitude lower.
+  \item \textbf{Encrypted outputs are validated against an independent plaintext reference.} We
+        implement the transformer computation independently in PyTorch float64 and NumPy float64
+        and compare them after every transformer block and the task head. After agreement is
+        established, the NumPy implementation supplies the reference for encrypted execution.
+  \item \textbf{Client refresh bounds multiplicative depth and avoids bootstrapping.} Fresh
+        encryption after each client-evaluated nonlinearity resets the level budget. The maximum
+        multiplicative depth therefore remains $13$ throughout the twelve-block model, while
+        device-wide GPU memory used peaks at $9839$~MiB without block-over-block growth.
+  \item \textbf{The current trade-off favors privacy over latency.} The $103$-token benchmark takes
+        $1.86$~hours on one A100 and is unsuitable for conventional interactive querying. It may
+        still serve low-volume settings in which a provider retains the model server-side and the
+        data owner accepts higher latency to keep genomic information confidential from a
+        semi-honest provider. Production throughput and networked deployment remain unmeasured.
 \end{itemize}
 
 % --- Graphical abstract -----------------------------------------------------
 \begin{figure*}[!tb]\centering
   \includegraphics[width=\linewidth]{fig_graphical_abstract.pdf}
   \caption{The data owner tokenizes and embeds a genomic fragment locally, encrypts the embedded
-  vectors, and retains the secret key. The provider evaluates the encrypted model arithmetic between
-  client boundaries on ciphertexts; the data owner evaluates the declared nonlinear functions on
-  CPU. The measured implementation
-  emulates both roles in one process. The result panel reports one measured execution at the
-  103-token genomic-signal prompt.}
+  vectors, and retains the secret key. The provider evaluates the transformer on encrypted
+  activations between client boundaries; the data owner evaluates the declared nonlinear functions
+  on CPU. The measured implementation emulates both roles in one process. The result panel reports
+  the complete encrypted execution at the $103$-token benchmark, the longest prompt among the
+  encrypted-scope classification tasks.}
   \label{fig:abstract}
 \end{figure*}

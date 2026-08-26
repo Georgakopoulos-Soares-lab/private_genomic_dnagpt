@@ -4,37 +4,28 @@
 %         numbers: evidence/measurements.yaml plaintext_baseline
 % ---------------------------------------------------------------------------
 
-\section{Plaintext reference and model fidelity}
+\section{Plaintext validation}
 \label{sec:baseline}
 
-An encrypted execution is useful only if the computation it reproduces is itself meaningful and
-independently checked. Task metrics answer the first question: they establish that the released
-model and locally trained heads retain the genomic capabilities for which the model is being
-evaluated. Per-example predictions answer the second. They are recorded before any encrypted work
-and become the frozen plaintext reference against which encrypted outputs are accepted.
+Before encrypted evaluation, we reproduced DNAGPT on genomic-signal recognition, promoter and
+splice-site classification, and mRNA abundance regression. We also recorded the plaintext outputs
+required for subsequent numerical comparison with CKKS execution.
 
-The plaintext harness imports the upstream model implementation and preserves its classification
-and regression forward paths. It adds batching, metric computation, and result recording without
-changing model arithmetic. The promoter, splice-site, and abundance tasks use their documented
-evaluation splits. Genomic-signal recognition is evaluated on the full balanced source corpus,
-including examples used to train the released head, so its aggregate metric is release and pipeline
-fidelity evidence rather than held-out performance. Each run records the per-example outputs needed
-downstream.
+The upstream DNAGPT implementation is used without changing its forward computation. Published or
+reconstructed evaluation splits are used for the selected tasks. Genomic-signal recognition is
+evaluated on the full balanced source corpus, including examples used to train its head, so this
+result measures model and pipeline reproduction rather than held-out generalization.
 
-The reference is not trusted merely because it is written in NumPy. The numerical chain has three
-explicit links. First, the released model's default float32 path is recorded as a diagnostic
-lineage. Second, a deep-copied float64 PyTorch shadow is compared with an independent NumPy float64
-re-derivation for every one of the $12$ blocks and the classifier head; generation aborts unless
-relative and absolute differences satisfy $2\times10^{-5}$. Their largest per-block absolute
-difference is $5.22\times10^{-6}$. Third, encrypted execution is compared with the accepted NumPy
-float64 reference, as Section~\ref{sec:results} reports. The released float32 path is not subject to
-the float64-shadow tolerance: its largest recorded absolute block drift from the NumPy lineage is
-$7.997\times10^{-4}$.
+Numerical validation uses two independent float64 implementations. A PyTorch execution and a
+separate NumPy implementation are compared after every transformer block and the task head, with a
+$2\times10^{-5}$ agreement criterion. After this check passes, the NumPy implementation provides
+the plaintext reference for encrypted evaluation. The original float32 execution is retained only
+to quantify dtype-related drift.
 
 \begin{table*}[!tb]\centering\small
-\caption{Released DNAGPT reproduced locally on three genomic task families, against published
-references. Signal recognition and abundance regression use the released fine-tuned heads;
-the understanding-benchmark rows use a locally fine-tuned head, as no head was released.}
+\caption{Plaintext DNAGPT validation on three genomic task families. Signal recognition and
+abundance regression use the released fine-tuned heads; the understanding-benchmark rows use a
+locally fine-tuned head because DNAGPT provides no corresponding head.}
 \label{tab:baseline}
 \begin{tabularx}{\linewidth}{Y l l l l}
 \toprule
@@ -60,38 +51,13 @@ $0.1$B variant, while the reference is reported for the mammal-pretrained varian
 backbones differ.}
 \end{table*}
 
-Table~\ref{tab:baseline} shows that the target carries useful signal across classification and
-regression tasks. On the full polyadenylation-signal source corpus of $22{,}604$ examples, the
-released classifier reaches $0.9124$ accuracy and $0.916$ F1, against the $0.9151$ accuracy
-\citet{dnagpt2023} report for this model class on a held-out quarter of that set. The locally
-fine-tuned understanding-benchmark heads reach MCC $0.680$, $0.897$, and $0.831$ on core-promoter,
-promoter, and splice-site detection, against the $0.69$, $0.87$, and $0.85$ that \citet{dnabert2}
-report for DNABERT-2 itself on the same splits; other models in that benchmark score higher on two
-of the three. The released abundance-regression head reaches $r^2=0.562$
-and Pearson $r=0.753$, against the $0.62$ \citet{dnagpt2023} report over the \citet{xpresso}
-regression baseline. These results establish model fidelity; encrypted evaluation is still
-required to establish cryptographic feasibility. The genomic-signal aggregate is not presented as
-an independent generalization result because the full source corpus includes head-training
-examples.
+Across the selected tasks, the reproduced results retain the expected task signal and provide the
+model-validation baseline used before encrypted evaluation. The GUE tasks use locally trained heads
+because DNAGPT provides no corresponding fine-tuned head, and the recovered abundance split is used
+only as model-fidelity evidence.
 
-Two dataset qualifications belong with these baseline results. DNAGPT does not release a head for
-the understanding benchmark, so we trained a linear head and evaluated the three human promoter
-and splice-site datasets selected for this study. For abundance regression, the historical source
-was recovered and its split procedure reproduced, but the resulting test set may not be
-gene-for-gene identical to the historical split. The abundance result is therefore model-fidelity
-evidence and is not used as an encrypted target.
-
-\subsection{Why 103 tokens}
-The encrypted anchor length follows from the genomic-signal task rather than from a convenient
-cryptographic setting. Its $600$-base-pair window becomes $100$ sequence tokens under the model's
-$6$-mer tokenization; three task-format special tokens bring the complete prompt to $103$ tokens.
-The evaluated prompt is therefore the task input consumed by the released classifier, rather than
-a shortened surrogate chosen to fit the encrypted implementation.
-
-The same arithmetic determines the other classification prompts. Core-promoter detection maps a
-$70$-base-pair window to $12$ sequence tokens plus one special token, or $13$ total. The
-$300$-base-pair promoter task uses $50$ sequence tokens plus one special, or $51$; the
-$400$-base-pair splice task uses $67$ sequence tokens plus one special, or $68$. The
-$103$-token genomic-signal prompt is the longest of these encrypted-scope tasks and consequently
-provides the anchor for the packing and sequence-length analysis in Sections~\ref{sec:protocol}
-and~\ref{sec:results}.
+\subsection{Benchmark prompt length}
+Genomic-signal recognition uses $600$-base-pair inputs. DNAGPT tokenizes each input into $100$
+$6$-mer sequence tokens plus three task-format tokens, yielding a $103$-token prompt. This is the
+longest prompt among the encrypted-scope classification tasks and is therefore used as the
+maximum-length encrypted benchmark in Sections~\ref{sec:protocol} and~\ref{sec:results}.
