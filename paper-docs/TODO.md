@@ -51,3 +51,7 @@ exact releases, configurations, and measured runs before making comparative perf
 - The IEEE/JBHI manuscript renders successfully and has been visually inspected page by page.
 - The 12-page layout has no empty columns on pages 6–8; algorithms are interleaved with explanatory
   prose, and all figure, table, algorithm, and citation references resolve.
+- (2026-09-08) `fig_waterfall` and `fig_cost_split` — two decompositions of the same measured
+  `full.encrypted_evaluation` interval, by phase and by party — are merged into one two-panel
+  `fig_cost_decomposition` figure in §7. Nine figures become eight; `check_numbers.py`'s structure
+  check (dangling labels/refs, orphaned generated figures) is clean after the merge.

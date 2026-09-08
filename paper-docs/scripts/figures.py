@@ -180,32 +180,63 @@ def fig_packing(out):
     return emit(fig, out, "fig_packing")
 
 
-def fig_waterfall(out):
+def fig_cost_decomposition(out):
+    """Merges the former fig_waterfall (by phase) and fig_cost_split (by party) panels.
+
+    Both read the same `full.encrypted_evaluation` ledger row, so they are two cuts of one
+    measured interval rather than two independent measurements.
+    """
     L = Ledger()
-    ids = ("full.wall", "full.encrypted_evaluation", "full.blocks_encrypted_evaluation",
-           "full.refreshes", "full.head_encrypted_evaluation")
-    for rid in ids:
+    wf_ids = ("full.wall", "full.encrypted_evaluation", "full.blocks_encrypted_evaluation",
+              "full.refreshes", "full.head_encrypted_evaluation")
+    for rid in wf_ids:
         L.require_tag(rid)
-    wall, encrypted, blocks, refresh, head = [L.value(rid) for rid in ids]
-    fig, ax = plt.subplots(figsize=(COLUMN_WIDTH, 2.15), dpi=DPI)
-    fig.subplots_adjust(left=.28, right=.97, bottom=.28, top=.76)
-    panel_title(fig, "Measured complete-run time", "One complete classifier; in-process client boundaries.")
-    ax.barh(1, wall, height=.38, facecolor=LIGHT_GRAY, **MEASURED_KW)
-    ax.text(wall*.5, 1, f"{wall:,.0f} s", ha="center", va="center", weight="bold")
-    ax.barh(0, blocks, height=.38, facecolor=SERVER, **MEASURED_KW)
-    ax.barh(0, refresh, left=blocks, height=.38, facecolor=CLIENT, edgecolor=BLACK, linewidth=.8)
-    ax.barh(0, head, left=blocks+refresh, height=.38, facecolor=PALE_ORANGE, edgecolor=BLACK, linewidth=.8)
-    ax.text(blocks*.5, 0, f"{encrypted:,.1f} s", color="white", ha="center", va="center", weight="bold")
-    ax.set_yticks([0, 1], ["Encrypted\nevaluation", "Process wall"])
-    ax.set_xlim(0, wall*1.025)
-    ax.set_ylim(-.65, 1.5)
-    ax.set_xlabel("Time (s)")
-    ax.grid(axis="x", color=LIGHT_GRAY)
-    ax.set_axisbelow(True)
-    despine(ax, keep=("bottom",))
-    fig.text(.02, .03, f"Blocks {blocks:,.1f} s · refreshes {refresh:.1f} s · head {head:.2f} s",
-             fontsize=6.5, color=GRAY)
-    return emit(fig, out, "fig_waterfall")
+    wall, encrypted, blocks, refresh, head = [L.value(rid) for rid in wf_ids]
+
+    cs_ids = ("full.encrypted_evaluation", "full.server_linear_algebra", "full.client_boundaries",
+              "full.server_share_pct", "full.client_share_pct")
+    for rid in cs_ids:
+        L.require_tag(rid)
+    total, server, client, server_pct, client_pct = [L.value(rid) for rid in cs_ids]
+
+    fig, (ax1, ax2) = plt.subplots(2, 1, figsize=(COLUMN_WIDTH, 3.55), dpi=DPI,
+                                    gridspec_kw={"height_ratios": [1.2, 1]})
+    fig.subplots_adjust(left=.24, right=.97, bottom=.24, top=.76, hspace=1.15)
+    panel_title(fig, "Where the measured time goes",
+                "The same measured interval, viewed by phase and by party.")
+
+    # By phase: process wall vs. blocks/refreshes/head
+    ax1.barh(1, wall, height=.38, facecolor=LIGHT_GRAY, **MEASURED_KW)
+    ax1.text(wall*.5, 1, f"{wall:,.0f} s", ha="center", va="center", weight="bold")
+    ax1.barh(0, blocks, height=.38, facecolor=SERVER, **MEASURED_KW)
+    ax1.barh(0, refresh, left=blocks, height=.38, facecolor=CLIENT, edgecolor=BLACK, linewidth=.8)
+    ax1.barh(0, head, left=blocks+refresh, height=.38, facecolor=PALE_ORANGE, edgecolor=BLACK, linewidth=.8)
+    ax1.text(blocks*.5, 0, f"{encrypted:,.1f} s", color="white", ha="center", va="center", weight="bold")
+    ax1.set_yticks([0, 1], ["Encrypted\nevaluation", "Process wall"])
+    ax1.set_xlim(0, wall*1.025)
+    ax1.set_ylim(-.65, 1.5)
+    ax1.set_xlabel("Time (s)", labelpad=8)
+    ax1.grid(axis="x", color=LIGHT_GRAY)
+    ax1.set_axisbelow(True)
+    despine(ax1, keep=("bottom",))
+    ax1.text(0, -.62, f"Blocks {blocks:,.1f} s · refreshes {refresh:.1f} s · head {head:.2f} s",
+             transform=ax1.transAxes, fontsize=6.5, color=GRAY, va="top")
+
+    # By party: server vs. client share of the same encrypted-evaluation total
+    for value, left, colour in ((server, 0, SERVER), (client, server, CLIENT)):
+        ax2.barh(0, value, left=left, height=.6, facecolor=colour, **MEASURED_KW)
+    ax2.text(server/2, 0, f"{server_pct:.1f}%", color="white", weight="bold", ha="center", va="center")
+    ax2.text(server+client/2, 0, f"{client_pct:.1f}%", color="white", weight="bold", ha="center", va="center", fontsize=6.6)
+    ax2.set_xlim(0, total)
+    ax2.set_yticks([])
+    ax2.set_xlabel("Time (s)", labelpad=8)
+    despine(ax2, keep=("bottom",))
+    ax2.text(0, -.72, f"Provider: {server:,.0f} s · encrypted linear algebra",
+             transform=ax2.transAxes, color=SERVER, fontsize=6.9, va="top")
+    ax2.text(0, -1.12, f"Data owner: {client:,.0f} s · CPU boundaries · no GPU",
+             transform=ax2.transAxes, color=CLIENT, fontsize=6.9, va="top")
+
+    return emit(fig, out, "fig_cost_decomposition")
 
 
 def fig_timeline(out):
@@ -264,29 +295,6 @@ def fig_memory(out):
     return emit(fig, out, "fig_memory")
 
 
-def fig_cost_split(out):
-    L = Ledger()
-    ids = ("full.encrypted_evaluation", "full.server_linear_algebra", "full.client_boundaries",
-           "full.server_share_pct", "full.client_share_pct")
-    for rid in ids:
-        L.require_tag(rid)
-    total, server, client, server_pct, client_pct = [L.value(rid) for rid in ids]
-    fig, ax = plt.subplots(figsize=(COLUMN_WIDTH, 1.8), dpi=DPI)
-    fig.subplots_adjust(left=.06, right=.98, bottom=.38, top=.69)
-    panel_title(fig, "Who pays the measured evaluation cost?", f"Complete classifier: {total:,.1f} s encrypted evaluation.")
-    for value, left, colour in ((server, 0, SERVER), (client, server, CLIENT)):
-        ax.barh(0, value, left=left, height=.6, facecolor=colour, **MEASURED_KW)
-    ax.text(server/2, 0, f"{server_pct:.1f}%", color="white", weight="bold", ha="center", va="center")
-    ax.text(server+client/2, 0, f"{client_pct:.1f}%", color="white", weight="bold", ha="center", va="center", fontsize=6.6)
-    ax.set_xlim(0, total)
-    ax.set_yticks([])
-    ax.set_xlabel("Time (s)")
-    despine(ax, keep=("bottom",))
-    fig.text(.02, .14, f"Provider: {server:,.0f} s · encrypted linear algebra", color=SERVER, fontsize=6.9)
-    fig.text(.02, .055, f"Data owner: {client:,.0f} s · CPU boundaries · no GPU", color=CLIENT, fontsize=6.9)
-    return emit(fig, out, "fig_cost_split")
-
-
 def fig_scaling(out):
     rows = load("scaling")["tasks"]
     labels = ["Core promoter", "300 bp promoter", "Splice site", "Genomic signal"]
@@ -341,10 +349,9 @@ FIGURES = {
     "graphical_abstract": fig_graphical_abstract,
     "architecture": fig_architecture,
     "packing": fig_packing,
-    "waterfall": fig_waterfall,
+    "cost_decomposition": fig_cost_decomposition,
     "timeline": fig_timeline,
     "memory": fig_memory,
-    "cost_split": fig_cost_split,
     "scaling": fig_scaling,
     "baseline": fig_baseline,
 }

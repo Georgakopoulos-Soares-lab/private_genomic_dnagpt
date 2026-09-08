@@ -29,7 +29,7 @@ number in the manuscript that is not there. And `[V]` measured, `[A]` derived or
 |---|---|
 | [`context/`](context/) | what the paper may say and how — terminology, the deployment scenario, the research narrative, defensible claims |
 | [`evidence/`](evidence/) | every number the manuscript may print, with its source and evidence tag. The only numeric authority |
-| [`manuscript/`](manuscript/) | `source/` (LaTeX) and `figures/` (generated PDFs, committed) |
+| [`manuscript/`](manuscript/) | `source/` (LaTeX, plus the compiled `main.pdf`, committed for convenience) and `figures/` (generated PDFs, committed) |
 | [`scripts/`](scripts/) | figure generation, the number and terminology lint, the build wrapper |
 | [`reviews/`](reviews/) | dated agent review output, appended never overwritten |
 | [`submission/`](submission/) | packaged submission for the IEEE Author Portal. Build artifact; see its `README.md` for what's ready vs. blocked on author action |
@@ -52,9 +52,13 @@ back to `tectonic`, which is a single binary that fetches the packages it needs 
 brew install tectonic                  # macOS, small and self-contained
 brew install --cask mactex-no-gui      # macOS, full TeX Live
 apt install texlive-full latexmk       # Debian
+module load texlive/2023               # TACC (Lmod; not on PATH by default)
 ```
 
-The compiled `manuscript/source/main.pdf` is a build artifact and is not committed.
+The compiled `manuscript/source/main.pdf` is committed so the paper can be read on GitHub without a
+LaTeX toolchain. It is a build artifact, not a source file — always regenerate it with
+`scripts/build.sh` after any change under `manuscript/` or `evidence/`, never hand-edit it, and
+commit the refreshed copy alongside the source change that produced it.
 
 ## How the pieces connect
 
@@ -102,8 +106,8 @@ and is reported as one.
 
 ## Status
 
-Last updated 2026-09-07. **The paper has been rewritten in the IEEE/JBHI journal template and
-renders as a 12-page regular-paper draft, including all nine figures and the references.**
+Last updated 2026-09-08. **The paper has been rewritten in the IEEE/JBHI journal template and
+renders as a 12-page regular-paper draft, including all eight figures and the references.**
 
 **Done:**
 
@@ -112,9 +116,11 @@ renders as a 12-page regular-paper draft, including all nine figures and the ref
   plaintext label, and stayed below the tested accelerator-memory envelope.
 - The evidence ledger holds 154 tagged rows — 120 `[V]`, 28 `[A]`, and 6 `[U]`. Every number in
   the LaTeX resolves to the ledger.
-- All nine figures are embedded and referenced in the manuscript, with compact journal-size
-  artwork. The timeline uses the measured complete-run trajectory; shorter-task scaling uses an
-  explicitly assumed group-linear model anchored to the clean complete-run wall time.
+- All eight figures are embedded and referenced in the manuscript, with compact journal-size
+  artwork. The former `fig_waterfall` (by-phase) and `fig_cost_split` (by-party) figures, which read
+  the same measured interval, are now one two-panel `fig_cost_decomposition` figure. The timeline
+  uses the measured complete-run trajectory; shorter-task scaling uses an explicitly assumed
+  group-linear model anchored to the clean complete-run wall time.
 - Four protocol algorithms in §5, transcribed from the implementation and cross-checked against
   `context/08_implementation_ground_truth.md`, which carries the `file:line` citations.
   Short routines appear beside their explanations; the full-block algorithm shares its page with

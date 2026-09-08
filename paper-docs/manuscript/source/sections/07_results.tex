@@ -97,16 +97,6 @@ from $533.9$ to $558.9$~s, with a mean of $547.2$~s. This within-run range is ab
 $4.5\%$ of the maximum; it describes block consistency in one execution, not independent-run
 variance.
 
-Figure~\ref{fig:waterfall} separates block computation, refreshes, and head evaluation within the
-complete elapsed time.
-
-\begin{figure}[!t]\centering
-  \includegraphics[width=\columnwidth]{fig_waterfall.pdf}
-  \caption{Measured complete-run time decomposition. Transformer evaluation, refreshes, and the
-  task head are instrumented subtotals; the remaining interval is outside those subtotals.}
-  \label{fig:waterfall}
-\end{figure}
-
 Server-side encrypted linear algebra accounts for $5{,}638.56$~s, or $85.5\%$ of encrypted
 evaluation. The in-process client boundaries account for $956.19$~s, or $14.5\%$, and require no
 GPU. The measured execution is therefore server-dominated, while the data owner's work remains
@@ -114,14 +104,19 @@ CPU-only. The client fraction should decrease as $O(1/D)$ with hidden width $D$ 
 structure because boundary values scale with $D$ and server dense transforms with $D^2$; this is a
 scaling argument, not a measurement of a wider model.
 
-\begin{figure}[!b]\centering
-  \includegraphics[width=\columnwidth]{fig_cost_split.pdf}
-  \caption{Server and client shares of measured encrypted-evaluation time. Client operations run
-  on CPU inside the evaluated process; the figure does not include network transport.}
-  \label{fig:cost-split}
-\end{figure}
+Figure~\ref{fig:cost-decomposition} decomposes this same measured interval two ways: by phase
+(process wall against blocks, refreshes, and the task head) and by responsible party (server
+against client).
 
-Figure~\ref{fig:cost-split} summarizes this division of computation.
+\begin{figure}[!t]\centering
+  \includegraphics[width=\columnwidth]{fig_cost_decomposition.pdf}
+  \caption{Measured complete-run time, decomposed by phase and by party. Top: process wall against
+  instrumented transformer, refresh, and task-head subtotals; the remaining interval falls outside
+  those subtotals. Bottom: the same encrypted-evaluation interval split between the compute
+  provider's encrypted linear algebra and the data owner's in-process client boundaries, which run
+  on CPU and exclude network transport.}
+  \label{fig:cost-decomposition}
+\end{figure}
 
 \subsection{Memory}
 
