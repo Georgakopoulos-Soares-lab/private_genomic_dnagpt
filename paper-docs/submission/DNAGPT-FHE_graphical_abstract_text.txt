@@ -1,0 +1,4 @@
+A client-assisted homomorphic-encryption protocol runs all twelve released transformer blocks of a
+genomic foundation model plus its classification head on an encrypted 103-token sequence, matching
+the plaintext prediction while revealing no query genomic data to the compute provider —
+establishing feasibility, with practicality remaining an open, cost-bound question.

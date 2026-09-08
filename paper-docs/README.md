@@ -32,7 +32,7 @@ number in the manuscript that is not there. And `[V]` measured, `[A]` derived or
 | [`manuscript/`](manuscript/) | `source/` (LaTeX) and `figures/` (generated PDFs, committed) |
 | [`scripts/`](scripts/) | figure generation, the number and terminology lint, the build wrapper |
 | [`reviews/`](reviews/) | dated agent review output, appended never overwritten |
-| `submission/` | packaged submission. Build artifact, never hand-edited. Not created yet |
+| [`submission/`](submission/) | packaged submission for the IEEE Author Portal. Build artifact; see its `README.md` for what's ready vs. blocked on author action |
 
 ## Build
 
