@@ -1,0 +1,46 @@
+% ---------------------------------------------------------------------------
+% 4 The plaintext reference
+% Source: docs/tasks.md, docs/eval_approach.md, docs/data_provenance.md
+%         numbers: evidence/measurements.yaml plaintext_baseline
+% ---------------------------------------------------------------------------
+
+\subsection{Plaintext reference and experimental design}
+\label{sec:baseline}
+
+An encrypted execution is useful only if the computation it reproduces is itself meaningful and
+independently checked. Task metrics answer the first question: they establish that the released
+model and locally trained heads retain the genomic capabilities for which the model is being
+evaluated. Per-example predictions answer the second. They are recorded before any encrypted work
+and become the frozen plaintext reference against which encrypted outputs are accepted.
+
+The plaintext harness imports the upstream model implementation and preserves its classification
+and regression forward paths. It adds batching, metric computation, and result recording without
+changing model arithmetic. Evaluation uses the canonical test split for each task, and each run
+records both its configuration and the per-example outputs needed downstream. Agreement with a
+published aggregate metric is evidence that the intended model behavior survived local
+reproduction; the recorded output for the selected encrypted input is the stricter numerical
+contract used by the cryptographic evaluation.
+
+The reference is not trusted merely because it is written in NumPy. Released checkpoint weights
+are evaluated through the upstream PyTorch block and, independently, through a float64 NumPy
+re-derivation. For every one of the $12$ transformer blocks, the two outputs are asserted equal at
+relative and absolute tolerance $2\times10^{-5}$; the classifier head is checked by the same
+procedure. Generation aborts on any divergence. Only after this upstream-to-reference comparison
+passes are the weights and reference output supplied to the encrypted circuit. This creates two
+independent checks: the plaintext re-derivation must reproduce the released model, and the
+encrypted computation must reproduce that validated re-derivation.
+
+\subsection{Task-derived sequence lengths}
+The encrypted anchor length follows from the genomic-signal task rather than from a convenient
+cryptographic setting. Its $600$-base-pair window becomes $100$ sequence tokens under the model's
+$6$-mer tokenization; three task-format special tokens bring the complete prompt to $103$ tokens.
+The evaluated prompt is therefore the task input consumed by the released classifier, rather than
+a shortened surrogate chosen to fit the encrypted implementation.
+
+The same arithmetic determines the other classification prompts. Core-promoter detection maps a
+$70$-base-pair window to $12$ sequence tokens plus one special token, or $13$ total. The
+$300$-base-pair promoter task uses $50$ sequence tokens plus one special, or $51$; the
+$400$-base-pair splice task uses $67$ sequence tokens plus one special, or $68$. The
+$103$-token genomic-signal prompt is the longest of these encrypted-scope tasks and consequently
+provides the anchor for the packing and sequence-length analysis in Sections~\ref{sec:protocol}
+and~\ref{sec:results}.

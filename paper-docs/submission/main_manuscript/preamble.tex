@@ -1,0 +1,78 @@
+% ---------------------------------------------------------------------------
+% IEEE journal preamble. Page geometry, headings, captions, and page furniture are
+% deliberately left to IEEEtran so the review PDF matches the journal's printed-copy
+% format.
+% ---------------------------------------------------------------------------
+
+\usepackage{cmap}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\ifdefined\pdfgentounicode \input{glyphtounicode} \pdfgentounicode=1 \fi
+
+\usepackage{cite}
+\usepackage{amsmath,amssymb,amsfonts}
+\usepackage{amsthm}
+\usepackage{booktabs}
+\usepackage{multirow}
+\usepackage{array}
+\usepackage{tabularx}
+\usepackage{graphicx}
+\usepackage{xcolor}
+\usepackage{microtype}
+\usepackage{url}
+\usepackage{algorithm}
+\usepackage{algpseudocode}
+\usepackage{placeins}
+\usepackage{hyperref}
+
+% algpseudocode defines \Call using \ifthenelse{\equal{#2}{}} to detect an empty
+% argument list. \equal expands its arguments, so any \Call whose arguments contain
+% a macro -- such as a nested \Call -- makes the test blow up with
+% "Argument of \equal has an extra }". \@ifmtarg performs the same emptiness test
+% without expanding, so the redefinition below is behaviourally identical for the
+% empty case and simply correct for the non-empty one.
+\usepackage{ifmtarg}
+\makeatletter
+\renewcommand{\Call}[2]{\textproc{#1}\@ifmtarg{#2}{}{(#2)}}
+\makeatother
+
+\bibliographystyle{IEEEtran}
+
+% IEEEtran owns the page and paragraph layout. The emergency stretch only helps
+% narrow technical columns avoid avoidable overfull boxes.
+\setlength{\emergencystretch}{2em}
+
+% --- Tables -----------------------------------------------------------------
+\newcolumntype{Y}{>{\raggedright\arraybackslash}X}
+\newcolumntype{R}{>{\raggedleft\arraybackslash}X}
+
+% --- Theorem-like environments for the threat model -------------------------
+\newtheorem{invariant}{Invariant}
+\newtheorem{proposition}{Proposition}
+
+% --- Links ------------------------------------------------------------------
+\hypersetup{
+  colorlinks=true,
+  linkcolor=blue!60!black,
+  citecolor=blue!60!black,
+  urlcolor=blue!60!black,
+  pdftitle={Feasibility of Homomorphic Inference for a Genomic Foundation Model},
+  pdfauthor={Christos Galanopoulos; Kimon Antonios Provatas; Ilias Georgakopoulos-Soares},
+  pdfsubject={Client-assisted homomorphic inference for genomic sequence analysis},
+  pdfkeywords={genomic privacy; homomorphic encryption; privacy-preserving inference; transformers}
+}
+\pdfstringdefDisableCommands{\def\texttt#1{#1}}
+
+% --- Evidence tags ----------------------------------------------------------
+% Used only in internal drafts to mark measurement status while writing. The
+% submission builder removes them; they must not survive into the final PDF.
+\newcommand{\Vtag}{\textcolor{green!45!black}{\footnotesize[V]}}
+\newcommand{\Utag}{\textcolor{red!60!black}{\footnotesize[U]}}
+\newcommand{\Atag}{\textcolor{orange!70!black}{\footnotesize[A]}}
+
+% --- Figure placeholder -----------------------------------------------------
+% Author sections against these, then swap for \includegraphics once the figure
+% script has produced the PDF.
+\newcommand{\figplaceholder}[2]{%
+  \begin{center}\fbox{\begin{minipage}{0.92\columnwidth}\centering\vspace{1.2cm}
+  \textbf{[figure: #1]}\\[4pt]\small #2\vspace{1.2cm}\end{minipage}}\end{center}}

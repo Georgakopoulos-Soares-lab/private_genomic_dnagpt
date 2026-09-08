@@ -1,0 +1,33 @@
+% ---------------------------------------------------------------------------
+% 10 Conclusion
+% ---------------------------------------------------------------------------
+
+\section{Conclusion}
+
+Client-assisted CKKS executes all $12$ released DNAGPT transformer blocks and the genomic-signal
+task head for one held-out $103$-token input. Intermediate errors remain within
+$1.54\times10^{-7}$, the encrypted head margin has $8.56\times10^{-9}$ relative error, and the
+final label matches the independently validated plaintext reference. The complete execution peaks
+at $9{,}839$~MiB of process GPU memory. Arithmetic feasibility is therefore affirmative from
+encrypted embedded vectors through the released head.
+
+The measured cost is $6{,}683$~s for one example on a single accelerator. Server-side encrypted
+linear algebra accounts for $85.5\%$ of encrypted evaluation and CPU-only client boundaries for
+$14.5\%$. These measurements characterize present cost without establishing deployment
+practicality: independent-run variation and network transport remain unmeasured, and private
+token-index lookup remains outside the encrypted boundary.
+
+The comparison with non-interactive CKKS identifies architecture, rather than numerical accuracy,
+as the decisive constraint. Polynomial nonlinearities completed one real-weight block, but their
+composition configuration exceeded the tested $80$~GB GPU-memory envelope. Exact nonlinearities and
+fresh encryption at declared client boundaries bound the depth of each encrypted segment.
+Separately, encoding public weight diagonals once and evicting their templates at stage boundaries
+bounds host memory without changing the checked operation schedule.
+
+\subsection*{Future work}
+
+The immediate measurement priority is an independent repetition of the complete execution, followed
+by a serialized client/server transport experiment. Systems work should cache fixed mask plaintexts
+and evaluate distinct transforms across packed activation copies. A thread-safe cryptographic
+context could expose independent client boundaries to concurrency. Protocol closure also requires a
+validated noise-flooding budget for re-encryption and private token-index lookup.

@@ -1,0 +1,111 @@
+% ---------------------------------------------------------------------------
+% 3 Deployment scenario and threat model
+% Source: context/01_scenario_and_motivation.md  (this section is written FROM that note)
+%         context/06_defensibility.md §3.1
+% This is the spine. Sections 5, 6, and 7 are read against it.
+% ---------------------------------------------------------------------------
+
+\section{Study Design and Threat Model}
+\label{sec:threat-model}
+
+\subsection{Deployment roles and privacy objective}
+Figure~\ref{fig:overview} summarizes the deployment and complete-classifier evaluation.
+The deployment has two parties but one cryptographic confidentiality objective. The data owner
+holds a human genomic sequence, ordinary CPU resources, and no GPU. It will not disclose the
+sequence to the compute provider. The model owner operates the accelerator infrastructure and
+serves the DNAGPT model rather than distributing it to clients. Keeping the weights server-side is
+an operational preference of this deployment, not a model-confidentiality guarantee supplied by
+the protocol.
+
+The released DNAGPT artifact makes the experiment reproducible; it does not itself require this
+service arrangement. A client may run the public release locally. We use it as an auditable
+surrogate for a genomic model whose owner limits access to a service by policy or contract, and the
+deployment conclusions apply under that premise.
+
+The protected asset is therefore the genome. The data owner encrypts its embedded numeric vectors
+and retains the secret key; the compute provider evaluates the served model on those ciphertexts.
+The protocol is relevant only where these roles are fixed. If a client is allowed to receive and
+run the model, local plaintext inference is the simpler architecture.
+
+\subsection{Local inference as a comparison}
+Where model distribution is permitted, the client can avoid all cryptographic work by running the
+ordinary forward pass. Client assistance cannot provide a computational advantage over that
+option. Its purpose is to make a service-only model available without sending the genomic input in
+plaintext.
+
+That comparison changes the deployment premise. A served model is available to the data owner only
+through the provider's interface; handing the client the weights creates a different service. Under
+the premise studied here, the available choices are to disclose the genome, decline the inference,
+or evaluate through a privacy-preserving protocol. Client-assisted CKKS addresses the last choice.
+The reason to use it is access to a served model without genomic disclosure, not an attempt to beat
+plaintext inference.
+
+\begin{table*}[t]\centering\small
+\caption{Resource and trust allocation under local and served-model deployment.}
+\label{tab:deployments}
+\begin{tabularx}{\textwidth}{Y c c}
+\toprule
+ & Client-local inference & Client-assisted CKKS \\
+\midrule
+Client must hold the model & yes & no \\
+Server observes the genome & not applicable & no \\
+Client requires a GPU & deployment-dependent & no \\
+Server evaluates model linear algebra & no & on ciphertexts \\
+Client evaluates model nonlinearities & as part of local model & at declared boundaries \\
+\bottomrule
+\end{tabularx}
+\end{table*}
+
+The protocol assigns encrypted dense linear algebra to the party with accelerator hardware while
+the key holder evaluates exact nonlinearities on CPU. This allocation protects the genomic input
+without requiring the data owner to operate a GPU.
+
+This allocation becomes more server-heavy as model width grows. At fixed sequence structure, the
+client's boundary work scales with the number of activation values, whereas the server's dense
+transforms scale quadratically with hidden width. The client fraction therefore decreases as
+$O(1/D)$ with hidden width $D$ under this fixed sequence structure. This is an asymptotic property
+of the work allocation, not a measurement of a wider DNAGPT model.
+
+\subsection{Adversary model}
+We consider a semi-honest compute provider under $128$-bit classical CKKS parameters. It follows
+the prescribed circuit but may inspect everything it legitimately receives: public and evaluation
+keys, model parameters, ciphertexts, sequence length, message sizes, operation order, boundary
+schedule, and timing. It does not alter ciphertexts to probe the client or deviate from the
+declared boundary sequence.
+
+Under this adversary, the compute provider receives no plaintext genomic vector, plaintext
+activation, partial decryption, or secret-key material. At a boundary it supplies a ciphertext and
+receives a fresh ciphertext under the data owner's public key. The guarantee concerns the
+provider's view of query-derived values; public model structure and plaintext weights remain
+available to the provider as inputs to ciphertext--plaintext operations.
+
+\begin{invariant}[Key custody]
+The data owner generates and retains the secret key. No protocol message contains the key or a
+partial decryption, and the compute provider has no decryption operation.
+\end{invariant}
+
+\begin{invariant}[No plaintext at the server]
+Every query-derived value held by the compute provider is a ciphertext under the data owner's key.
+Client-evaluated nonlinearities return through fresh encryption rather than as decoded values.
+\end{invariant}
+
+\begin{invariant}[Non-adaptive boundaries]
+The circuit and sequence length determine every boundary before execution; decrypted content does
+not select the next operation. The implementation asserts the complete schedule and boundary counts
+for each accepted run and aborts on deviation. Transcript equality across multiple private inputs
+of equal length has not been measured as a separate leakage experiment.
+\end{invariant}
+
+\subsection{What is not claimed}
+Model confidentiality is not claimed. The data owner observes full intermediate activations at
+every nonlinearity. Those observations decouple the network into shallow segments with known
+nonlinearities, turning global model inversion into inexpensive per-segment regression. Keeping
+weights on the server may deter casual copying, but it does not prevent extraction by a determined
+client. This concession does not change the genomic-data guarantee, which protects the data owner
+from the compute provider.
+
+Malicious servers, authenticated transport, production key custody, traffic analysis, timing and
+physical side channels, and compromised clients are outside the evaluated boundary. Encrypted
+scope begins after token-index lookup, so private lookup is also unresolved. The data owner sees
+its own intermediate activations and final output; privacy from the key holder is not an objective
+of this protocol.

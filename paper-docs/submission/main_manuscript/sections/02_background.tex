@@ -1,0 +1,61 @@
+% ---------------------------------------------------------------------------
+% 2 Background
+% Source: docs/shared/backend_selection.md, docs/overview.md,
+%         docs/hybrid/t123_walkthrough.md §3 (glossary) and §3.1
+% ---------------------------------------------------------------------------
+
+\section{Background}
+
+\subsection{DNAGPT and the genomic task families}
+DNAGPT is an autoregressive transformer for sequence and numerical tasks over DNA~\cite{dnagpt2023}.
+The evaluated $0.1$-billion-parameter configuration has $12$ blocks, hidden width $768$, $12$
+causal-attention heads of width $64$, and feed-forward width $3{,}072$. Its input combines
+$6$-mer DNA tokens with task-format tokens.
+
+Each block applies LayerNorm; query, key, and value projections; causal self-attention; an output
+projection and residual; a second LayerNorm; and an expanded MLP with GELU and another residual.
+Dense maps use fixed weights; LayerNorm, attention, and GELU introduce data-dependent products or
+nonlinear functions.
+
+Released heads cover genomic-signal recognition and mRNA abundance regression; the
+genome-understanding benchmark uses a locally fine-tuned linear head (Section~\ref{sec:baseline}).
+These tasks follow convolutional signal recognition~\cite{deepgsr}, abundance
+regression~\cite{xpresso}, and the encoder-based benchmark~\cite{dnabert2}. They establish model
+fidelity before encrypted evaluation of the signal-recognition path.
+
+\subsection{CKKS}
+CKKS supports approximate arithmetic on packed real or complex vectors~\cite{ckks2017}. Values
+occupy plaintext slots encrypted under the data owner's key. Addition and multiplication act
+slotwise; rotations move values between slots. This single-instruction, multiple-data model
+expresses public matrix transforms through rotated ciphertexts, plaintext diagonals, and accumulation.
+
+Query--key scoring and attention context instead multiply encrypted query-derived operands,
+requiring ciphertext--ciphertext multiplication and relinearization. Public weights and masks
+remain plaintext; query-derived operands remain encrypted at the server.
+
+Rescaling controls fixed-point scale using levels from a finite modulus chain. Bootstrapping
+refreshes the budget without decryption; fresh client encryption resets it interactively. Their
+system costs make multiplicative depth an architectural resource.
+
+\subsection{Why the nonlinearities are the architecture}
+LayerNorm requires inverse square root, softmax requires exponentiation and normalization, and the
+MLP requires GELU. A non-interactive circuit approximates these functions polynomially over declared
+input ranges. Higher degree consumes additional depth, increasing the context and evaluation-key
+material needed across repeated blocks. Exact evaluation at declared client boundaries removes
+range calibration and resets depth, while requiring an online client that observes intermediate
+activations. This choice determines memory, interaction, and the threat model;
+Section~\ref{sec:protocol} specifies both designs.
+
+\subsection{Software backend selection}
+OpenFHE provides CKKS context and security-parameter construction, encoding, rotations, polynomial
+evaluation, and approximate bootstrapping~\cite{openfhe}, establishing reference behavior for local
+operators and the non-interactive design. The evaluated GPU backend interoperates with those
+representations and supplies every measured server-side CUDA operation. Python, NumPy, and PyTorch
+construct and validate the plaintext reference outside the encrypted performance path.
+
+We also considered Concrete ML and the Boolean/integer-oriented TFHE-rs
+ecosystem~\cite{concreteml,tfhers}. Concrete ML documents a hybrid language-model protocol with
+client-side attention and activations and server-side linear layers~\cite{concreteml-inference}.
+This was a documentation-based assessment, not a local DNAGPT performance comparison. We retained
+the validated CKKS implementation; this engineering choice does not establish CKKS as the only
+viable encryption scheme.

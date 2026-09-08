@@ -1,0 +1,54 @@
+\subsection{Plaintext model fidelity}
+
+\begin{table*}[!t]\centering\small
+\caption{Released DNAGPT evaluated locally on three genomic task families. Published comparators
+are DNAGPT-M for signal recognition and abundance regression, and DNABERT-2 for the three
+understanding-benchmark tasks. Signal recognition and abundance regression use released fine-tuned
+heads; the understanding-benchmark rows use a locally fine-tuned head, as no head was released.}
+\label{tab:baseline}
+\begin{tabularx}{\textwidth}{Y l l l l}
+\toprule
+Task & Metric & This work & Reference & Source \\
+\midrule
+Polyadenylation-signal recognition$^{\ddagger}$ & accuracy & 0.9124 & 0.9151 & \cite{dnagpt2023} \\
+ & F1 & 0.916 & --- & \\
+Core promoter detection & MCC & 0.680 & 0.69 & \cite{dnabert2} \\
+300\,bp promoter detection & MCC & 0.897 & 0.87 & \cite{dnabert2} \\
+Splice-site classification & MCC & 0.831 & 0.85 & \cite{dnabert2} \\
+mRNA abundance regression$^{\dagger}$ & $r^2$ & 0.562 & 0.62 & \cite{dnagpt2023} \\
+ & Pearson $r$ & 0.753 & --- & \\
+\bottomrule
+\end{tabularx}
+\vspace{2pt}
+{\footnotesize $^{\ddagger}$The reference is DNAGPT's own reported accuracy for this model class,
+measured on a held-out quarter of the set; this work evaluates all $22{,}604$ examples. The
+comparison is same-model but not same-split.\\
+$^{\dagger}$Model-fidelity evidence only. This task is outside the encrypted
+scope; see Section~\ref{sec:limitations}.}
+\end{table*}
+
+Table~\ref{tab:baseline} and Fig.~\ref{fig:baseline} show that the target carries useful signal across classification and
+regression tasks. On the complete polyadenylation-signal test set of $22{,}604$ examples, the
+released classifier reaches $0.9124$ accuracy and $0.916$ F1, against the $0.9151$ accuracy
+reported for this model class on a held-out quarter of that set~\cite{dnagpt2023}. The locally
+fine-tuned understanding-benchmark heads reach MCC $0.680$, $0.897$, and $0.831$ on core-promoter,
+promoter, and splice-site detection, against the $0.69$, $0.87$, and $0.85$ reported on the same
+splits~\cite{dnabert2}. The released abundance-regression head reaches $r^2=0.562$ and Pearson
+$r=0.753$, against the $0.62$ result reported over the Xpresso regression baseline
+~\cite{dnagpt2023,xpresso}. These results establish model fidelity; encrypted evaluation is still
+required to establish cryptographic feasibility.
+
+Two dataset qualifications belong with these baseline results. DNAGPT does not release a head for
+the understanding benchmark, so we trained a linear head and evaluated the three human promoter
+and splice-site datasets selected for this study. For abundance regression, the historical source
+was recovered and its split procedure reproduced, but the resulting test set may not be
+gene-for-gene identical to the historical split. The abundance result is therefore model-fidelity
+evidence and is not used as an encrypted target.
+
+\begin{figure}[!t]\centering
+  \includegraphics[width=\columnwidth]{fig_baseline.pdf}
+  \caption{Plaintext model fidelity against published references. The signal-recognition comparison
+  uses different test splits; promoter and splice-site comparisons use the stated benchmark splits.
+  Abundance regression is outside the encrypted scope.}
+  \label{fig:baseline}
+\end{figure}

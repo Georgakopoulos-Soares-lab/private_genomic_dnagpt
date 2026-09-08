@@ -1,0 +1,55 @@
+% ---------------------------------------------------------------------------
+% 9 Related work
+% Sources verified in reviews/2026-08-08-paper-sources.md.
+% ---------------------------------------------------------------------------
+
+\section{Related work}
+
+\subsection{Private transformer inference}
+
+Gazelle combines homomorphic linear layers with garbled-circuit
+nonlinearities~\cite{gazelle2018}. Iron, BOLT, Nimbus, and BumbleBee adapt homomorphic encryption,
+secret sharing, and/or oblivious-transfer-based protocols to transformer attention,
+normalization, and activations~\cite{iron2022,bolt2024,nimbus2024,bumblebee2025}. They optimize
+joint secure computation; our server evaluates the linear path in CKKS and the data owner
+evaluates exact nonlinearities at explicit boundaries, changing both the security contract and
+the allocation of work.
+
+The Safhire preprint describes a closely related architecture: its client decrypts an intermediate,
+evaluates the nonlinearity, and returns fresh encryption~\cite{safhire2025}. It studies convolutional
+networks and adds randomized output permutation intended to hinder reconstruction from intermediates.
+We apply this established pattern to a released genomic transformer at its task-defined prompt,
+preserving released weights and exact nonlinearities. The contribution is the independently
+checked verification chain and measured arithmetic, boundary schedule, and memory behavior.
+
+THOR demonstrates full non-interactive homomorphic transformer evaluation using diagonal-major
+organization and compact packing~\cite{thor}. Thus, our observed memory wall is specific to the
+evaluated backend, parameters, packing, and circuit. Client assistance tests whether released
+computation can be preserved when the data owner is available for exact nonlinear evaluation.
+
+\subsection{Homomorphic encryption for genomics}
+
+The iDASH competition evaluated encrypted association studies, sequence search, and related
+genomic workflows~\cite{idash2018}. Private genomic-query systems combine homomorphic encryption,
+hashing, and set intersection to test for variants without disclosing the genome or
+query~\cite{privategenomicqueries2017}. Beyond these searches and prescribed statistics, DNAGPT
+inference composes dense projections, attention, normalization, and feed-forward layers while
+preserving the numerical behavior of a released foundation model.
+
+\subsection{GPU-accelerated homomorphic encryption}
+
+The evaluated GPU backend supplies number-theoretic transforms, key switching, rotations, and
+ciphertext arithmetic interoperable with the host runtime~\cite{gpu-ckks-backend,openfhe}.
+Its missing ciphertext serialization prevented process-sharded evaluation, leaving thread-level
+concurrency and in-process device placement. Multi-GPU transformer work motivates further
+placement and communication--computation overlap~\cite{aegis}; adopting those schedules requires
+direct evaluation of serialization and transport, which this implementation does not exercise.
+
+\subsection{Homomorphic matrix primitives}
+
+Matrix layout determines rotations, plaintext encodings, and reductions. THOR specializes it for
+transformers~\cite{thor}; HE-BLAS supplies homomorphic matrix--vector, vector--vector, and
+matrix--matrix reductions implemented with BLAS~\cite{heblas2025}. These motivate less repeated
+packing, fewer diagonal copies, and shape-matched reductions (Section~\ref{sec:optimization}).
+Because packing, keys, levels, and the operation schedule are coupled, candidate primitives must
+be revalidated against the frozen reference and schedule before performance comparison.

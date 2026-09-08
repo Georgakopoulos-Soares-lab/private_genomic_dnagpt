@@ -1,0 +1,285 @@
+%% ---------------------------------------------------------------------------
+%% Bibliography
+%%
+%% Entries were checked against the primary records identified in
+%% reviews/2026-09-07-paper-sources.md (including the follow-up audit).
+%% Grouped by category; acronym braces preserve published names in IEEE style.
+%% ---------------------------------------------------------------------------
+
+%% ----- The model under study -----
+
+%% VERIFIED 2026-08-08
+@article{dnagpt2023,
+  title   = {{DNAGPT}: A Generalized Pre-trained Tool for Versatile {DNA} Sequence Analysis Tasks},
+  author  = {Zhang, Daoan and Zhang, Weitong and Zhao, Yu and Zhang, Jianguo and He, Bing and Qin, Chenchen and Yao, Jianhua},
+  journal = {arXiv preprint arXiv:2307.05628},
+  year    = {2023},
+  url     = {https://arxiv.org/abs/2307.05628}
+}
+
+%% ----- Genomic task references -----
+
+%% VERIFIED 2026-08-08
+@inproceedings{dnabert2,
+  title         = {{DNABERT}-2: Efficient Foundation Model and Benchmark for Multi-Species Genomes},
+  author        = {Zhou, Zhihan and Ji, Yanrong and Li, Weijian and Dutta, Pratik and Davuluri, Ramana V. and Liu, Han},
+  booktitle     = {International Conference on Learning Representations},
+  year          = {2024},
+  eprint        = {2306.15006},
+  archivePrefix = {arXiv},
+  url           = {https://openreview.net/forum?id=oMLQB4EZE1}
+}
+
+%% VERIFIED 2026-08-08
+@article{deepgsr,
+  title   = {{DeepGSR}: an optimized deep-learning structure for the recognition of genomic signals and regions},
+  author  = {Kalkatawi, Manal and Magana-Mora, Arturo and Jankovic, Boris and Bajic, Vladimir B.},
+  journal = {Bioinformatics},
+  volume  = {35},
+  number  = {7},
+  pages   = {1125--1132},
+  year    = {2019},
+  doi     = {10.1093/bioinformatics/bty752}
+}
+
+%% VERIFIED 2026-08-08
+@article{xpresso,
+  title   = {Predicting {mRNA} Abundance Directly from Genomic Sequence Using Deep Convolutional Neural Networks},
+  author  = {Agarwal, Vikram and Shendure, Jay},
+  journal = {Cell Reports},
+  volume  = {31},
+  number  = {7},
+  pages   = {107663},
+  year    = {2020},
+  doi     = {10.1016/j.celrep.2020.107663}
+}
+
+%% ----- Homomorphic encryption -----
+
+%% VERIFIED 2026-08-08
+@inproceedings{ckks2017,
+  title     = {Homomorphic Encryption for Arithmetic of Approximate Numbers},
+  author    = {Cheon, Jung Hee and Kim, Andrey and Kim, Miran and Song, Yongsoo},
+  booktitle = {Advances in Cryptology -- ASIACRYPT 2017},
+  series    = {Lecture Notes in Computer Science},
+  volume    = {10624},
+  pages     = {409--437},
+  year      = {2017},
+  doi       = {10.1007/978-3-319-70694-8_15}
+}
+
+%% VERIFIED 2026-08-08
+@inproceedings{openfhe,
+  title     = {{OpenFHE}: Open-Source Fully Homomorphic Encryption Library},
+  author    = {Al Badawi, Ahmad and Bates, Jack and Bergamaschi, Flavio and Cousins, David Bruce and Erabelli, Saroja and Genise, Nicholas and Halevi, Shai and Hunt, Hamish and Kim, Andrey and Lee, Yongwoo and Liu, Zeyu and Micciancio, Daniele and Quah, Ian and Polyakov, Yuriy and {Saraswathy R.V.} and Rohloff, Kurt and Saylor, Jonathan and Suponitsky, Dmitriy and Triplett, Matthew and Vaikuntanathan, Vinod and Zucca, Vincent},
+  booktitle = {Proceedings of the 10th Workshop on Encrypted Computing \& Applied Homomorphic Cryptography},
+  pages     = {53--63},
+  publisher = {Association for Computing Machinery},
+  year      = {2022},
+  doi       = {10.1145/3560827.3563379}
+}
+
+%% VERIFIED 2026-08-08
+@article{gpu-ckks-backend,
+  title         = {{FIDESlib}: A Fully-Fledged Open-Source {FHE} Library for Efficient {CKKS} on {GPU}s},
+  author        = {Agull\'{o}-Domingo, Carlos and Vera-L\'{o}pez, \'{O}scar and Guzelhan, Seyda and Daksha, Lohit and El Jerari, Aymane and Shivdikar, Kaustubh and Agrawal, Rashmi and Kaeli, David and Joshi, Ajay and Abell\'{a}n, Jos\'{e} L.},
+  journal       = {arXiv preprint arXiv:2507.04775},
+  year          = {2025},
+  eprint        = {2507.04775},
+  archivePrefix = {arXiv},
+  url           = {https://arxiv.org/abs/2507.04775}
+}
+
+%% VERIFIED 2026-08-08
+@misc{concreteml,
+  title  = {Concrete {ML}: a Privacy-Preserving Machine Learning Library using Fully Homomorphic Encryption for Data Scientists},
+  author = {{Zama}},
+  year   = {2022},
+  url    = {https://github.com/zama-ai/concrete-ml},
+  note   = {Accessed: Sep. 7, 2026}
+}
+
+%% VERIFIED 2026-08-08
+@misc{tfhers,
+  title  = {{TFHE-rs}: A Pure {Rust} Implementation of the {TFHE} Scheme for Boolean and Integer Arithmetics Over Encrypted Data},
+  author = {{Zama}},
+  year   = {2022},
+  url    = {https://github.com/zama-ai/tfhe-rs},
+  note   = {Accessed: Sep. 7, 2026}
+}
+
+%% VERIFIED 2026-09-07: official documentation, not a local benchmark.
+@misc{concreteml-inference,
+  author       = {{Zama}},
+  title        = {Inference},
+  howpublished = {Concrete {ML} documentation},
+  url          = {https://docs.zama.org/concrete-ml/llms/inference},
+  note         = {Accessed: Sep. 7, 2026}
+}
+
+%% ----- Private transformer and hybrid inference -----
+
+%% VERIFIED 2026-08-08
+@inproceedings{gazelle2018,
+  title     = {{GAZELLE}: A Low Latency Framework for Secure Neural Network Inference},
+  author    = {Juvekar, Chiraag and Vaikuntanathan, Vinod and Chandrakasan, Anantha},
+  booktitle = {27th USENIX Security Symposium},
+  pages     = {1651--1669},
+  publisher = {USENIX Association},
+  address   = {Baltimore, MD},
+  month     = aug,
+  year      = {2018},
+  url       = {https://www.usenix.org/conference/usenixsecurity18/presentation/juvekar}
+}
+
+%% VERIFIED 2026-08-08
+@inproceedings{iron2022,
+  title     = {Iron: Private Inference on Transformers},
+  author    = {Hao, Meng and Li, Hongwei and Chen, Hanxiao and Xing, Pengzhi and Xu, Guowen and Zhang, Tianwei},
+  booktitle = {Advances in Neural Information Processing Systems},
+  volume    = {35},
+  pages     = {15718--15731},
+  year      = {2022},
+  doi       = {10.52202/068431-1143}
+}
+
+@inproceedings{bolt2024,
+  title     = {{BOLT}: Privacy-Preserving, Accurate and Efficient Inference for Transformers},
+  author    = {Pang, Qi and Zhu, Jinhao and M\"{o}llering, Helen and Zheng, Wenting and Schneider, Thomas},
+  booktitle = {2024 IEEE Symposium on Security and Privacy},
+  pages     = {4753--4771},
+  publisher = {IEEE},
+  year      = {2024},
+  doi       = {10.1109/SP54263.2024.00130}
+}
+
+%% VERIFIED 2026-08-08
+@inproceedings{nimbus2024,
+  title     = {Nimbus: Secure and Efficient Two-Party Inference for Transformers},
+  author    = {Li, Zhengyi and Yang, Kang and Tan, Jin and Lu, Wen-jie and Wu, Haoqi and Wang, Xiao and Yu, Yu and Zhao, Derun and Zheng, Yancheng and Guo, Minyi and Leng, Jingwen},
+  booktitle = {Advances in Neural Information Processing Systems},
+  volume    = {37},
+  pages     = {21572--21600},
+  year      = {2024},
+  doi       = {10.52202/079017-0680}
+}
+
+%% VERIFIED 2026-08-08
+@inproceedings{bumblebee2025,
+  title     = {{BumbleBee}: Secure Two-Party Inference Framework for Large Transformers},
+  author    = {Lu, Wen-jie and Huang, Zhicong and Gu, Zhen and Li, Jingyu and Liu, Jian and Hong, Cheng and Ren, Kui and Wei, Tao and Chen, Wenguang},
+  booktitle = {32nd Annual Network and Distributed System Security Symposium},
+  publisher = {The Internet Society},
+  year      = {2025},
+  doi       = {10.14722/ndss.2025.230057}
+}
+
+%% VERIFIED 2026-08-08
+@article{safhire2025,
+  title         = {Practical and Private Hybrid {ML} Inference with Fully Homomorphic Encryption},
+  author        = {Biswas, Sayan and Chartier, Philippe and Dhasade, Akash and Jurien, Tom and Kerriou, David and Kerrmarec, Anne-Marie and Lemou, Mohammed and Tranie, Franklin and de Vos, Martijn and Vujasinovic, Milos},
+  journal       = {arXiv preprint arXiv:2509.01253},
+  year          = {2025},
+  eprint        = {2509.01253},
+  archivePrefix = {arXiv},
+  url           = {https://arxiv.org/abs/2509.01253}
+}
+
+%% VERIFIED 2026-08-08
+@inproceedings{thor,
+  title     = {{THOR}: Secure Transformer Inference with Homomorphic Encryption},
+  author    = {Moon, Jungho and Yoo, Dongwoo and Jiang, Xiaoqian and Kim, Miran},
+  booktitle = {Proceedings of the 2025 ACM SIGSAC Conference on Computer and Communications Security},
+  pages     = {3765--3779},
+  publisher = {Association for Computing Machinery},
+  year      = {2025},
+  doi       = {10.1145/3719027.3765150}
+}
+
+%% ----- Homomorphic encryption for genomics -----
+
+%% VERIFIED 2026-08-08
+@article{idash2018,
+  title   = {{iDASH} secure genome analysis competition 2018: blockchain genomic data access logging, homomorphic encryption on {GWAS}, and {DNA} segment searching},
+  author  = {Kuo, Tsung-Ting and Jiang, Xiaoqian and Tang, Haixu and Wang, XiaoFeng and Bath, Tyler and Bu, Diyue and Wang, Lei and Harmanci, Arif and Zhang, Shaojie and Zhi, Degui and Sofia, Heidi J. and Ohno-Machado, Lucila},
+  journal = {BMC Medical Genomics},
+  volume  = {13},
+  number  = {Suppl 7},
+  pages   = {98},
+  year    = {2020},
+  doi     = {10.1186/s12920-020-0715-0}
+}
+
+%% VERIFIED 2026-08-08
+@article{privategenomicqueries2017,
+  title   = {Private queries on encrypted genomic data},
+  author  = {\c{C}etin, Gizem S. and Chen, Hao and Laine, Kim and Lauter, Kristin and Rindal, Peter and Xia, Yuhou},
+  journal = {BMC Medical Genomics},
+  volume  = {10},
+  number  = {Suppl 2},
+  pages   = {45},
+  year    = {2017},
+  doi     = {10.1186/s12920-017-0276-z}
+}
+
+%% ----- Genomic privacy and regulation -----
+
+%% VERIFIED 2026-08-08
+@misc{gdpr,
+  title        = {Regulation ({EU}) 2016/679 of the European Parliament and of the Council of 27 April 2016 on the Protection of Natural Persons with Regard to the Processing of Personal Data and on the Free Movement of Such Data, and Repealing Directive 95/46/{EC} (General Data Protection Regulation)},
+  author       = {{European Parliament and Council of the European Union}},
+  howpublished = {Official Journal of the European Union, L 119},
+  pages        = {1--88},
+  month        = may,
+  year         = {2016},
+  url          = {https://eur-lex.europa.eu/eli/reg/2016/679/oj}
+}
+
+%% VERIFIED 2026-08-08
+@article{gymrek2013,
+  title   = {Identifying Personal Genomes by Surname Inference},
+  author  = {Gymrek, Melissa and McGuire, Amy L. and Golan, David and Halperin, Eran and Erlich, Yaniv},
+  journal = {Science},
+  volume  = {339},
+  number  = {6117},
+  pages   = {321--324},
+  year    = {2013},
+  doi     = {10.1126/science.1229566}
+}
+
+%% VERIFIED 2026-08-08
+@article{erlich2018,
+  title   = {Identity inference of genomic data using long-range familial searches},
+  author  = {Erlich, Yaniv and Shor, Tal and Pe'er, Itsik and Carmi, Shai},
+  journal = {Science},
+  volume  = {362},
+  number  = {6415},
+  pages   = {690--694},
+  year    = {2018},
+  doi     = {10.1126/science.aau4832}
+}
+
+%% ----- Homomorphic matrix and linear-algebra primitives -----
+
+%% VERIFIED 2026-08-08
+@article{heblas2025,
+  title   = {Fast Homomorphic Linear Algebra with {BLAS}},
+  author  = {Bae, Youngjin and Cheon, Jung Hee and Hanrot, Guillaume and Park, Jai Hyun and Stehl\'{e}, Damien},
+  journal = {Journal of Cryptology},
+  volume  = {39},
+  number  = {3},
+  pages   = {25},
+  year    = {2026},
+  doi     = {10.1007/s00145-026-09580-x}
+}
+
+%% VERIFIED 2026-08-08
+@inproceedings{aegis,
+  title     = {Scaling Long-Sequence Homomorphic Encrypted Transformer Inference via Hybrid Parallelism on Multi-{GPU} Systems},
+  author    = {Gong, Zhaoting and Ran, Ran and Yao, Fan and Wen, Wujie},
+  booktitle = {Proceedings of the 40th ACM International Conference on Supercomputing},
+  pages     = {1206--1219},
+  publisher = {Association for Computing Machinery},
+  year      = {2026},
+  doi       = {10.1145/3797905.3800539}
+}

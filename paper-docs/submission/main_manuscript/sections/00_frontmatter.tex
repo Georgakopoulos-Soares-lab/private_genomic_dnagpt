@@ -1,0 +1,42 @@
+% ---------------------------------------------------------------------------
+% IEEE/JBHI front matter.
+%
+% The abstract is one self-contained paragraph under 250 words and contains no
+% citations, footnotes, displayed equations, or undefined abbreviations. Author
+% contact details and funding remain author-supplied submission metadata.
+% ---------------------------------------------------------------------------
+
+\title{Feasibility of Homomorphic Inference for a Genomic Foundation Model}
+
+\author{Christos Galanopoulos, Kimon Antonios Provatas, and Ilias Georgakopoulos-Soares%
+\thanks{The authors are with The University of Texas at Austin, Austin, TX, USA.}%
+% TODO(authors): add institutional e-mail addresses, corresponding-author designation,
+% and funding/support disclosure before submission.
+}
+
+\maketitle
+
+\begin{abstract}
+Human genomic sequences can identify individuals, cannot be replaced after disclosure, and are the
+inputs that genomic foundation models are designed to interpret. We assess whether a compute
+provider can execute a released genomic foundation model without receiving query-derived genomic
+values in plaintext and whether
+correctness, memory, or cost prevents complete encrypted inference. We first reproduce the released
+model on three genomic task families and freeze an independently validated numerical reference. We
+then implement a client-assisted approximate homomorphic encryption protocol: the provider evaluates
+linear algebra on ciphertexts, while the key-holding data owner evaluates exact normalization,
+causal softmax, and activation functions at fixed boundaries. A non-interactive configuration
+completes one released-weight block but exceeds the tested accelerator-memory envelope when
+configured for composition. The client-assisted configuration executes all released transformer
+blocks and the task head for one held-out genomic-signal input at its full prompt length. It matches
+the frozen final label, peaks at 9{,}839 mebibytes of accelerator memory, and completes in 6{,}683
+seconds on one accelerator. These results establish arithmetic feasibility for a complete
+classifier, while repeatability, network transport, and private token-index lookup remain
+unresolved. The biomedical significance is that, under the stated threat model, a served genomic
+model can process an encoded sequence without exposing plaintext query-derived activations to the
+compute provider.
+\end{abstract}
+
+\begin{IEEEkeywords}
+genomic privacy, homomorphic encryption, privacy-preserving inference, transformers.
+\end{IEEEkeywords}

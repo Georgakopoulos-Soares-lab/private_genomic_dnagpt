@@ -1,0 +1,62 @@
+% ---------------------------------------------------------------------------
+% 1 Introduction
+% Source: context/01_scenario_and_motivation.md, context/02_research_timeline.md
+%
+% This paper asks a feasibility question and answers it. The shape of the section is therefore:
+% tension -> the question -> why the question is hard -> how we answer it -> the two verdicts.
+% ---------------------------------------------------------------------------
+
+\section{Introduction}
+
+Human genomic sequence carries a persistent confidentiality risk. It can identify its contributor
+and reveal information about relatives; re-identification has been demonstrated after conventional
+identifiers were removed~\cite{gymrek2013,erlich2018}. A disclosed genome cannot be replaced like a
+password. European data-protection law accordingly treats genetic data as a special
+category~\cite{gdpr}. Yet genomic foundation models derive their value from this same sequence:
+DNAGPT supports classification, regression, and generation through a common transformer
+backbone~\cite{dnagpt2023}. Homomorphic encryption offers access to a served model without sending
+the provider plaintext genomic values.
+
+DNAGPT's public release makes this experiment auditable and permits local execution. We use it as a
+reproducible surrogate for a genomic model offered only as a service by policy or contract, accessed
+by a CPU-equipped data owner without accelerator hardware. We ask whether its released computation
+can execute faithfully within the cryptographic and memory budget, and whether the resource cost
+supports a target use. These are separate feasibility and practicality verdicts: a correct but slow
+encrypted path can resolve the former while leaving the latter open.
+
+The technical difficulty is concentrated in transformer nonlinearities. CKKS supports approximate
+packed arithmetic for dense projections, rotations, and accumulations~\cite{ckks2017}, whereas
+non-interactive LayerNorm, softmax, and GELU require polynomial approximations that increase depth
+and resident cryptographic material. Moving exact functions to the key holder resets the depth
+budget but introduces interaction and a different threat model. THOR demonstrates non-interactive
+homomorphic transformer inference; Safhire uses the server-linear/client-nonlinear division in
+convolutional networks~\cite{thor,safhire2025}. We study the correctness, memory, and executed work
+of the latter established pattern on a released genomic transformer.
+
+We first evaluate genomic-signal recognition, promoter and splice-site classification, and mRNA
+abundance regression, freezing outputs before encrypted work. An independent NumPy reference is
+asserted against upstream PyTorch at $2\times10^{-5}$ for every released block and the task head.
+We then build non-interactive and client-assisted CKKS designs, with fixed, non-adaptive boundaries
+for exact nonlinearities in the latter. Instrumented evaluations record correctness and memory;
+runtime assertions preserve the cryptographic operation schedule during systems optimization.
+
+The client-assisted protocol executes all $12$ released blocks and the task head for one held-out
+input at the $103$-token genomic-signal prompt. Its label matches the frozen reference, with head
+margin relative error $8.56\times10^{-9}$. The non-interactive design completed a released-weight
+block but exceeded the tested $80$~GB envelope while loading its composition context and evaluation
+keys. The complete client-assisted run instead peaks at $9{,}839$~MiB of process GPU memory and
+takes $6{,}683$~s on one accelerator. Bounded caching also prevents encoded plaintexts from
+accumulating across stages. These results close arithmetic feasibility at the stated encrypted
+boundary while leaving deployment practicality a separate question.
+
+The paper makes the following contributions:
+
+\begin{itemize}
+  \item An independently verified plaintext reference across three genomic task families.
+  \item A specified client-assisted CKKS protocol, including packing, depth resets, algorithms,
+        and a semi-honest threat model.
+  \item Complete released-weight inference for one held-out input, with label and intermediate
+        verification under a predeclared tolerance.
+  \item Fixed-circuit systems optimization with an asserted operation schedule, bounded host
+        caching, and separate feasibility and practicality verdicts.
+\end{itemize}
