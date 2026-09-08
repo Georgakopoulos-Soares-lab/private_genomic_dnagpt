@@ -66,6 +66,19 @@ def panel_title(fig, text, note=None):
         fig.text(.02, .895, note, ha="left", va="top", fontsize=6.8, color=GRAY)
 
 
+def below(fig, artist, gap_pt=5.0):
+    """Figure-fraction y just below `artist`'s actually-rendered extent.
+
+    Positions text relative to real geometry rather than a hand-picked axes-fraction offset,
+    which is unreliable across subplots of different physical heights (e.g. unequal
+    height_ratios): the same axes-fraction delta covers a different absolute distance in each.
+    """
+    fig.canvas.draw()
+    bbox = artist.get_window_extent(renderer=fig.canvas.get_renderer())
+    bbox = bbox.transformed(fig.transFigure.inverted())
+    return bbox.y0 - gap_pt / 72.0 / fig.get_figheight()
+
+
 def fig_graphical_abstract(out):
     L = Ledger()
     for rid in ("prompt.gsr_total", "full.wall", "full.head_margin_relative_error",
@@ -219,8 +232,10 @@ def fig_cost_decomposition(out):
     ax1.grid(axis="x", color=LIGHT_GRAY)
     ax1.set_axisbelow(True)
     despine(ax1, keep=("bottom",))
-    ax1.text(0, -.62, f"Blocks {blocks:,.1f} s · refreshes {refresh:.1f} s · head {head:.2f} s",
-             transform=ax1.transAxes, fontsize=6.5, color=GRAY, va="top")
+    x0 = ax1.get_position().x0
+    fig.text(x0, below(fig, ax1.xaxis.label, gap_pt=7),
+             f"Blocks {blocks:,.1f} s · refreshes {refresh:.1f} s · head {head:.2f} s",
+             ha="left", va="top", fontsize=6.5, color=GRAY)
 
     # By party: server vs. client share of the same encrypted-evaluation total
     for value, left, colour in ((server, 0, SERVER), (client, server, CLIENT)):
@@ -231,10 +246,13 @@ def fig_cost_decomposition(out):
     ax2.set_yticks([])
     ax2.set_xlabel("Time (s)", labelpad=8)
     despine(ax2, keep=("bottom",))
-    ax2.text(0, -.72, f"Provider: {server:,.0f} s · encrypted linear algebra",
-             transform=ax2.transAxes, color=SERVER, fontsize=6.9, va="top")
-    ax2.text(0, -1.12, f"Data owner: {client:,.0f} s · CPU boundaries · no GPU",
-             transform=ax2.transAxes, color=CLIENT, fontsize=6.9, va="top")
+    x0 = ax2.get_position().x0
+    provider_note = fig.text(x0, below(fig, ax2.xaxis.label, gap_pt=7),
+                              f"Provider: {server:,.0f} s · encrypted linear algebra",
+                              ha="left", va="top", color=SERVER, fontsize=6.9)
+    fig.text(x0, below(fig, provider_note, gap_pt=6),
+             f"Data owner: {client:,.0f} s · CPU boundaries · no GPU",
+             ha="left", va="top", color=CLIENT, fontsize=6.9)
 
     return emit(fig, out, "fig_cost_decomposition")
 
