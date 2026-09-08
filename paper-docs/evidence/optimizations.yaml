@@ -13,12 +13,14 @@
 # Use descriptive names. Internal tags (T123, v0/v1/v2/v3, config1/2/3) do not appear in prose.
 
 meta:
-  updated: 2026-08-08
+  updated: 2026-09-07
   invariants_held: >
     Operation schedule, packing layout, multiplicative depth, client-boundary sequencing, and
     the frozen plaintext reference are unchanged across every retained step. Each run asserts
     the full operation counts and fails closed on any deviation.
-  hardware: "One NVIDIA A100 GPU (40 GB) with 32 CPU cores, allocated as a dedicated node."
+  hardware: >
+    One telemetry-confirmed clean NVIDIA A100 GPU (40 GB) with 32 CPU cores. The allocation did
+    not establish exclusive use of the physical node.
 
 # ---------------------------------------------------------------------------
 # Retained: the chain that produced the reported result
@@ -38,7 +40,7 @@ retained:
       showed the process pegged at 3,900 to 4,700 percent CPU. The bottleneck was the host
       encoding path, not the GPU.
     block_time_s: 7560
-    block_time_tag: "[V]"
+    block_time_tag: "[A]"
     block_time_note: >
       Approximately 2.1 hours per block. Attested by the measuring engineer from the
       pre-optimization runs. See open_provenance below.
@@ -104,7 +106,7 @@ retained:
       that level directly, so templates carry fewer limbs and are roughly half the size. Flush
       the cache after the projection stage and after the attention projection, since no weight
       matrix recurs across those stage boundaries.
-    effect_gib: [25.5, 12.4, 48.6]
+    effect_gib: [24.9, 12.1, 47.5]
     effect_tag: "[V]"
     effect_note: >
       Measured host resident set size across the three stages: projection with three weight
@@ -112,7 +114,7 @@ retained:
       bounded by the largest single stage rather than by all twelve matrices at once.
     enabling_not_merely_faster: >
       Without this, the encode cache is fatal rather than beneficial. The unbounded version was
-      killed by the operating system at 61.9 GiB resident, with an allocation failure at the
+      killed by the operating system at 60.4 GiB resident, with an allocation failure at the
       instant the MLP stage began building templates on top of everything still cached from
       earlier stages. Time and space trade against each other here, and the trade has to be
       made explicitly.
@@ -152,17 +154,20 @@ validated_not_in_measured_run:
 net_full_pass:
   id: opt.net_full_pass
   from_hours: 26
-  from_tag: "[V]"
-  to_range_human: "17 minutes to 2.2 hours, depending on the task's prompt length"
-  to_tag: "[A]"
+  from_tag: "[A]"
+  shortest_to_tag: "[A]"
+  genomic_signal_to_tag: "[V]"
+  to_range_human: "17 minutes projected for the shortest prompt; 1.86 hours measured for the genomic-signal classifier"
   statement: >
-    A complete twelve-block pass over the encrypted-scope tasks moves from roughly 26 hours
-    before the campaign to a projected 17 minutes for the shortest task and 2.2 hours for the
-    longest. The endpoints of that range are projections from the measured block; the 26-hour
-    starting point is attested from the pre-optimization configuration.
+    The complete twelve-block genomic-signal classifier and released head ran in 1.86 hours after
+    the campaign. The 17-minute value for the shortest encrypted-scope prompt remains a projection
+    from group-linear scaling of the clean measured complete program, as specified in scaling.yaml.
+    The 26-hour starting point is attested from the
+    pre-optimization configuration and remains pending in open_provenance.
   caveat: >
-    Both ends are per-block measurements scaled by the block count. The twelve-block evaluation
-    is built and ready but has not been run, so this is a projection and must be labelled one.
+    The genomic-signal endpoint is a measured complete run. The shortest-task endpoint is a
+    projection. Do not use the pre-optimization endpoint or the headline factor until its source
+    is resolved in open_provenance.
 
 net:
   id: opt.net
@@ -170,7 +175,7 @@ net:
   to_encrypted_evaluation_s: 652.545
   to_wall_s: 663
   factor: 11.6
-  tag: "[V]"
+  tag: "[A]"
   error_after: 4.64e-9
   tolerance: 4e-2
   statement: >
@@ -179,8 +184,8 @@ net:
     with an unchanged operation schedule and a relative error of 4.64e-9 against a 4e-2
     acceptance tolerance.
   caveat: >
-    The factor compares the pre-optimization configuration with the reported run. Report it as
-    an implementation speedup on a fixed circuit, never as a cryptographic result.
+    The factor depends on an attested baseline and a shared-host endpoint. Do not report it until
+    both endpoints have acceptable provenance under the manuscript timing rule.
 
 # ---------------------------------------------------------------------------
 # Abandoned, with mechanism. These constrain future work and explain the retained design.

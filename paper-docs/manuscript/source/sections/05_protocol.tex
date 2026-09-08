@@ -1,17 +1,17 @@
-% ---------------------------------------------------------------------------
-% 5 Protocol
-% Source: context/03_methods_and_protocol.md, docs/hybrid/t123_walkthrough.md §3, §3.1, §4
-%         numbers: evidence/measurements.yaml (ops, parameters, layout)
-% ---------------------------------------------------------------------------
-
+% Protocol transcribed from context/08_implementation_ground_truth.md.
+% Algorithms are introduced beside their explanation; floats may share pages with prose.
 \section{Client-assisted CKKS protocol}
 \label{sec:protocol}
 
+Table~\ref{tab:notation} defines the evaluated configuration. Figure~\ref{fig:architecture} locates
+the server computation and the client calls within a transformer block. The protocol retains the
+released weights and exact nonlinearities while bounding encrypted depth through fresh client
+encryption.
 
-\begin{table}[t]\centering\small
+\begin{table}[!t]\centering\small
 \caption{Notation. All values are those of the evaluated configuration.}
 \label{tab:notation}
-\begin{tabularx}{\textwidth}{l l Y}
+\begin{tabularx}{\columnwidth}{l l Y}
 \toprule
 Symbol & Value & Meaning \\
 \midrule
@@ -31,51 +31,113 @@ $\lambda$  & 128    & classical security level, in bits \\
 \end{tabularx}
 \end{table}
 
-\subsection{Nonlinearity boundaries}
-CKKS carries the affine maps, reductions, residual additions, and attention products without
-exposing an activation to the compute provider. The difficulty lies in three nonlinearity classes:
-the inverse square root in LayerNorm, causal softmax, and GELU. We place a declared client boundary
-at each class. For LayerNorm, the server computes the encrypted mean and variance and sends only the
-variance term needed for the inverse square root. For attention, it sends encrypted causal score
-tiles and receives encrypted softmax weights. The GELU boundary operates on the packed MLP
-activations.
 
-At every boundary, the data owner decrypts values derived from its own query, evaluates the declared
-function exactly in double precision, and encrypts the result afresh. The data owner already holds
-the secret key and is the only party that decrypts. The compute provider receives neither a
-plaintext activation nor the secret key. Between these declared calls, the ciphertext lineage
-remains on the server and every model operation is evaluated homomorphically.
+\begin{figure*}[!t]\centering
+  \includegraphics[width=\textwidth]{fig_architecture.pdf}
+  \caption{Client-assisted block evaluation. The compute provider evaluates encrypted linear algebra
+  and the data owner evaluates exact nonlinearities at declared boundaries. The provider has public
+  weights, keys, and execution metadata, but receives no plaintext query-derived activation or secret key.}
+  \label{fig:architecture}
+\end{figure*}
 
-\subsection{Non-interactive design}
-The non-interactive design keeps a single ciphertext lineage and replaces every
-nonlinearity with a polynomial approximation. It completed one released-weight transformer block,
-establishing that the block arithmetic can be expressed without intermediate decryption. The
-stopping point appeared when the same design was configured for multi-block composition: context
-and evaluation-key loading exceeded the tested 80~GB GPU memory envelope before useful composition
-arithmetic began.
+\subsection{Client boundaries and normalization}
+CKKS carries affine maps, reductions, residual additions, and attention products. The inverse
+square root in LayerNorm, causal softmax, and GELU use declared client calls. At each call, the
+data owner decrypts values derived from its query, evaluates the function in double precision, and
+encrypts the result afresh under the same key. Algorithm~\ref{alg:boundary} gives this operation.
 
-The mechanism matters more than the failure location. Repeated polynomial approximation lengthens
-the multiplicative path, which requires a deeper modulus budget and a bootstrapping schedule. The
-associated context and evaluation-key material must be resident before evaluation, so composition
-failed as a memory problem rather than as a numerical-correctness problem. This finding is specific
-to the evaluated library, parameters, packing, and hardware; it does not establish a general lower
-bound for non-interactive CKKS. It does identify the measured pressure that the client-assisted
-design removes: exact client evaluation shortens each encrypted segment and replaces encrypted
-bootstrapping with fresh encryption at already declared boundaries.
+\begin{algorithm}[H]
+\small
+\caption{The client boundary. The data owner is the only party holding $\mathsf{sk}$, and every
+value it decrypts derives from its own query.}
+\label{alg:boundary}
+\begin{algorithmic}[1]
+\Function{ClientBoundary}{$c$, $f$}
+  \State $v \gets \Call{Decode}{\Call{Decrypt}{\mathsf{sk},c}}$
+  \State $v' \gets f(v)$ \Comment{evaluated exactly, in double precision}
+  \State \Return $\Call{Encrypt}{\mathsf{pk},\Call{Encode}{v'}}$ \Comment{fresh ciphertext at
+         level $0$}
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
 
-% fig_architecture.pdf is temporarily excluded because its provider-view label exceeds the stated
-% threat model. Regeneration requirements are recorded in paper-docs/TODO.md.
+Fresh encryption returns the activation to level~$0$. The configured depth of $13$ therefore bounds
+the longest encrypted run between boundaries rather than the depth accumulated across all $12$
+transformer blocks. The ciphertext lineage remains at the server between these calls.
 
+For LayerNorm, the server computes the mean and centered variance under encryption and adds
+$\varepsilon$ before sending the variance term to the client. Only the inverse square root is
+evaluated there; the server then applies the returned factor and public scale, as specified in
+Algorithm~\ref{alg:layernorm}. No bias is omitted as an approximation: the released checkpoint
+contains no bias tensors.
 
+\begin{algorithm}[H]
+\small
+\caption{LayerNorm. The server computes both statistics under encryption; only the inverse square
+root crosses the boundary. The released checkpoint carries no bias term.}
+\label{alg:layernorm}
+\begin{algorithmic}[1]
+\Function{LayerNorm}{$x$, $\gamma$}
+  \State $\mu \gets \Call{ReduceSum}{x}\odot(1/D)$
+  \State $z \gets x - \mu$
+  \State $\sigma^2 \gets \Call{ReduceSum}{z \odot z}\odot(1/D) + \varepsilon$
+  \State $r \gets \Call{ClientBoundary}{\sigma^2,\ t \mapsto t^{-1/2}}$
+  \State \Return $(z \odot r) \odot \gamma$
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
 
-\subsection{Protocol algorithms}
+\subsection{Packing and dense transforms}
+The slot layout in Fig.~\ref{fig:packing} assigns $32{,}768$ slots as $4$ activation copies by
+$1{,}024$ padded features by $8$ token lanes. Token lane is the innermost index: whole-lane
+rotations move features without mixing tokens, and smaller rotations align token lanes. The
+released width of $768$ occupies the active feature region; padding supports the power-of-two
+transform and attention-score staging. Rows and columns outside the active width contribute zeros.
+
+\begin{figure}[!t]\centering
+  \includegraphics[width=\columnwidth]{fig_packing.pdf}
+  \caption{Slot layout and grouping for the measured prompt. The final ciphertext group carries
+  seven live tokens and one padded lane; the groups produce the lower-triangular causal score tiles.}
+  \label{fig:packing}
+\end{figure}
+
+The four copies express the MLP expansion from width $768$ to $3{,}072$ as parallel chunks.
+The $103$ tokens occupy $13$ ciphertext groups. A $32\times32$ baby-step giant-step decomposition
+covers the $1{,}024$ padded features. Algorithm~\ref{alg:matmul} combines shared baby rotations
+with encoded weight diagonals, cloning each plaintext for use at the receiving ciphertext's level.
+
+\begin{algorithm}[H]
+\small
+\caption{Packed matrix product, baby-step giant-step over the packed diagonals.
+$N_1 = N_2 = 32$ and $N_1N_2 = W = 1024$.}
+\label{alg:matmul}
+\begin{algorithmic}[1]
+\Function{MatMul}{$\beta$, $M$}
+  \State $d \gets \Call{EncodedDiagonals}{M,\ \mathrm{level}(\beta_0)}$
+         \Comment{encoded once, cloned per use}
+  \State $y \gets 0$
+  \For{$j \gets 0$ \textbf{to} $N_2-1$}
+    \State $u \gets \sum_{i<N_1} \beta_i \odot \Call{Clone}{d_{N_1 j + i}}$
+    \State $y \gets y + (j = 0\ ?\ u : \Call{Rot}{u, B N_1 j})$
+  \EndFor
+  \State \Return $y$
+\EndFunction
+\end{algorithmic}
+\end{algorithm}
+
+Eight-token packing reduces the serial-equivalent dense-product count from $1{,}236$ to $156$,
+a structural reduction of $7.92\times$. Rotations, masking, encoding, and client work remain, so
+this operation-count ratio does not specify a latency speedup.
+
+\subsection{Block evaluation}
 \label{sec:algorithms}
+Algorithm~\ref{alg:block} follows the released block through normalization, query/key/value
+projection, causal attention, output projection, residuals, and the expanded MLP. The cached
+diagonals are flushed after the last use of each weight set; this changes storage lifetime without
+changing the arithmetic. Baby rotations are shared among transforms that consume the same input.
 
-% Transcribed from the implementation and verified line by line in
-% context/08_implementation_ground_truth.md §4, which carries the file:line citations.
-% Do not paraphrase these; a reviewer reading the released code must find them in agreement.
-
-\begin{algorithm}[t]
+\begin{algorithm}[!t]
+\small
 \caption{Evaluating one transformer block. $G=13$ token groups; $\odot$ is homomorphic
 multiplication; every operation outside a \textsc{Client} call runs on ciphertexts.}
 \label{alg:block}
@@ -85,8 +147,8 @@ multiplication; every operation outside a \textsc{Client} call runs on ciphertex
 \For{$g \gets 0$ \textbf{to} $G-1$}
   \State $n \gets \Call{LayerNorm}{c_g,\ \gamma_1}$ \Comment{Algorithm~\ref{alg:layernorm}}
   \State $\beta \gets \Call{BabyRotations}{n}$ \Comment{$N_1-1$ rotations, shared}
-  \State $Q_g,K_g,V_g \gets \Call{MatMul}{\beta,W_q},\ \Call{MatMul}{\beta,W_k},\
-         \Call{MatMul}{\beta,W_v}$
+  \State $Q_g \gets \Call{MatMul}{\beta,W_q}$; $K_g \gets \Call{MatMul}{\beta,W_k}$
+  \State $V_g \gets \Call{MatMul}{\beta,W_v}$
 \EndFor
 \State \Call{FlushEncodedWeights}{} \Comment{bounds host memory to one stage}
 \Statex \textit{Stage 2: causal attention scores}
@@ -130,121 +192,41 @@ multiplication; every operation outside a \textsc{Client} call runs on ciphertex
 \end{algorithmic}
 \end{algorithm}
 
-\begin{algorithm}[t]
-\caption{The client boundary. The data owner is the only party holding $\mathsf{sk}$, and every
-value it decrypts derives from its own query.}
-\label{alg:boundary}
-\begin{algorithmic}[1]
-\Function{ClientBoundary}{$c$, $f$}
-  \State $v \gets \Call{Decode}{\Call{Decrypt}{\mathsf{sk},c}}$
-  \State $v' \gets f(v)$ \Comment{evaluated exactly, in double precision}
-  \State \Return $\Call{Encrypt}{\mathsf{pk},\Call{Encode}{v'}}$ \Comment{fresh ciphertext at
-         level $0$}
-\EndFunction
-\end{algorithmic}
-\end{algorithm}
-
-Fresh encryption in Algorithm~\ref{alg:boundary} returns the activation to level~$0$, so every
-client boundary fully resets the multiplicative budget. The configured depth of $13$ therefore
-bounds the longest encrypted run between consecutive boundaries. It does not accumulate across the
-$12$ transformer blocks.
-
-\begin{algorithm}[t]
-\caption{LayerNorm. The server computes both statistics under encryption; only the inverse square
-root crosses the boundary. The released checkpoint carries no bias term.}
-\label{alg:layernorm}
-\begin{algorithmic}[1]
-\Function{LayerNorm}{$x$, $\gamma$}
-  \State $\mu \gets \Call{ReduceSum}{x}\odot(1/D)$
-  \State $z \gets x - \mu$
-  \State $\sigma^2 \gets \Call{ReduceSum}{z \odot z}\odot(1/D) + \varepsilon$
-  \State $r \gets \Call{ClientBoundary}{\sigma^2,\ t \mapsto t^{-1/2}}$
-  \State \Return $(z \odot r) \odot \gamma$
-\EndFunction
-\end{algorithmic}
-\end{algorithm}
-
-\begin{algorithm}[t]
-\caption{Packed matrix product, baby-step giant-step over the packed diagonals.
-$N_1 = N_2 = 32$ and $N_1N_2 = W = 1024$.}
-\label{alg:matmul}
-\begin{algorithmic}[1]
-\Function{MatMul}{$\beta$, $M$}
-  \State $d \gets \Call{EncodedDiagonals}{M,\ \mathrm{level}(\beta_0)}$
-         \Comment{encoded once, cloned per use}
-  \State $y \gets 0$
-  \For{$j \gets 0$ \textbf{to} $N_2-1$}
-    \State $u \gets \sum_{i<N_1} \beta_i \odot \Call{Clone}{d_{N_1 j + i}}$
-    \State $y \gets y + (j = 0\ ?\ u : \Call{Rot}{u, B N_1 j})$
-  \EndFor
-  \State \Return $y$
-\EndFunction
-\end{algorithmic}
-\end{algorithm}
-
-The algorithms also expose the protocol transcript. Its order and size are determined by the
-circuit and sequence length, never by decrypted content. The evaluated block makes $857$ physical
-client boundary crossings, including $91$ score-tile decryptions and $727$ weight-tile encryptions
-for attention. These physical operations batch $129{,}162$ individual nonlinear values. Softmax
-accounts for $128{,}544$, or $99.5\%$, of them; LayerNorm and GELU are minor components of the
-boundary traffic. Consequently, reducing boundary cost means addressing the attention
-nonlinearity. The implementation asserts the complete operation schedule, boundary counts, and
-remaining depth on every run and aborts when any differs. Section~\ref{sec:optimization} can thus
-treat an unchanged circuit as a checked invariant of the optimization campaign.
-
-\subsection{Packing}
-Each ciphertext has $32{,}768$ usable slots, indexed by activation copy, padded feature, and token
-lane. The layout assigns these slots as $4$ copies by $1{,}024$ features by $8$ token lanes, with
-the token lane as the innermost index. Rotations by whole-lane strides can therefore move features
-without mixing tokens, while smaller rotations align tokens within a group. The released hidden
-width of $768$ occupies part of the padded feature region; the remainder supplies the
-power-of-two width required by the linear transform and staging space for per-head attention
-scores. In dense transforms, rows and columns outside the active width contribute zeros; padding
-therefore affects cost without changing the numerical result.
-
-The four copies match the MLP expansion from width $768$ to $3{,}072$. They let its expansion
-chunks occupy parallel regions of one ciphertext rather than requiring a separate wide layout.
-The $103$ tokens fill $13$ ciphertext groups, with padding in the final group. Within a
-dense transform, a $32\times32$ baby-step giant-step decomposition covers the $1{,}024$ padded
-features; baby rotations are shared where the schedule permits. Packing eight tokens together
-reduces the number of dense encrypted products from $1{,}236$ serial-equivalent products to $156$,
-a structural reduction of $7.92\times$. No latency factor follows from that operation count alone.
-
-\begin{figure}[tb]\centering
-  \includegraphics[width=\textwidth]{fig_packing.pdf}
-  \caption{Slot layout and token grouping. Each ciphertext carries four activation copies of 1{,}024 padded features across eight token lanes. The 103-token prompt therefore occupies 13 ciphertext groups, which generate 91 lower-triangular causal score tiles.}
-  \label{fig:packing}
-\end{figure}
-
+The protocol transcript is fixed by the circuit and sequence length. Each block makes $857$
+physical client boundary crossings, including $91$ score-tile decryptions and $727$ weight-tile
+encryptions. They carry $129{,}162$ logical nonlinear instances. Softmax accounts for $128{,}544$,
+or $99.5\%$, of them, concentrating the boundary work in attention. The implementation asserts
+the operation schedule, boundary counts, and remaining depth at run time and aborts on deviation.
 
 \subsection{Causal attention}
-Attention follows a chunked lower-triangular schedule over the $13$ token groups. Only causal group
-pairs are visited, producing $91$ encrypted score tiles. Shifts needed by several later query
-groups are materialized per key group and reused. The client collects all score tiles before
-applying stable softmax over complete causal rows; normalization is therefore a global
-synchronization point in this design. It then emits the encrypted weight tiles consumed by the
-context computation.
+Attention visits the $91$ lower-triangular pairs of the $13$ token groups. Shifts required by
+later query groups are computed once per key group and reused. The client collects all encrypted
+score tiles before stable softmax normalizes complete causal rows, then returns fresh encrypted
+weight tiles for context aggregation. This normalization is a global synchronization point.
 
-Plaintext model weights do not eliminate ciphertext--ciphertext multiplication inside attention:
-both query--key scoring and softmax-weight--value aggregation multiply one activation-derived
-quantity by another. Of the block's $1{,}506$ ciphertext--ciphertext multiplications, LayerNorm
-contributes $26$ centered-value squares and $26$ products with client-returned inverse square
-roots. Attention contributes $727$ query--key products and $727$ weight--value products, accounting
-for $97\%$ of the total. The latter term follows directly from returning exact attention weights
-as fresh ciphertexts; it is the arithmetic price paid to keep the attention nonlinearity exact at
-the client boundary.
+Both query--key scoring and weight--value aggregation multiply two activation-derived operands.
+Of the block's $1{,}506$ ciphertext--ciphertext multiplications, LayerNorm contributes $26$
+centered squares and $26$ products with returned inverse square roots. Attention contributes
+$727$ query--key and $727$ weight--value products, or $97\%$ of the total.
 
-\subsection{Depth and parameters}
-The retained CKKS context uses ring dimension $65{,}536$, yielding $32{,}768$ usable slots at a
-$128$-bit classical security level. It uses $50$-bit scaling, a $60$-bit first modulus, $3$
-hybrid key-switching digits, and $80$ rotation keys. Multiplicative depth $13$ is the smallest
-demonstrated passing depth for this scale, digit count, ring, and packing. The block completes with
-$6$ of the $13$ levels remaining. The retained setting is the demonstrated feasible point in this
-parameter space; parameter optimization is a separate experiment.
+\subsection{Depth, parameters, and composition}
+The retained context has ring dimension $65{,}536$, $32{,}768$ usable slots, and a $128$-bit
+classical security level. It uses $50$-bit scaling, a $60$-bit first modulus, $3$ hybrid
+key-switching digits, and $80$ rotation keys. Depth $13$ is the smallest demonstrated passing
+depth for these parameters and packing; the block finishes with $6$ levels remaining.
 
-\subsection{Composition across blocks}
-Composition uses a declared full-hidden-state client refresh between blocks. The data owner decrypts
-the packed block output, restores its token-vector layout, and encrypts fresh level-$0$ inputs for
-the next block under the same context and key lineage. Two consecutive released blocks compose by
-this mechanism at two tokens with relative error $8.48\times10^{-11}$. GPU memory peaks in the
-first block and does not grow in the second.
+Between blocks, the data owner decrypts the full hidden state, restores its token-vector layout,
+and encrypts fresh level-$0$ inputs under the same context and key lineage. The preliminary
+two-block execution at two tokens reached relative error $8.48\times10^{-11}$ without GPU-memory
+growth in the second block. Section~\ref{sec:results} reports the complete task-length composition.
+
+\subsection{Non-interactive comparison}
+The non-interactive design replaces every nonlinearity with a polynomial approximation and
+retains a single ciphertext lineage without intermediate decryption. It completes one
+released-weight block. When configured for composition, however, its context and evaluation keys
+exceed the tested $80$~GB GPU-memory envelope before useful composition arithmetic begins.
+
+Repeated polynomial evaluation requires a deeper modulus budget and a bootstrapping schedule
+whose associated material must remain resident. This memory limit applies to the tested library,
+parameters, packing, and hardware. The client-assisted design shortens encrypted segments by
+evaluating the exact functions at the client and refreshing through fresh encryption.

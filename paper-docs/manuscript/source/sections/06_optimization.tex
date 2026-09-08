@@ -10,109 +10,69 @@
 % Only timing artifacts that satisfy the manuscript evidence rule may appear in the paper.
 % ---------------------------------------------------------------------------
 
-\section{Systems optimization at fixed circuit}
+\section{Systems Optimization at Fixed Circuit}
 \label{sec:optimization}
 
-Every comparison in this section holds the encrypted circuit fixed. The retained implementation
-executes the same $156$ dense products, $177{,}734$ ciphertext--plaintext multiplications,
-$1{,}506$ ciphertext--ciphertext multiplications, $8{,}173$ rotations, and $857$ client boundary
-crossings before and after optimization. Packing, multiplicative depth, boundary order, and the
-frozen plaintext reference are also unchanged. These properties are enforced at run time: the
-implementation compares the observed schedule and boundary counts with their expected values,
-checks the remaining depth before the MLP, and aborts on any deviation. The repository does not
-contain the clean timing artifacts needed for an elapsed-time comparison, so this section reports
-the verified changes in work and memory.
-
-This invariant separates systems work from circuit simplification. None of the retained changes
-removes a dense transform, reduces the number of attention tiles, moves linear algebra to the
-client, or relaxes the acceptance criterion. Each instead changes when host data are prepared,
-how long they remain resident, or where CPU work executes. The asserted schedule establishes that
-the retained implementation preserves the encrypted arithmetic while changing these systems paths.
+The encrypted circuit remains fixed throughout this section: $156$ dense products,
+$177{,}734$ ciphertext--plaintext multiplications, $1{,}506$ ciphertext--ciphertext multiplications,
+$8{,}173$ rotations, and $857$ client boundary crossings per block. Runtime assertions check these
+counts, the boundary schedule, and remaining depth before the MLP, aborting on deviation. Packing,
+depth, reference, and acceptance criterion are unchanged. Optimizations alter host-data preparation,
+residency, and CPU placement without removing arithmetic or moving linear work to the client.
+The retained system completes the full classifier in one clean sample; the pre-optimization timing
+denominator lacks matching evidence quality, so we report the endpoint without a speedup factor.
 
 \subsection{Host-side encoding redundancy}
-The baseline rebuilt and encoded every packed diagonal for every dense product. Its $156$ products
-each required $1{,}024$ diagonal plaintexts, producing $159{,}744$ encoding operations per block.
-About $90\%$ of this work was byte-identical: the block has $12$ weight matrices, and each is
-used across all $13$ token groups. The GPU could not begin the corresponding multiplication until
-the host had prepared its plaintexts.
-
-In the baby-step giant-step transform, a plaintext diagonal is not merely a view of the original
-matrix. It must be packed, scaled, and encoded for the ciphertext level at which multiplication
-will occur. Repeating that conversion for every token group made a model-invariant representation
-step dominate the call path. Caching therefore targets plaintext representation while preserving
-the encrypted products and accumulations.
-
-The operation counts locate the redundancy without relying on elapsed time: identical weight
-diagonals are rebuilt across token groups even though the public matrix does not change. The
-optimization target is the lifetime and placement of plaintext preparation while encrypted matrix
-arithmetic remains fixed.
+The baseline rebuilt and encoded $1{,}024$ diagonals for each of $156$ dense products, yielding
+$159{,}744$ encodings per block. About $90\%$ were byte-identical because the $12$ weight matrices
+recur across $13$ token groups. Each diagonal must be packed, scaled, and encoded at the receiving
+ciphertext's level before GPU multiplication can begin. Caching this model-invariant representation
+therefore removes redundant host preparation while preserving encrypted products and accumulations.
 
 \subsection{Encode once, clone per use}
-The retained cache encodes each distinct weight diagonal into a pristine host template. A
-multiplication receives a lightweight clone that shares the encoded host data by reference while
-carrying fresh device state; the clone is loaded and evicted for that operation. This removes
-$90\%$ of the $159{,}744$ encoding operations without keeping a plaintext object resident on the
-GPU between multiplications.
+The retained cache encodes each distinct weight diagonal into a pristine host template indexed by
+matrix and multiplicative level. Each multiplication receives a clone sharing encoded host data
+by reference but carrying fresh device state, loaded and evicted for that operation. This removes
+about $90\%$ of the $159{,}744$ encodings without persistent GPU plaintext objects.
 
-Cloning is required by the evaluated backend's object semantics. Its plaintext-load path returns
-early when an object is already marked as loaded, so directly reusing a template across
-multiplicative levels can pair a new ciphertext level with stale residue-number-system limbs.
-Fresh device state on each clone forces a load at the level required by the current operation. An
-isolated GPU micro-test checked clone-versus-fresh-encode equality, cross-level reuse, stable device
-memory under repeated multiplication, and equality between parallel and serial encoding before the
-cache was applied to the complete block.
-
-Templates are indexed by both weight matrix and multiplicative level. This distinction preserves
-the backend's level contract while still sharing work among token groups that reach the same
-matrix at the same level. The cache therefore stores reusable encoded data, not a ciphertext or a
-mutable GPU object, and leaves homomorphic multiplication itself unchanged.
+Cloning follows the backend's object semantics: its load path returns early for an already-loaded
+object, so direct reuse across levels can expose stale residue-number-system limbs. Fresh device
+state forces loading at the current level. An isolated GPU test verified clone-versus-fresh-encode
+equality, cross-level reuse, stable memory during repeated multiplication, and parallel-versus-serial
+encoding equality before application to a complete block.
 
 \subsection{Bounding host memory}
-Removing repeated encoding exchanges computation for host memory. An early cache retained
-templates from every completed stage, and the operating system terminated the process with an
-allocation failure when the MLP began constructing its templates on top of those retained from
-projection and attention.
+An early cache retained templates across completed stages and failed allocation when the MLP
+constructed its templates above those left by projection and attention.
 
-Two exact changes bound the cache. First, a template is encoded directly at its multiplicative
-level of use, so it carries only the limbs needed by the receiving ciphertext. This changes no
-arithmetic because the backend would otherwise drop a level-$0$ plaintext to the same level before
-multiplication. Second, the implementation flushes the cache after query/key/value projection and
-after the attention projection. No weight matrix recurs across either boundary, so retaining those
-templates cannot produce another hit. The flush points are the final use sites for their respective
-weight sets.
+Two exact changes bound residency. Templates are encoded at their level of use, retaining only
+required limbs; the backend would otherwise drop a level-$0$ plaintext to that same level.
+The cache is then flushed after query/key/value projection and after attention projection, where
+the respective weights reach their final use. The group-major loop retains reuse within each stage;
+eviction between stages cannot create additional re-encoding.
 
-The lifetime policy follows the block topology. Within a stage, the group-major loop revisits its
-weights as it advances through token groups, so early eviction would discard real reuse. Across
-stages, the next operation consumes a different set of weights; eviction at that point releases
-memory without creating a later re-encoding. The cache consequently remains large enough to serve
-the schedule and no larger.
+The resident-set trace (Fig.~\ref{fig:memory}) reaches $24.9$~GiB during query/key/value projection
+and $12.1$~GiB during attention after projection templates are flushed. The MLP's eight matrices
+determine the $47.5$~GiB block peak. Thus, the largest live stage determines peak host memory.
 
-The target-process resident-set trace follows this policy. Query/key/value projection reaches
-$25{,}530$~MiB. Attention begins after a flush and uses $12{,}434$~MiB. The MLP holds eight
-matrices and reaches the block peak of $48{,}610$~MiB. The largest live stage, rather than every
-encoded weight in the block, determines peak host memory.
-
-% fig_memory.pdf is temporarily excluded pending unit correction and regeneration; see
-% paper-docs/TODO.md.
-
+\begin{figure}[t]
+\centering
+\includegraphics[width=\columnwidth]{fig_memory.pdf}
+\caption{Host-memory bounding through level-specific encoding and stage-local template lifetimes.
+The measured resident set falls after projection templates are flushed; the MLP determines the
+retained complete-block peak.}
+\label{fig:memory}
+\end{figure}
 
 \subsection{Placement and parallelism}
-Plaintext preparation also depends on where host work runs. The retained implementation binds
-threads to physical cores and uses NUMA-local allocation so encoding threads stay close to the
-memory they allocate and to buffers staged for the GPU. Decryption, exact nonlinear evaluation,
-and re-encryption use the same host resources. Their elapsed-time effect awaits a sourced paired
-measurement.
+The retained implementation binds threads to physical cores and uses NUMA-local allocation for
+encoding and GPU staging buffers. Decryption, nonlinear evaluation, and re-encryption share those
+host resources. Template construction uses dynamic scheduling across $32$ cores: independent
+diagonals are encoded in parallel without changing encrypted multiplication order. Output equality
+was checked against serial construction. The individual timing effects of affinity and batching
+await sourced paired measurements.
 
-Template construction was then batched across the available $32$ cores with dynamic scheduling.
-Each diagonal can be encoded independently, making this step parallel without changing the order
-or result of encrypted multiplications. Parallel and serial template construction were checked for
-equal outputs before the parallel path was retained.
-
-Affinity and batching address different parts of the same host path: affinity controls placement,
-while batching exposes independent diagonals to the available cores. Together they make plaintext
-preparation a core-local parallel batch under the same cryptographic parameters.
-
-\begin{table}[t]\centering\small
+\begin{table*}[t]\centering\small
 \caption{The optimization campaign. Every row leaves the operation schedule, packing,
 multiplicative depth, and frozen plaintext reference unchanged.}
 \label{tab:optimization}
@@ -122,33 +82,26 @@ Change & Verified effect & Status \\
 \midrule
 Re-encode every plaintext per multiplication & $159{,}744$ encodings & baseline \\
 Thread affinity, NUMA-local allocation & host placement changed & retained \\
-Encode once, clone per use & removes $90\%$ of encodings & retained \\
+Encode once, clone per use & removes about $90\%$ of encodings & retained \\
 Parallel batched encoding & equal to serial encoding & retained \\
-Encode at use level, flush between stages & peak $48{,}610$~MiB RSS & enabling \\
+Encode at use level, flush between stages & peak $47.5$~GiB RSS & enabling \\
 \midrule
 \textbf{Net} & \textbf{checked operation schedule unchanged} & \\
 \bottomrule
 \end{tabularx}
-\end{table}
-
-% fig_waterfall.pdf is temporarily excluded pending clean endpoint evidence and regeneration;
-% see paper-docs/TODO.md.
+\end{table*}
 
 \subsection{Remaining optimization targets}
-Mask plaintexts are still encoded afresh at $17{,}400$ uses per block. Head masks,
-score-isolation masks, lane masks, and copy-activity masks all have fixed values under the declared
-layout, so host templates could remove the same class of repeated work already eliminated for
-weight diagonals. This target remains unimplemented.
+About $17{,}400$ mask plaintexts are still encoded afresh per block. Head, score-isolation, lane,
+and copy-activity masks are fixed by the layout; caching them remains unimplemented.
 
-A second opportunity lies in the four packed activation copies. They currently carry duplicates
-through a dense transform. An analyzed layout would apply distinct transforms to those copies,
-placing query, key, and value projections together and likewise combining the MLP expansion
+The four packed activation copies currently carry duplicates through dense transforms. An analyzed
+layout applies distinct transforms to them, combining query/key/value projections and MLP expansion
 chunks. At fixed model arithmetic, the projected schedule reduces dense products from $156$ to
-$52$ and dense ciphertext--plaintext multiplications from $159{,}744$ to $53{,}248$; the total
-ciphertext--plaintext count falls by $60\%$ before mask and copy-repair overhead. The layout
-requires an exact reconstruction proof before implementation.
+$52$ and dense ciphertext--plaintext multiplications from $159{,}744$ to $53{,}248$, lowering the
+total ciphertext--plaintext count by roughly $60\%$ before mask and copy-repair overhead. An exact
+reconstruction proof is required before implementation.
 
-Client work has a separate opportunity. Softmax accounts for $99.5\%$ of the values crossing the
-boundary, and each tile's cryptographic work is independent. Concurrent client boundaries were
-unsafe under the evaluated shared crypto context, so the retained implementation executes them
-sequentially. A thread-safe context would expose this independent work to concurrency.
+Softmax accounts for $99.5\%$ of boundary values, with independent cryptographic work per tile.
+Concurrent boundaries were unsafe under the shared crypto context, requiring sequential execution;
+a thread-safe context would permit concurrency.

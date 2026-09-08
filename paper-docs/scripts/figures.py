@@ -1,68 +1,25 @@
 #!/usr/bin/env python3
-"""Generate every manuscript figure from the evidence ledger.
-
-No figure hard-codes a measurement. Every plotted value is read from
-``paper-docs/evidence/*.yaml``, so a figure and a table cannot disagree.
-
-    python paper-docs/scripts/figures.py                 # all figures
-    python paper-docs/scripts/figures.py --only waterfall memory
-    python paper-docs/scripts/figures.py --list
-    python paper-docs/scripts/figures.py --png DIR       # also write PNGs, for visual review
-
-Output: ``paper-docs/manuscript/figures/*.pdf`` (vector, committed).
-
-Layout rules, learned by getting them wrong:
-  * titles go through ``ax.set_title`` or ``transAxes`` -- never data coordinates;
-  * text positions are computed from the data, never guessed;
-  * anything that could collide gets its own reserved band.
-"""
-
+"""Generate compact IEEE figures from sourced evidence/*.yaml, as vector PDF."""
 from __future__ import annotations
 
 import argparse
 import pathlib
 import sys
-
 import yaml
 
 sys.path.insert(0, str(pathlib.Path(__file__).resolve().parent))
-
-import matplotlib.pyplot as plt  # noqa: E402
-import numpy as np  # noqa: E402
-from matplotlib.patches import Patch  # noqa: E402
-
-from figstyle import (  # noqa: E402
-    AMBER,
-    BLACK,
-    CHART_BLUE,
-    CLIENT,
-    CLIENT_PALE,
-    DPI,
-    FAILURE,
-    GRAY,
-    GREEN,
-    LIGHT_GRAY,
-    MEASURED_KW,
-    NAVY,
-    PALE_ORANGE,
-    SERVER,
-    SERVER_PALE,
-    arrow,
-    canvas,
-    despine,
-    labelled_box,
-    save,
-    save_png,
+import matplotlib.pyplot as plt
+import numpy as np
+from figstyle import (
+    AMBER, BLACK, CLIENT, CLIENT_PALE, COLUMN_WIDTH, DPI, FAILURE, GRAY,
+    LIGHT_GRAY, MEASURED_KW, PAGE_WIDTH, PALE_ORANGE, PROJECTED_KW,
+    SERVER, SERVER_PALE, arrow, canvas, despine, labelled_box, save, save_png,
 )
 
 ROOT = pathlib.Path(__file__).resolve().parents[2]
 EVIDENCE = ROOT / "paper-docs" / "evidence"
 DEFAULT_OUT = ROOT / "paper-docs" / "manuscript" / "figures"
-
 PNG_DIR: pathlib.Path | None = None
-
-
-# --- Evidence access --------------------------------------------------------
 
 
 def load(name: str) -> dict:
@@ -71,1132 +28,314 @@ def load(name: str) -> dict:
 
 
 class Ledger:
-    """Flat id -> row view over measurements.yaml, so figures cite by id."""
-
     def __init__(self) -> None:
-        self.rows: dict[str, dict] = {}
+        self.rows = {}
         for section in load("measurements").values():
             if isinstance(section, list):
                 for row in section:
                     if isinstance(row, dict) and "id" in row:
                         self.rows[row["id"]] = row
 
+    def row(self, rid: str) -> dict:
+        if rid not in self.rows:
+            raise SystemExit(f"Missing evidence row: {rid}")
+        return self.rows[rid]
+
     def value(self, rid: str):
-        try:
-            return self.rows[rid]["value"]
-        except KeyError:
-            raise SystemExit(
-                f"figures.py: '{rid}' is not in evidence/measurements.yaml.\n"
-                f"Add it to the ledger with a source before plotting it."
-            )
+        return self.row(rid)["value"]
+
+    def require_tag(self, rid: str, tag: str = "[V]") -> None:
+        if self.row(rid).get("tag") != tag:
+            raise SystemExit(f"Evidence row {rid} must have tag {tag}.")
 
 
-def emit(fig, out: pathlib.Path, name: str) -> pathlib.Path:
-    """Write the PDF, and a review PNG when --png was given."""
+def sci(value: float, digits: int = 3) -> str:
+    coefficient, exponent = f"{value:.{digits - 1}e}".split("e")
+    return rf"${coefficient}\times10^{{{int(exponent)}}}$"
+
+
+def emit(fig, out, name):
     if PNG_DIR is not None:
-        save_png(fig, PNG_DIR, name, dpi=130)
+        save_png(fig, PNG_DIR, name, dpi=220)
     return save(fig, out, name)
 
 
-def title(ax, text, subtitle=None, size=13.5, pad=None):
-    """Title above the axes, in axes coordinates. Never in data coordinates."""
-    ax.set_title(
-        text,
-        fontsize=size,
-        fontweight="bold",
-        color=BLACK,
-        loc="left",
-        pad=pad if pad is not None else (30 if subtitle else 14),
-    )
-    if subtitle:
-        ax.text(
-            0,
-            1.02,
-            subtitle,
-            transform=ax.transAxes,
-            fontsize=9.6,
-            color=GRAY,
-            va="bottom",
-            ha="left",
-        )
+def panel_title(fig, text, note=None):
+    fig.text(.02, .975, text, ha="left", va="top", fontsize=8.1, weight="bold")
+    if note:
+        fig.text(.02, .895, note, ha="left", va="top", fontsize=6.8, color=GRAY)
 
 
-# --- 1. Graphical abstract --------------------------------------------------
-
-
-def fig_graphical_abstract(out: pathlib.Path) -> pathlib.Path:
+def fig_graphical_abstract(out):
     L = Ledger()
-    fig, ax = canvas(figsize=(14.0, 7.9))
-
-    ax.text(
-        50,
-        95.5,
-        "The genome is protected. The client needs no GPU.",
-        fontsize=21,
-        fontweight="bold",
-        color=BLACK,
-        ha="center",
-        va="center",
-    )
-
-    labelled_box(
-        ax,
-        2,
-        62,
-        30,
-        24,
-        "Data owner",
-        "a human genome it will\nnot disclose  ·  CPU only",
-        facecolor=CLIENT_PALE,
-        edgecolor=CLIENT,
-        title_size=15,
-        sub_size=11,
-    )
-    labelled_box(
-        ax,
-        68,
-        62,
-        30,
-        24,
-        "Compute provider",
-        "serves the model on\nGPU infrastructure",
-        facecolor=SERVER_PALE,
-        edgecolor=SERVER,
-        title_size=15,
-        sub_size=11,
-    )
-
-    labelled_box(
-        ax,
-        27,
-        30,
-        46,
-        22,
-        "Client-assisted CKKS",
-        "every linear operation runs encrypted on the server;\n"
-        "the key holder evaluates three nonlinearities exactly",
-        facecolor="white",
-        edgecolor=BLACK,
-        title_size=15.5,
-        sub_size=10.5,
-    )
-
-    arrow(ax, 17, 61, 36, 52.5, color=CLIENT, lw=2.0)
-    arrow(ax, 83, 61, 64, 52.5, color=SERVER, lw=2.0)
-    ax.text(
-        21.5,
-        55.5,
-        "sends it\nencrypted",
-        fontsize=10,
-        color=CLIENT,
-        ha="center",
-        va="center",
-        style="italic",
-    )
-    ax.text(
-        78.5,
-        55.5,
-        "runs it\nin place",
-        fontsize=10,
-        color=SERVER,
-        ha="center",
-        va="center",
-        style="italic",
-    )
-
-    ax.text(
-        50,
-        26.0,
-        "The compute provider never receives a plaintext activation or the secret key.",
-        fontsize=11,
-        color=BLACK,
-        ha="center",
-        va="center",
-        style="italic",
-    )
-
-    results = [
-        (f"{L.value('prompt.gsr_total')} tokens", "the full task prompt"),
-        (f"{L.value('block.encrypted_evaluation'):,.0f} s", "one transformer block"),
-        (r"$4.6\times10^{-9}$", "error vs. the plaintext model"),
-        (f"{L.value('client.peak_ram')} GB", "peak client memory, no GPU"),
+    for rid in ("prompt.gsr_total", "full.wall", "full.head_margin_relative_error",
+                "full.head_label_matches_reference", "client.needs_gpu"):
+        L.require_tag(rid)
+    fig, ax = canvas((PAGE_WIDTH, 2.05))
+    ax.text(50, 96, "Encrypted genomic classification", ha="center", va="center",
+            fontsize=10, weight="bold")
+    for x, title, note, col, pale in (
+        (1, "Data owner", "Genome and secret key\nCPU boundary evaluation", CLIENT, CLIENT_PALE),
+        (69, "Compute provider", "Model and evaluation keys\nEncrypted linear algebra", SERVER, SERVER_PALE),
+    ):
+        labelled_box(ax, x, 49, 30, 34, title, note, facecolor=pale,
+                     edgecolor=col, title_size=8.4, sub_size=7.4)
+    labelled_box(ax, 36, 49, 28, 34, "Client-assisted CKKS",
+                 "Encrypted vectors in\nEncrypted prediction out", facecolor="white",
+                 edgecolor=BLACK, title_size=8.2, sub_size=7.2)
+    arrow(ax, 31.5, 66, 35.5, 66, color=CLIENT, mutation=9)
+    arrow(ax, 68.5, 66, 64.5, 66, color=SERVER, mutation=9)
+    ax.text(50, 39, "Provider receives no plaintext activation or secret key.",
+            ha="center", va="center", fontsize=7.4)
+    values = [
+        (f"{L.value('prompt.gsr_total')} tokens", "complete classifier"),
+        (f"{L.value('full.wall'):,.0f} s", "measured wall time"),
+        (sci(L.value("full.head_margin_relative_error")), "head-margin relative error"),
+        ("Matching label", "plaintext reference"),
     ]
-    for i, (big, small) in enumerate(results):
-        labelled_box(
-            ax,
-            2 + i * 24.4,
-            4,
-            22.4,
-            16,
-            big,
-            small,
-            facecolor=LIGHT_GRAY,
-            edgecolor=GRAY,
-            title_size=17,
-            sub_size=9.5,
-        )
-
+    for i, (value, note) in enumerate(values):
+        labelled_box(ax, 1+i*25, 3, 23, 27, value, note, title_size=8.5,
+                     sub_size=6.9, facecolor=LIGHT_GRAY, edgecolor=GRAY)
     return emit(fig, out, "fig_graphical_abstract")
 
 
-# --- 2. Protocol architecture -----------------------------------------------
-
-
-def fig_architecture(out: pathlib.Path) -> pathlib.Path:
-    """The evaluation order, and which party performs each step."""
-    fig, ax = canvas(figsize=(13.0, 9.4))
-
+def fig_architecture(out):
+    fig, ax = canvas((PAGE_WIDTH, 2.25))
+    ax.text(1, 96, "One transformer block: evaluation order and executor",
+            va="center", fontsize=9, weight="bold")
+    ax.text(1, 86, "Data owner: genome + secret key", color=CLIENT, fontsize=7.3)
+    ax.text(56, 86, "Compute provider: model + evaluation keys", color=SERVER, fontsize=7.3)
     steps = [
-        ("client", "Encrypt the embedded token vectors"),
-        ("server", "LayerNorm statistics"),
-        ("client", "Inverse square root"),
-        ("server", "Query / key / value projection"),
-        ("server", "Causal attention scores"),
-        ("client", "Softmax over the score tiles"),
-        ("server", "Attention context, projection, residual"),
-        ("client", "LayerNorm, second occurrence"),
-        ("server", "MLP up-projection"),
-        ("client", "GELU"),
-        ("server", "MLP down-projection, residual"),
-        ("client", "Decrypt the block output"),
+        ("server", "LayerNorm\nstatistics"),
+        ("client", "Inverse\nsquare root"),
+        ("server", "Normalize;\nproject queries,\nkeys, values"),
+        ("server", "Causal\nattention scores"),
+        ("client", "Stable softmax\non complete\nrows"),
+        ("server", "Attention context\nprojection\n+ residual"),
+        ("server", "Second\nLayerNorm\nstatistics"),
+        ("client", "Inverse\nsquare root"),
+        ("server", "Normalize; MLP\nup-projection"),
+        ("client", "GELU\nactivation"),
+        ("server", "MLP\ndown-projection\n+ residual"),
+        ("server", "Encrypted\nblock output"),
     ]
-
-    top, bottom = 85.0, 11.0
-    n = len(steps)
-    pitch = (top - bottom) / n
-    height = pitch * 0.72
-    lx, rx, width = 4.0, 54.0, 42.0
-    boundary = 50.0
-
-    ax.text(
-        4, 96.0, "Data owner", fontsize=16, fontweight="bold", color=CLIENT, va="center"
-    )
-    ax.text(
-        4,
-        92.0,
-        "holds the genome and the secret key  ·  no GPU",
-        fontsize=10.2,
-        color=GRAY,
-        va="center",
-    )
-    ax.text(
-        54,
-        96.0,
-        "Compute provider",
-        fontsize=16,
-        fontweight="bold",
-        color=SERVER,
-        va="center",
-    )
-    ax.text(
-        54,
-        92.0,
-        "holds the model  ·  sees only ciphertexts  ·  one A100",
-        fontsize=10.2,
-        color=GRAY,
-        va="center",
-    )
-
-    ax.plot(
-        [boundary, boundary],
-        [6.5, 88.5],
-        color=GRAY,
-        linewidth=1.1,
-        linestyle=(0, (6, 5)),
-    )
-    ax.text(
-        boundary,
-        5.4,
-        "trust boundary",
-        fontsize=9.6,
-        color=GRAY,
-        ha="center",
-        va="top",
-        style="italic",
-        bbox=dict(boxstyle="round,pad=0.28", facecolor="white", edgecolor="none"),
-    )
-
-    centres = []
+    locs, label_boxes = [], []
+    box_width, box_height = 15, 26
     for i, (who, label) in enumerate(steps):
-        y = top - (i + 1) * pitch + (pitch - height) / 2
-        x = lx if who == "client" else rx
-        labelled_box(
-            ax,
-            x,
-            y,
-            width,
-            height,
-            f"{i + 1}.  {label}",
-            facecolor=CLIENT_PALE if who == "client" else SERVER_PALE,
-            edgecolor=CLIENT if who == "client" else SERVER,
-            title_size=11,
-        )
-        centres.append((who, x, y, y + height / 2))
-
-    for i in range(n - 1):
-        who_a, xa, ya, mid_a = centres[i]
-        who_b, xb, yb, mid_b = centres[i + 1]
-        if who_a == who_b:  # same column: drop straight down
-            cx = xa + width / 2
-            arrow(ax, cx, ya, cx, yb + height, color=GRAY, lw=1.3)
-        else:  # cross the boundary
-            x1 = xa + width if who_a == "client" else xa
-            x2 = xb if who_b == "server" else xb + width
-            arrow(
-                ax,
-                x1,
-                mid_a - height * 0.15,
-                x2,
-                mid_b + height * 0.15,
-                color=GRAY,
-                lw=1.3,
-            )
-
-    ax.text(
-        boundary,
-        1.6,
-        "Only ciphertexts cross. A crossing carries values derived from the client's own "
-        "query,\nwhich it decrypts, evaluates exactly, and returns freshly encrypted.",
-        fontsize=9.8,
-        color=BLACK,
-        ha="center",
-        va="top",
-        style="italic",
-        linespacing=1.45,
-    )
-
+        col = i if i < 6 else 11-i
+        x, y = 1+col*16.65, 50 if i < 6 else 13
+        colour, pale = (CLIENT, CLIENT_PALE) if who == "client" else (SERVER, SERVER_PALE)
+        labelled_box(ax, x, y, box_width, box_height, label, facecolor=pale,
+                     edgecolor=colour, title_size=6.6)
+        label_boxes.append((ax.texts[-1], ax.patches[-1]))
+        locs.append((x, y))
+    for i in range(len(locs)-1):
+        x, y = locs[i]
+        nx, ny = locs[i+1]
+        if ny != y:
+            arrow(ax, x+7.5, y-.6, nx+7.5, ny+box_height+.6, mutation=8, lw=1)
+        elif nx > x:
+            arrow(ax, x+15.2, y+box_height/2, nx-.2, ny+box_height/2, mutation=7, lw=1)
+        else:
+            arrow(ax, x-.2, y+box_height/2, nx+15.2, ny+box_height/2, mutation=7, lw=1)
+    ax.text(50, 4, "Client functions decrypt, evaluate in double precision, and re-encrypt; "
+            "score collection and softmax emission are separate.", fontsize=6.7,
+            ha="center", va="center", color=GRAY)
+    # Check actual rendered type, not character counts: every label must clear
+    # all four borders by at least 3 pt at the final two-column print width.
+    fig.canvas.draw()
+    renderer = fig.canvas.get_renderer()
+    min_padding = 3 * fig.dpi / 72
+    for text, patch in label_boxes:
+        tb, pb = text.get_window_extent(renderer), patch.get_window_extent(renderer)
+        clearance = min(tb.x0-pb.x0, pb.x1-tb.x1, tb.y0-pb.y0, pb.y1-tb.y1)
+        if clearance < min_padding:
+            raise ValueError(f"Architecture label has insufficient padding: {text.get_text()!r}")
     return emit(fig, out, "fig_architecture")
 
 
-# --- 3. Packing -------------------------------------------------------------
-
-
-def fig_packing(out: pathlib.Path) -> pathlib.Path:
+def fig_packing(out):
     L = Ledger()
-    copies = L.value("layout.copies")
-    width_feat = L.value("layout.pack_width")
-    lanes = L.value("layout.token_lanes")
-    slots = L.value("param.slots")
-    groups = L.value("layout.token_groups")
-    tokens = L.value("prompt.gsr_total")
-    bp = L.value("prompt.gsr_basepairs")
-    kmer = L.value("prompt.kmer")
-    specials = L.value("prompt.gsr_special_tokens")
-
-    fig, ax = canvas(figsize=(13.0, 7.2))
-
-    ax.text(
-        2,
-        96,
-        f"One ciphertext holds {slots:,} slots",
-        fontsize=15.5,
-        fontweight="bold",
-        color=BLACK,
-        va="center",
-    )
-    ax.text(
-        2,
-        90.5,
-        f"{copies} activation copies  ×  {width_feat:,} padded features  ×  "
-        f"{lanes} token lanes  =  {copies * width_feat * lanes:,} slots."
-        f"   The {copies} copies exist because the MLP expands to {copies}× the hidden width.",
-        fontsize=10.6,
-        color=GRAY,
-        va="center",
-    )
-
-    x0, gap = 2.0, 1.6
-    w = (96.0 - gap * (copies - 1)) / copies
+    copies, width, lanes, slots, groups, tokens, active = [L.value(rid) for rid in (
+        "layout.copies", "layout.pack_width", "layout.token_lanes", "param.slots",
+        "layout.token_groups", "prompt.gsr_total", "layout.embedding_width")]
+    fig, ax = canvas((COLUMN_WIDTH, 2.2))
+    ax.text(1, 96, f"{slots:,} slots per ciphertext", fontsize=8.4, weight="bold", va="center")
+    ax.text(1, 85, f"{copies} copies × {width:,} features × {lanes} token lanes",
+            fontsize=7.0, va="center")
     for c in range(copies):
-        x = x0 + c * (w + gap)
-        labelled_box(ax, x, 56, w, 26, "", facecolor=SERVER_PALE, edgecolor=SERVER)
-        ax.text(
-            x + w / 2,
-            78.0,
-            f"copy {c}",
-            fontsize=12.5,
-            fontweight="bold",
-            color=BLACK,
-            ha="center",
-            va="center",
-        )
-        ax.text(
-            x + w / 2,
-            74.0,
-            f"features 0–{width_feat - 1}",
-            fontsize=9,
-            color=GRAY,
-            ha="center",
-            va="center",
-        )
-        inner, pad = w - 3.0, 1.5
-        for lane in range(lanes):
-            lw_ = inner / lanes
-            ax.add_patch(
-                plt.Rectangle(
-                    (x + pad + lane * lw_, 62.5),
-                    lw_ * 0.82,
-                    7.5,
-                    facecolor=CLIENT_PALE,
-                    edgecolor=CLIENT,
-                    linewidth=0.8,
-                )
-            )
-        ax.text(
-            x + w / 2,
-            59.0,
-            f"{lanes} token lanes",
-            fontsize=8.6,
-            color=GRAY,
-            ha="center",
-            va="center",
-        )
-
-    ax.text(
-        2,
-        46,
-        f"{tokens} tokens occupy {groups} ciphertext groups",
-        fontsize=14.5,
-        fontweight="bold",
-        color=BLACK,
-        va="center",
-    )
-    ax.text(
-        2,
-        40.5,
-        f"{bp} bp ÷ {kmer}-mer = {bp // kmer} tokens, plus {specials} task specials = "
-        f"{tokens}.   {tokens} tokens across {lanes} lanes rounds up to {groups} groups; "
-        f"the final group is partly padded.",
-        fontsize=10.6,
-        color=GRAY,
-        va="center",
-    )
-
-    gw = 96.0 / groups
+        x = 1+c*24.75
+        labelled_box(ax, x, 54, 23, 22, f"Copy {c+1}", f"{lanes} lanes / feature",
+                     facecolor=SERVER_PALE, edgecolor=SERVER, title_size=7.2, sub_size=6.0)
+    ax.text(1, 44, f"{active} active features; padding includes attention staging.",
+            fontsize=6.6, color=GRAY, va="center")
+    ax.text(1, 31, f"{tokens} tokens → {groups} groups", fontsize=8.1, weight="bold", va="center")
     for g in range(groups):
-        filled = min(lanes, tokens - g * lanes)
-        full = filled == lanes
-        labelled_box(
-            ax,
-            2 + g * gw,
-            20,
-            gw - 1.2,
-            13,
-            f"g{g}",
-            f"{filled}/{lanes}",
-            facecolor=SERVER_PALE if full else PALE_ORANGE,
-            edgecolor=SERVER if full else AMBER,
-            title_size=10.5,
-            sub_size=8.8,
-        )
-
-    ax.text(
-        2,
-        13,
-        f"The {groups} groups give {groups * (groups + 1) // 2} lower-triangular causal "
-        f"score tiles, and just {(-tokens) % lanes} of the {groups * lanes} lanes is padding.",
-        fontsize=10.2,
-        color=GRAY,
-        va="center",
-    )
-
+        live = min(lanes, tokens-g*lanes)
+        ax.add_patch(plt.Rectangle((1+g*7.5, 12), 6.6, 10,
+                     facecolor=SERVER_PALE if live == lanes else PALE_ORANGE,
+                     edgecolor=SERVER if live == lanes else AMBER, linewidth=.8))
+    ax.text(1, 4, f"Final group: {tokens % lanes} live lanes + {(-tokens) % lanes} padded lane.",
+            fontsize=6.8, va="center", color=GRAY)
     return emit(fig, out, "fig_packing")
 
 
-# --- 4. The optimization result ---------------------------------------------
-
-
-def fig_waterfall(out: pathlib.Path) -> pathlib.Path:
-    """Two measured endpoints, the changes between them, and the whole-model consequence."""
-    opt = load("optimizations")
-    baseline = opt["retained"][0]["block_time_s"]
-    final = opt["net"]["to_encrypted_evaluation_s"]
-    factor = opt["net"]["factor"]
-    full = opt["net_full_pass"]
-
-    changes = [
-        "Thread affinity and NUMA-local allocation",
-        "Encode once, clone per use",
-        "Parallel batched encoding across 32 cores",
-        "Encode at the level of use, flush between stages",
-        "Release host-side key copies after upload",
-    ]
-
-    fig, (ax, axr) = plt.subplots(
-        1,
-        2,
-        figsize=(13.6, 6.0),
-        dpi=DPI,
-        gridspec_kw={"width_ratios": [1.0, 1.12], "wspace": 0.06},
-    )
-
-    # Left: the two measured endpoints.
-    for x, val in ((0.0, baseline), (1.0, final)):
-        ax.bar(x, val, width=0.52, facecolor=SERVER, **MEASURED_KW, zorder=3)
-        ax.text(
-            x,
-            val * 1.06,
-            f"{val:,.0f} s\n{val / 60:,.0f} min",
-            ha="center",
-            va="bottom",
-            fontsize=13,
-            fontweight="bold",
-            color=BLACK,
-            zorder=4,
-        )
-
-    ax.set_yscale("log")
-    ax.set_ylim(300, baseline * 4.2)
-    ax.set_xlim(-0.62, 1.62)
-    ax.set_xticks([0.0, 1.0])
-    ax.set_xticklabels(
-        ["Re-encode at every\nmultiplication", "After the\ncampaign"],
-        fontsize=11,
-        color=BLACK,
-    )
-    ax.set_ylabel("Encrypted evaluation, seconds (log scale)", fontsize=11)
-    despine(ax)
-    ax.grid(axis="y", color=LIGHT_GRAY, linewidth=0.8, zorder=0)
+def fig_waterfall(out):
+    L = Ledger()
+    ids = ("full.wall", "full.encrypted_evaluation", "full.blocks_encrypted_evaluation",
+           "full.refreshes", "full.head_encrypted_evaluation")
+    for rid in ids:
+        L.require_tag(rid)
+    wall, encrypted, blocks, refresh, head = [L.value(rid) for rid in ids]
+    fig, ax = plt.subplots(figsize=(COLUMN_WIDTH, 2.15), dpi=DPI)
+    fig.subplots_adjust(left=.28, right=.97, bottom=.28, top=.76)
+    panel_title(fig, "Measured complete-run time", "One complete classifier; in-process client boundaries.")
+    ax.barh(1, wall, height=.38, facecolor=LIGHT_GRAY, **MEASURED_KW)
+    ax.text(wall*.5, 1, f"{wall:,.0f} s", ha="center", va="center", weight="bold")
+    ax.barh(0, blocks, height=.38, facecolor=SERVER, **MEASURED_KW)
+    ax.barh(0, refresh, left=blocks, height=.38, facecolor=CLIENT, edgecolor=BLACK, linewidth=.8)
+    ax.barh(0, head, left=blocks+refresh, height=.38, facecolor=PALE_ORANGE, edgecolor=BLACK, linewidth=.8)
+    ax.text(blocks*.5, 0, f"{encrypted:,.1f} s", color="white", ha="center", va="center", weight="bold")
+    ax.set_yticks([0, 1], ["Encrypted\nevaluation", "Process wall"])
+    ax.set_xlim(0, wall*1.025)
+    ax.set_ylim(-.65, 1.5)
+    ax.set_xlabel("Time (s)")
+    ax.grid(axis="x", color=LIGHT_GRAY)
     ax.set_axisbelow(True)
-
-    ax.annotate(
-        "",
-        xy=(0.86, final * 1.35),
-        xytext=(0.16, baseline * 1.02),
-        arrowprops=dict(
-            arrowstyle="-|>",
-            color=GREEN,
-            linewidth=2.4,
-            connectionstyle="arc3,rad=0.26",
-        ),
-        zorder=2,
-    )
-    ax.text(
-        1.20,
-        baseline * 1.45,
-        f"{factor}×",
-        fontsize=27,
-        fontweight="bold",
-        color=GREEN,
-        ha="center",
-        va="center",
-    )
-    ax.text(
-        1.20,
-        baseline * 0.92,
-        "faster",
-        fontsize=13.5,
-        fontweight="bold",
-        color=GREEN,
-        ha="center",
-        va="center",
-    )
-    title(ax, "One transformer block, 103 tokens")
-
-    # Right: what changed, and what it means for a whole inference.
-    axr.axis("off")
-    axr.set_xlim(0, 100)
-    axr.set_ylim(0, 100)
-
-    axr.text(
-        0,
-        95,
-        "What changed",
-        fontsize=12.5,
-        fontweight="bold",
-        color=BLACK,
-        va="center",
-    )
-    axr.text(
-        0,
-        89.5,
-        "None of it alters a single encrypted operation.",
-        fontsize=9.8,
-        color=GRAY,
-        va="center",
-        style="italic",
-    )
-    for i, change in enumerate(changes):
-        axr.text(0, 82 - i * 6.6, "—", fontsize=10.5, color=SERVER, va="center")
-        axr.text(4.5, 82 - i * 6.6, change, fontsize=10.5, color=BLACK, va="center")
-
-    axr.text(
-        0,
-        42,
-        "Identical at both ends",
-        fontsize=12.5,
-        fontweight="bold",
-        color=BLACK,
-        va="center",
-    )
-    axr.text(
-        0,
-        30,
-        "156 dense products  ·  177,734 ciphertext–plaintext and\n"
-        "1,506 ciphertext–ciphertext multiplications  ·  8,173 rotations\n"
-        "857 client boundary crossings  ·  multiplicative depth 13\n"
-        "the same frozen plaintext reference, reproduced to $4.6\\times10^{-9}$",
-        fontsize=10.2,
-        color=GRAY,
-        va="center",
-        linespacing=1.7,
-    )
-
-    labelled_box(
-        axr,
-        0,
-        2,
-        100,
-        13,
-        f"A whole {int(full['from_hours'])}-hour inference becomes "
-        f"{full['to_range_human'].split(',')[0]}",
-        "projected across the encrypted-scope tasks, at fixed circuit",
-        facecolor=LIGHT_GRAY,
-        edgecolor=GRAY,
-        title_size=12,
-        sub_size=9.2,
-    )
-
+    despine(ax, keep=("bottom",))
+    fig.text(.02, .03, f"Blocks {blocks:,.1f} s · refreshes {refresh:.1f} s · head {head:.2f} s",
+             fontsize=6.5, color=GRAY)
     return emit(fig, out, "fig_waterfall")
 
 
-# --- 5. Resource trace ------------------------------------------------------
-
-
-def fig_timeline(out: pathlib.Path) -> pathlib.Path:
-    tel = load("telemetry")
-    trace, stages = tel["trace"], tel["stages"]
-    total = tel["meta"]["total_wall_s"]
-
-    t = np.array([r["t_s"] for r in trace], dtype=float)
-    gpu_pct = np.array([r["gpu_pct"] for r in trace], dtype=float)
-    rss = np.array([r["rss_mib"] for r in trace], dtype=float) / 1024.0
-    gpu_mem = np.array([r["gpu_mib"] for r in trace], dtype=float) / 1024.0
-
-    fig, (axl, ax1, ax2) = plt.subplots(
-        3,
-        1,
-        figsize=(13.4, 7.8),
-        dpi=DPI,
-        sharex=True,
-        gridspec_kw={"height_ratios": [0.30, 1.15, 1.0], "hspace": 0.10},
-    )
-
-    band = {"server": SERVER_PALE, "client": CLIENT_PALE, "mixed": PALE_ORANGE}
-
-    # Dedicated label lane, so stage names can never collide with the plots.
-    axl.set_ylim(0, 1)
-    axl.axis("off")
-    for i, st in enumerate(stages):
-        axl.axvspan(
-            st["start_s"],
-            st["end_s"],
-            color=band[st["executor"]],
-            alpha=0.75,
-            linewidth=0,
-        )
-        axl.text(
-            (st["start_s"] + st["end_s"]) / 2,
-            0.5 if i % 2 == 0 else 0.5,
-            st["label"].replace(" + ", "\n"),
-            ha="center",
-            va="center",
-            fontsize=8.2,
-            color=BLACK,
-            linespacing=1.2,
-        )
-
+def fig_timeline(out):
+    tel = load("telemetry")["complete_run"]
+    if tel["tag"] != "[V]":
+        raise SystemExit("Complete-run trajectory must be measured.")
+    rows = tel["block_trajectory"]
+    block = np.array([r["block"] for r in rows])
+    seconds = np.array([r["evaluation_s"] for r in rows])
+    fig, (ax1, ax2) = plt.subplots(2, 1, sharex=True, figsize=(COLUMN_WIDTH, 2.5), dpi=DPI)
+    fig.subplots_adjust(left=.19, right=.98, bottom=.16, top=.82, hspace=.13)
+    panel_title(fig, "Measured trajectory across the complete run")
+    ax1.plot(block, seconds, color=SERVER, marker="o", ms=3, lw=1.2)
+    ax1.set_ylabel("Block time (s)")
+    ax1.set_ylim(seconds.min()*.96, seconds.max()*1.03)
+    ax1.text(.02, .93, f"{seconds.min():.1f}–{seconds.max():.1f} s", transform=ax1.transAxes,
+             va="top", fontsize=6.6)
+    ax2.semilogy(block, [r["global_rel_inf"] for r in rows], color=SERVER, marker="o",
+                 ms=3, lw=1.2, label="Global")
+    ax2.semilogy(block, [r["worst_token_rel_inf"] for r in rows], color=CLIENT,
+                 marker="s", ms=2.6, ls="--", lw=1.1, label="Worst token")
+    ax2.set_ylabel("Relative error")
+    ax2.set_xlabel("Transformer block")
+    ax2.set_xticks(block)
+    ax2.legend(frameon=False, fontsize=6.4, loc="upper left", ncol=2,
+                bbox_to_anchor=(0, 1.13), handlelength=1.1, columnspacing=.8)
     for ax in (ax1, ax2):
-        for st in stages:
-            ax.axvspan(
-                st["start_s"],
-                st["end_s"],
-                color=band[st["executor"]],
-                alpha=0.5,
-                linewidth=0,
-                zorder=0,
-            )
-
-    ax1.plot(
-        t, gpu_pct, color=NAVY, linewidth=2.2, marker="o", markersize=3.6, zorder=3
-    )
-    ax1.set_ylabel("GPU utilization (%)", fontsize=11)
-    ax1.set_ylim(0, 100)
-    despine(ax1)
-    ax1.grid(axis="y", color=LIGHT_GRAY, linewidth=0.8)
-    ax1.set_axisbelow(True)
-
-    idle = [r for r in trace if r["stage"] == "attention_context"]
-    if idle:
-        mid = idle[len(idle) // 2]
-        ax1.annotate(
-            "GPU idle while the data owner\nevaluates the attention weights",
-            xy=(mid["t_s"], mid["gpu_pct"] + 1.5),
-            xytext=(150, 68),
-            fontsize=10.5,
-            color=CLIENT,
-            fontweight="bold",
-            ha="left",
-            arrowprops=dict(
-                arrowstyle="-|>",
-                color=CLIENT,
-                linewidth=1.5,
-                connectionstyle="arc3,rad=-0.25",
-            ),
-        )
-
-    ax2.plot(
-        t,
-        rss,
-        color=CHART_BLUE,
-        linewidth=2.2,
-        marker="o",
-        markersize=3.6,
-        label="host memory",
-        zorder=3,
-    )
-    ax2.plot(
-        t,
-        gpu_mem,
-        color=GREEN,
-        linewidth=1.9,
-        linestyle="--",
-        marker="s",
-        markersize=3.0,
-        label="GPU memory",
-        zorder=3,
-    )
-    ax2.set_ylabel("Memory (GiB)", fontsize=11)
-    ax2.set_xlabel("Seconds since process start", fontsize=11)
-
-    fail = Ledger().value("mem.unbounded_failure")
-    ax2.set_ylim(0, fail * 1.30)
-    ax2.set_yticks([0, 20, 40, 60])
-    ax2.axhline(fail, color=FAILURE, linewidth=1.3, linestyle=":")
-    ax2.text(
-        total * 0.995,
-        fail * 1.04,
-        f"{fail} GiB — where the unbounded cache was killed",
-        color=FAILURE,
-        fontsize=9.2,
-        ha="right",
-        va="bottom",
-    )
-    ax2.legend(
-        frameon=False, fontsize=10, loc="upper left", ncol=2, bbox_to_anchor=(0.0, 1.02)
-    )
-    despine(ax2)
-    ax2.grid(axis="y", color=LIGHT_GRAY, linewidth=0.8)
-    ax2.set_axisbelow(True)
-
-    ax1.set_xlim(0, total)
-    axl.set_title(
-        "The evaluation is not GPU-bound, and the memory curve is the caching strategy",
-        fontsize=13,
-        fontweight="bold",
-        color=BLACK,
-        loc="left",
-        pad=10,
-    )
+        despine(ax)
+        ax.grid(axis="y", color=LIGHT_GRAY)
     return emit(fig, out, "fig_timeline")
 
 
-# --- 6. Memory bounding -----------------------------------------------------
-
-
-def fig_memory(out: pathlib.Path) -> pathlib.Path:
-    fail = Ledger().value("mem.unbounded_failure")
-    bounded = next(
-        o
-        for o in load("optimizations")["retained"]
-        if o["id"] == "opt.bounded_host_memory"
-    )
-    values = bounded["effect_gib"]
-    labels = [
-        "Query / key / value\n3 weight matrices resident",
-        "Attention\nnone resident",
-        "MLP\n8 weight matrices resident",
-    ]
-
-    fig, ax = plt.subplots(figsize=(9.6, 5.9), dpi=DPI)
-    bars = ax.bar(
-        range(3), values, width=0.5, facecolor=SERVER, **MEASURED_KW, zorder=3
-    )
-    for b, v in zip(bars, values):
-        ax.text(
-            b.get_x() + b.get_width() / 2,
-            v + 1.1,
-            f"{v} GiB",
-            ha="center",
-            va="bottom",
-            fontsize=12.5,
-            fontweight="bold",
-            color=BLACK,
-        )
-
-    ax.axhline(fail, color=FAILURE, linewidth=1.6, linestyle="--", zorder=2)
-    ax.text(
-        2.52,
-        fail - 1.4,
-        f"{fail} GiB — the unbounded cache\nwas killed by the operating system",
-        color=FAILURE,
-        fontsize=9.8,
-        ha="right",
-        va="top",
-        fontweight="bold",
-    )
-
-    ax.set_xticks(range(3))
-    ax.set_xticklabels(labels, fontsize=10.5)
-    ax.set_ylabel("Peak host memory (GiB)", fontsize=11)
-    ax.set_ylim(0, fail * 1.22)
-    ax.set_xlim(-0.62, 2.62)
-    despine(ax)
-    ax.grid(axis="y", color=LIGHT_GRAY, linewidth=0.8)
+def fig_memory(out):
+    L = Ledger()
+    ids = ("mem.stage_qkv", "mem.stage_attention", "mem.stage_mlp", "mem.unbounded_failure")
+    for rid in ids:
+        L.require_tag(rid)
+    values = [L.value(rid) for rid in ids[:3]]
+    fail = L.value(ids[-1])
+    fig, ax = plt.subplots(figsize=(COLUMN_WIDTH, 2.3), dpi=DPI)
+    fig.subplots_adjust(left=.18, right=.98, bottom=.21, top=.75)
+    panel_title(fig, "Stage flushing bounds host memory", "Standalone-block samples; target-process resident set.")
+    ax.bar(range(len(values)), values, width=.55, facecolor=SERVER, **MEASURED_KW)
+    for i, value in enumerate(values):
+        ax.text(i, value+1.6, f"{value:.1f}", ha="center", fontsize=7, weight="bold")
+    ax.axhline(fail, color=FAILURE, lw=1.1, ls="--")
+    ax.text(.02, .95, f"Unbounded cache: failure at {fail:.1f} GiB", transform=ax.transAxes,
+             color=FAILURE, va="top", fontsize=6.7)
+    ax.set_xticks(range(len(values)), ["Query/key/value", "Attention", "MLP"])
+    ax.set_ylabel("Host memory (GiB)")
+    ax.set_ylim(0, fail*1.27)
+    ax.grid(axis="y", color=LIGHT_GRAY)
     ax.set_axisbelow(True)
-    title(
-        ax,
-        "Flushing between stages bounds the peak",
-        "The cache has to hold only the largest single stage, not all twelve weight "
-        "matrices at once.",
-    )
+    despine(ax)
+    fig.text(.02, .035, "Stage peaks are sampled, not allocation-by-allocation maxima.", fontsize=6.5, color=GRAY)
     return emit(fig, out, "fig_memory")
 
 
-# --- 7. Cost split ----------------------------------------------------------
-
-
-def fig_cost_split(out: pathlib.Path) -> pathlib.Path:
+def fig_cost_split(out):
     L = Ledger()
-    server = L.value("block.server_linear_algebra")
-    client = L.value("block.client_boundaries")
-    setup = L.value("block.context_keygen_load") + L.value("block.encrypt_input")
-    tail = L.value("block.final_decrypt") + L.value("block.fixture_load")
-    other = setup + tail
-    wall = L.value("block.wall")
-    crossings = L.value("ops.client_crossings_physical")
-    ram = L.value("client.peak_ram")
-
-    fig, (ax, axr) = plt.subplots(
-        1,
-        2,
-        figsize=(13.4, 4.6),
-        dpi=DPI,
-        gridspec_kw={"width_ratios": [1.35, 1.0], "wspace": 0.13},
-    )
-
-    # Segments are labelled in place, so the figure needs no legend and nothing can collide
-    # with the axis.
-    for label, val, color, textcolor in (
-        ("Compute provider", server, SERVER, "white"),
-        ("Data owner", client, CLIENT, "white"),
-        ("", other, GRAY, BLACK),
-    ):
-        left = {"Compute provider": 0.0, "Data owner": server}.get(
-            label, server + client
-        )
-        ax.barh(
-            0,
-            val,
-            left=left,
-            height=0.34,
-            facecolor=color,
-            edgecolor=BLACK,
-            linewidth=1.1,
-        )
-        if label:
-            ax.text(
-                left + val / 2,
-                0.02,
-                f"{val:,.0f} s\n{100 * val / wall:.1f}%",
-                ha="center",
-                va="center",
-                fontsize=12.5,
-                fontweight="bold",
-                color=textcolor,
-            )
-            ax.text(
-                left + val / 2,
-                -0.30,
-                label,
-                ha="center",
-                va="center",
-                fontsize=10.5,
-                color=color,
-                fontweight="bold",
-            )
-            sub = (
-                "encrypted linear algebra, one A100"
-                if label == "Compute provider"
-                else "exact nonlinearities, CPU only"
-            )
-            ax.text(
-                left + val / 2,
-                -0.40,
-                sub,
-                ha="center",
-                va="center",
-                fontsize=9.2,
-                color=GRAY,
-            )
-
-    ax.set_xlim(0, wall)
-    ax.set_ylim(-0.52, 0.30)
+    ids = ("full.encrypted_evaluation", "full.server_linear_algebra", "full.client_boundaries",
+           "full.server_share_pct", "full.client_share_pct")
+    for rid in ids:
+        L.require_tag(rid)
+    total, server, client, server_pct, client_pct = [L.value(rid) for rid in ids]
+    fig, ax = plt.subplots(figsize=(COLUMN_WIDTH, 1.8), dpi=DPI)
+    fig.subplots_adjust(left=.06, right=.98, bottom=.38, top=.69)
+    panel_title(fig, "Who pays the measured evaluation cost?", f"Complete classifier: {total:,.1f} s encrypted evaluation.")
+    for value, left, colour in ((server, 0, SERVER), (client, server, CLIENT)):
+        ax.barh(0, value, left=left, height=.6, facecolor=colour, **MEASURED_KW)
+    ax.text(server/2, 0, f"{server_pct:.1f}%", color="white", weight="bold", ha="center", va="center")
+    ax.text(server+client/2, 0, f"{client_pct:.1f}%", color="white", weight="bold", ha="center", va="center", fontsize=6.6)
+    ax.set_xlim(0, total)
     ax.set_yticks([])
-    ax.set_xlabel("Seconds", fontsize=11)
+    ax.set_xlabel("Time (s)")
     despine(ax, keep=("bottom",))
-    ax.text(
-        1.0,
-        -0.155,
-        f"setup, encryption and final decrypt account for the remaining {other:.1f} s",
-        transform=ax.transAxes,
-        fontsize=9.2,
-        color=GRAY,
-        ha="right",
-        va="top",
-    )
-    title(ax, f"One transformer block, 103 tokens — {wall:,.0f} s wall clock")
-
-    axr.axis("off")
-    axr.set_xlim(0, 100)
-    axr.set_ylim(0, 100)
-    labelled_box(
-        axr,
-        1,
-        56,
-        98,
-        34,
-        "Data owner",
-        f"{client:,.0f} s  \u00b7  no GPU  \u00b7  ~{ram} GB peak memory\n"
-        f"holds the genome and the secret key",
-        facecolor=CLIENT_PALE,
-        edgecolor=CLIENT,
-        title_size=14,
-        sub_size=10.5,
-    )
-    labelled_box(
-        axr,
-        1,
-        6,
-        98,
-        34,
-        "Compute provider",
-        f"{server:,.0f} s  \u00b7  one A100 GPU\n"
-        f"holds the model; observes only ciphertexts",
-        facecolor=SERVER_PALE,
-        edgecolor=SERVER,
-        title_size=14,
-        sub_size=10.5,
-    )
-    arrow(axr, 50, 55, 50, 41, color=GRAY, lw=1.6, style="<|-|>")
-    axr.text(
-        53, 48, f"{crossings} boundary crossings", fontsize=9.8, color=GRAY, va="center"
-    )
-
+    fig.text(.02, .14, f"Provider: {server:,.0f} s · encrypted linear algebra", color=SERVER, fontsize=6.9)
+    fig.text(.02, .055, f"Data owner: {client:,.0f} s · CPU boundaries · no GPU", color=CLIENT, fontsize=6.9)
     return emit(fig, out, "fig_cost_split")
 
 
-# --- 8. Sequence-length scaling ---------------------------------------------
-
-
-def fig_scaling(out: pathlib.Path) -> pathlib.Path:
-    """Per-block cost across the encrypted-scope tasks, anchored on the one measured point."""
-    sc = load("scaling")
-    tasks = list(reversed(sc["tasks"]))  # longest prompt at the top
-    names = [t["name"] for t in tasks]
-    secs = [t["block_seconds"] for t in tasks]
-    toks = [t["tokens"] for t in tasks]
-    groups = [t["token_groups"] for t in tasks]
-    passes = [t["full_pass_human"] for t in tasks]
-    measured = [t["block_tag"] == "[V]" for t in tasks]
-
-    y = np.arange(len(tasks))
-    fig, ax = plt.subplots(figsize=(11.4, 5.6), dpi=DPI)
-
-    for i, (sv, m) in enumerate(zip(secs, measured)):
-        ax.barh(
-            i,
-            sv,
-            height=0.56,
-            facecolor=SERVER if m else "white",
-            edgecolor=SERVER if m else GRAY,
-            linewidth=1.6 if m else 1.2,
-            hatch=None if m else "///",
-            alpha=1.0 if m else 0.9,
-            zorder=3,
-        )
-        ax.text(
-            sv + max(secs) * 0.018,
-            i,
-            f"{sv:,.0f} s",
-            va="center",
-            ha="left",
-            fontsize=11.5,
-            fontweight="bold" if m else "normal",
-            color=BLACK if m else GRAY,
-        )
-        ax.text(
-            sv + max(secs) * 0.115,
-            i,
-            f"·  twelve blocks {passes[i]}",
-            va="center",
-            ha="left",
-            fontsize=9.6,
-            color=GRAY,
-        )
-
-    ax.set_yticks(y)
-    ax.set_yticklabels(
-        [f"{n}\n{tk} tokens · {g} groups" for n, tk, g in zip(names, toks, groups)],
-        fontsize=10.2,
-    )
-    ax.set_xlabel("Time per transformer block (s)", fontsize=11)
-    ax.set_xlim(0, max(secs) * 1.42)
-    ax.set_ylim(-0.62, len(tasks) - 0.30)
-    despine(ax, keep=("bottom",))
-    ax.grid(axis="x", color=LIGHT_GRAY, linewidth=0.8)
+def fig_scaling(out):
+    rows = load("scaling")["tasks"]
+    labels = ["Core promoter", "300 bp promoter", "Splice site", "Genomic signal"]
+    fig, ax = plt.subplots(figsize=(COLUMN_WIDTH, 2.4), dpi=DPI)
+    fig.subplots_adjust(left=.31, right=.98, bottom=.21, top=.75)
+    panel_title(fig, "Complete run and shorter-task projections", "Solid: measured; hatched: group-linear wall-time model.")
+    largest = max(r["full_pass_seconds"] for r in rows)
+    for i, row in enumerate(rows):
+        measured = row["full_pass_tag"] == "[V]"
+        value = row["full_pass_seconds"]
+        ax.barh(i, value, height=.58, facecolor=SERVER if measured else SERVER_PALE,
+                 **(MEASURED_KW if measured else PROJECTED_KW))
+        ax.text(value+largest*.025, i, f"{value:,.0f}", ha="left", va="center",
+                 fontsize=6.8, weight="bold" if measured else "normal")
+    ax.set_yticks(range(len(rows)), [f"{label}\n{row['tokens']} tokens" for label, row in zip(labels, rows)])
+    ax.set_xlabel("Time (s)")
+    ax.set_xlim(0, largest*1.29)
+    ax.grid(axis="x", color=LIGHT_GRAY)
     ax.set_axisbelow(True)
-
-    ax.legend(
-        handles=[
-            Patch(facecolor=SERVER, edgecolor=SERVER, label="measured"),
-            Patch(
-                facecolor="white",
-                edgecolor=GRAY,
-                hatch="///",
-                label="projected at fixed circuit",
-            ),
-        ],
-        frameon=False,
-        fontsize=10,
-        loc="lower right",
-        bbox_to_anchor=(1.0, 1.005),
-        ncol=2,
-    )
-
-    excl = sc["out_of_encrypted_scope"][0]
-    ax.text(
-        0.0,
-        -0.185,
-        f"Excluded: mRNA abundance regression at {excl['tokens']:,} tokens needs "
-        f"{excl['token_groups']} ciphertext groups and roughly 48,000 causal score "
-        f"tiles — a different problem, not a longer one.",
-        transform=ax.transAxes,
-        fontsize=9.2,
-        color=GRAY,
-        ha="left",
-        va="top",
-    )
-
-    title(
-        ax,
-        "The task that was measured is the longest one",
-        "Token counts follow from the task: base pairs divided by six, plus task specials. "
-        "The twelve-block figures are projections.",
-    )
+    despine(ax, keep=("bottom",))
+    fig.text(.02, .035, "Fixed circuit/head; attention and fixed costs not fitted separately.", fontsize=6.5, color=GRAY)
     return emit(fig, out, "fig_scaling")
 
 
-# --- 9. Plaintext baseline --------------------------------------------------
-
-
-def fig_baseline(out: pathlib.Path) -> pathlib.Path:
+def fig_baseline(out):
     L = Ledger()
-    rows = [
-        ("Polyadenylation signal\n(accuracy)", "base.gsr_accuracy", True),
-        ("Core promoter\n(MCC)", "base.gue_prom_core_mcc", True),
-        ("300 bp promoter\n(MCC)", "base.gue_prom_300_mcc", True),
-        ("Splice site\n(MCC)", "base.gue_splice_mcc", True),
-        ("mRNA abundance\n($r^2$)", "base.mrna_r2", False),
-    ]
-    labels = [r[0] for r in rows]
-    ours = [L.value(r[1]) for r in rows]
-    refs = [L.rows[r[1]].get("reference") for r in rows]
-    in_scope = [r[2] for r in rows]
-
-    x = np.arange(len(rows))
-    fig, ax = plt.subplots(figsize=(11.2, 5.9), dpi=DPI)
-    ax.bar(
-        x - 0.185,
-        ours,
-        width=0.35,
-        facecolor=SERVER,
-        label="this work",
-        **MEASURED_KW,
-        zorder=3,
-    )
-    ax.bar(
-        x + 0.185,
-        refs,
-        width=0.35,
-        facecolor="white",
-        edgecolor=GRAY,
-        linewidth=1.2,
-        label="published reference",
-        zorder=3,
-    )
-
-    for xi, (o, r) in enumerate(zip(ours, refs)):
-        ax.text(
-            xi - 0.185,
-            o + 0.016,
-            f"{o:.3f}",
-            ha="center",
-            va="bottom",
-            fontsize=10,
-            fontweight="bold",
-        )
-        if r is not None:
-            ax.text(
-                xi + 0.185,
-                r + 0.016,
-                f"{r:.2f}",
-                ha="center",
-                va="bottom",
-                fontsize=10,
-                color=GRAY,
-            )
-
-    ax.set_xticks(x)
-    ax.set_xticklabels(labels, fontsize=10)
-    ax.set_ylabel("Metric value", fontsize=11)
-    ax.set_ylim(0, 1.10)
-    ax.set_xlim(-0.6, len(rows) - 0.4)
-    ax.legend(
-        frameon=False, fontsize=10, loc="upper right", ncol=2, bbox_to_anchor=(1.0, 1.0)
-    )
-    despine(ax)
-    ax.grid(axis="y", color=LIGHT_GRAY, linewidth=0.8)
-    ax.set_axisbelow(True)
-
-    # Shade and label the task that is outside the encrypted scope.
-    for xi, inside in enumerate(in_scope):
-        if not inside:
-            ax.axvspan(xi - 0.42, xi + 0.42, color=PALE_ORANGE, alpha=0.55, zorder=0)
-            ax.text(
-                xi,
-                0.035,
-                "outside the\nencrypted scope",
-                fontsize=9,
-                color=AMBER,
-                ha="center",
-                va="bottom",
-                style="italic",
-                fontweight="bold",
-                linespacing=1.35,
-            )
-
-    title(
-        ax,
-        "The released model, reproduced locally",
-        "Signal recognition and abundance regression use the released fine-tuned heads. "
-        "The promoter and splice-site rows use a locally fine-tuned head, as none was "
-        "released.",
-    )
+    rows = [("Signal (accuracy)", "base.gsr_accuracy", 4),
+            ("Core promoter (MCC)", "base.gue_prom_core_mcc", 3),
+            ("300 bp promoter (MCC)", "base.gue_prom_300_mcc", 3),
+            ("Splice site (MCC)", "base.gue_splice_mcc", 3),
+            ("mRNA ($r^2$)", "base.mrna_r2", 3)]
+    fig, ax = plt.subplots(figsize=(COLUMN_WIDTH, 2.5), dpi=DPI)
+    fig.subplots_adjust(left=.43, right=.98, bottom=.16, top=.78)
+    panel_title(fig, "Plaintext model reproduction", "Filled: this work; open: published reference.")
+    for i, (_, rid, precision) in enumerate(rows):
+        own, ref = L.value(rid), L.row(rid)["reference"]
+        ax.plot([own, ref], [i, i], color=GRAY, lw=.8)
+        ax.plot(own, i, "o", color=SERVER, ms=4.4)
+        ax.plot(ref, i, "s", mfc="white", mec=GRAY, ms=4)
+        ax.text(.995, i+.36, f"{own:.{precision}f} / {ref:.{precision}f}",
+                 ha="right", va="center", fontsize=6.3, color=GRAY)
+    ax.set_yticks(range(len(rows)), [r[0] for r in rows])
+    ax.set_xlim(.48, 1.0)
+    ax.set_ylim(len(rows)-.45, -.65)
+    ax.set_xlabel("Task-specific metric value")
+    ax.grid(axis="x", color=LIGHT_GRAY)
+    despine(ax, keep=("bottom",))
     return emit(fig, out, "fig_baseline")
 
-
-# --- Driver -----------------------------------------------------------------
 
 FIGURES = {
     "graphical_abstract": fig_graphical_abstract,
@@ -1216,23 +355,16 @@ def main() -> int:
     ap = argparse.ArgumentParser(description=__doc__)
     ap.add_argument("--output-dir", type=pathlib.Path, default=DEFAULT_OUT)
     ap.add_argument("--only", nargs="+", choices=sorted(FIGURES), metavar="NAME")
-    ap.add_argument(
-        "--png", type=pathlib.Path, help="also write review PNGs to this directory"
-    )
+    ap.add_argument("--png", type=pathlib.Path)
     ap.add_argument("--list", action="store_true")
     args = ap.parse_args()
-
     if args.list:
         print("\n".join(FIGURES))
         return 0
-
     PNG_DIR = args.png
     for name in args.only or list(FIGURES):
         print(f"  {FIGURES[name](args.output_dir).relative_to(ROOT)}")
-    print(
-        f"{len(args.only or FIGURES)} figure(s) written to "
-        f"{args.output_dir.relative_to(ROOT)}"
-    )
+    print(f"{len(args.only or FIGURES)} figure(s) written")
     return 0
 
 

@@ -25,11 +25,20 @@ ensure_venv() {
 build_figures() {
   ensure_venv
   echo "==> figures"
-  "${PY}" "${PAPER}/scripts/figures.py"
+  local mpl_cache="${TMPDIR:-/tmp}/dnagpt-paper-matplotlib"
+  mkdir -p "${mpl_cache}"
+  MPLCONFIGDIR="${mpl_cache}" "${PY}" "${PAPER}/scripts/figures.py"
 }
 
 build_pdf() {
   echo "==> pdf"
+  # TACC exposes TeX Live through Lmod rather than on PATH. Load it when
+  # available so the same build command works in an interactive shell or job.
+  if ! command -v latexmk >/dev/null 2>&1 && ! command -v tectonic >/dev/null 2>&1; then
+    if type module >/dev/null 2>&1; then
+      module load texlive/2023 >/dev/null 2>&1 || true
+    fi
+  fi
   if command -v latexmk >/dev/null 2>&1; then
     ( cd "${SRC}" && latexmk -pdf main.tex )
     echo "    ${SRC}/main.pdf"

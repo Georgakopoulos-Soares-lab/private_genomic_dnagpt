@@ -11,13 +11,14 @@
 # host names, scheduler job numbers. Those are development bookkeeping, not scientific content.
 
 meta:
-  updated: 2026-08-08
+  updated: 2026-09-07
   encrypted_scope: >
-    One complete DNAGPT transformer block evaluated on encrypted activations at the full
-    103-token genomic-signal prompt length. Not the twelve-block classifier, not the task head,
-    and not encrypted token-index lookup.
+    The strongest measurement is one complete DNAGPT-0.1b genomic-signal classifier: all twelve
+    transformer blocks and the released task head evaluated at the full 103-token prompt length.
+    The encrypted boundary begins at embedded vectors and excludes private token-index lookup.
   hardware: >
-    One NVIDIA A100 GPU (40 GB) with 32 CPU cores, allocated as a dedicated node.
+    One telemetry-confirmed clean NVIDIA A100 GPU (40 GB) with 32 CPU cores. The allocation did
+    not establish exclusive use of the physical node.
   acceptance: >
     A run passes when the decrypted output matches the frozen plaintext reference within a
     relative infinity-norm tolerance of 4e-2.
@@ -31,7 +32,7 @@ block_timing:
     value: 663
     unit: s
     tag: "[V]"
-    scope: "One block, 103 tokens, end of process to start of process"
+    scope: "One block, 103 tokens, process start through process end"
     source: "docs/hybrid/t123_walkthrough.md §8"
   - id: block.encrypted_evaluation
     value: 652.545
@@ -76,6 +77,210 @@ block_timing:
     scope: "Reading released weights and embeddings from disk"
     source: "docs/hybrid/t123_walkthrough.md §8"
 
+# ---------------------------------------------------------------------------
+# 1a. Complete twelve-block classifier and released task head
+#
+# One clean, telemetry-confirmed sample. Correctness and elapsed time are measured; repeat-run
+# variance and networked client/server transport remain unresolved.
+# ---------------------------------------------------------------------------
+
+full_classifier:
+  - id: full.wall
+    value: 6683
+    unit: s
+    tag: "[V]"
+    scope: >
+      One complete twelve-block DNAGPT-0.1b genomic-signal classifier plus released encrypted
+      task head at 103 tokens, measured on one clean single-A100 node.
+    source: "docs/hybrid/tasks.md, Complete 12-block + GSR-head encrypted forward pass"
+    notes: "Approximately 1.86 hours. One sample; independent repetition remains open."
+  - id: full.encrypted_evaluation
+    value: 6594.748483198002
+    unit: s
+    tag: "[V]"
+    scope: "Twelve blocks, eleven inter-block refreshes, last-token refresh, and encrypted head"
+    source: "docs/hybrid/tasks.md, Complete 12-block + GSR-head encrypted forward pass"
+  - id: full.blocks_encrypted_evaluation
+    value: 6565.992935047001
+    unit: s
+    tag: "[V]"
+    scope: "Sum of encrypted evaluation across all twelve transformer blocks"
+    source: "docs/hybrid/tasks.md, Complete 12-block + GSR-head encrypted forward pass"
+  - id: full.head_encrypted_evaluation
+    value: 9.045895324
+    unit: s
+    tag: "[V]"
+    scope: "Released genomic-signal task head after the twelve encrypted blocks"
+    source: "docs/hybrid/tasks.md, Complete 12-block + GSR-head encrypted forward pass"
+  - id: full.refreshes
+    value: 19.709652827
+    unit: s
+    tag: "[V]"
+    scope: "Eleven inter-block full-state refreshes plus one last-token refresh"
+    source: "docs/hybrid/tasks.md, Complete 12-block + GSR-head encrypted forward pass"
+  - id: full.server_linear_algebra
+    value: 5638.561475474001
+    unit: s
+    tag: "[V]"
+    scope: "Server-side encrypted linear algebra across the complete classifier"
+    source: "docs/hybrid/tasks.md, Complete 12-block + GSR-head encrypted forward pass"
+  - id: full.client_boundaries
+    value: 956.1870077240006
+    unit: s
+    tag: "[V]"
+    scope: "In-process client-boundary cryptographic work across the complete classifier"
+    source: "docs/hybrid/tasks.md, Complete 12-block + GSR-head encrypted forward pass"
+  - id: full.server_share_pct
+    value: 85.5
+    unit: "%"
+    tag: "[V]"
+    scope: "Server share of complete encrypted-evaluation time"
+    source: "docs/hybrid/tasks.md, Complete 12-block + GSR-head encrypted forward pass"
+  - id: full.client_share_pct
+    value: 14.5
+    unit: "%"
+    tag: "[V]"
+    scope: "Client-boundary share of complete encrypted-evaluation time"
+    source: "docs/hybrid/tasks.md, Complete 12-block + GSR-head encrypted forward pass"
+  - id: full.per_block_mean
+    value: 547.1660779205834
+    unit: s
+    tag: "[V]"
+    scope: "Mean evaluation time across the twelve consecutive blocks in the complete run"
+    source: "docs/hybrid/tasks.md, Complete 12-block + GSR-head encrypted forward pass"
+  - id: full.per_block_range
+    value: [533.869242651, 558.943309887]
+    unit: s
+    tag: "[V]"
+    scope: "Minimum and maximum block evaluation time within the single complete run"
+    source: "docs/hybrid/tasks.md, Complete 12-block + GSR-head encrypted forward pass"
+  - id: full.per_block_spread_pct
+    value: 4.5
+    unit: "%"
+    tag: "[A]"
+    scope: "Relative spread across the twelve block times in the complete run"
+    source: "derived from full.per_block_range"
+  - id: full.context_keygen_load
+    value: 3.944696831
+    unit: s
+    tag: "[V]"
+    scope: "One-time context construction, key generation, and key loading"
+    source: "docs/hybrid/tasks.md, Complete 12-block + GSR-head encrypted forward pass"
+  - id: full.encrypt_input
+    value: 1.264851686
+    unit: s
+    tag: "[V]"
+    scope: "One-time encryption of the embedded 103-token input"
+    source: "docs/hybrid/tasks.md, Complete 12-block + GSR-head encrypted forward pass"
+  - id: full.final_decrypt
+    value: 0.043833214
+    unit: s
+    tag: "[V]"
+    scope: "Final client decryption of the encrypted head output"
+    source: "docs/hybrid/tasks.md, Complete 12-block + GSR-head encrypted forward pass"
+  - id: full.global_relative_range
+    value: [2.349302393730871e-09, 2.0656009090123795e-08]
+    unit: "relative infinity norm"
+    tag: "[V]"
+    scope: "Minimum and maximum block-output error across all twelve blocks"
+    source: "docs/hybrid/tasks.md, Complete 12-block + GSR-head encrypted forward pass"
+  - id: full.global_relative_max_rounded
+    value: 2.07e-08
+    unit: "relative infinity norm"
+    tag: "[A]"
+    scope: "Publication rounding of the upper endpoint of full.global_relative_range"
+    source: "derived from full.global_relative_range"
+  - id: full.worst_token_relative_range
+    value: [4.390464700664904e-09, 1.54381786956218e-07]
+    unit: "relative infinity norm"
+    tag: "[V]"
+    scope: "Minimum and maximum worst-token error across all twelve blocks"
+    source: "docs/hybrid/tasks.md, Complete 12-block + GSR-head encrypted forward pass"
+  - id: full.worst_token_relative_max_rounded
+    value: 1.54e-07
+    unit: "relative infinity norm"
+    tag: "[A]"
+    scope: "Publication rounding of the upper endpoint of full.worst_token_relative_range"
+    source: "derived from full.worst_token_relative_range"
+  - id: full.head_margin_relative_error
+    value: 8.55814015132133e-09
+    unit: "relative"
+    tag: "[V]"
+    scope: "Decrypted encrypted-head margin versus the direct plaintext reference"
+    source: "docs/hybrid/tasks.md, Complete 12-block + GSR-head encrypted forward pass"
+  - id: full.head_margin_relative_error_rounded
+    value: 8.56e-09
+    unit: "relative"
+    tag: "[A]"
+    scope: "Publication rounding of full.head_margin_relative_error"
+    source: "derived from full.head_margin_relative_error"
+  - id: full.head_label_matches_reference
+    value: true
+    tag: "[V]"
+    scope: "Final genomic-signal label matches the frozen plaintext reference"
+    source: "docs/hybrid/tasks.md, Complete 12-block + GSR-head encrypted forward pass"
+  - id: full.host_peak
+    value: 49.7
+    unit: GiB
+    tag: "[V]"
+    scope: "Peak target-process host resident memory across the complete classifier"
+    source: "docs/hybrid/tasks.md, Complete 12-block + GSR-head encrypted forward pass"
+  - id: full.gpu_peak_mib
+    value: 9839
+    unit: MiB
+    tag: "[V]"
+    scope: "Peak GPU memory used by the evaluating process across the complete classifier"
+    source: "docs/hybrid/tasks.md, Complete 12-block + GSR-head encrypted forward pass"
+  - id: full.block_matrix_products
+    value: 1872
+    unit: "dense encrypted matrix products"
+    tag: "[V]"
+    scope: "Twelve blocks at 156 dense products per block"
+    source: "docs/hybrid/tasks.md, Complete 12-block + GSR-head encrypted forward pass"
+  - id: full.head_matrix_products
+    value: 1
+    unit: "dense encrypted matrix product"
+    tag: "[V]"
+    scope: "Released encrypted genomic-signal task head"
+    source: "docs/hybrid/tasks.md, Complete 12-block + GSR-head encrypted forward pass"
+  - id: full.ct_pt_multiplications
+    value: 2133839
+    unit: "ciphertext-plaintext multiplications"
+    tag: "[V]"
+    scope: "Complete twelve-block classifier and released task head"
+    source: "docs/hybrid/tasks.md, Complete 12-block + GSR-head encrypted forward pass"
+  - id: full.ct_ct_multiplications
+    value: 18076
+    unit: "ciphertext-ciphertext multiplications"
+    tag: "[V]"
+    scope: "Complete twelve-block classifier and released task head"
+    source: "docs/hybrid/tasks.md, Complete 12-block + GSR-head encrypted forward pass"
+  - id: full.client_crossings_physical
+    value: 10299
+    unit: "boundary crossings"
+    tag: "[V]"
+    scope: >
+      In-process physical client boundary crossings across twelve blocks, inter-block refreshes,
+      last-token refresh, and the head. They are not network messages.
+    source: "docs/hybrid/tasks.md, Complete 12-block + GSR-head encrypted forward pass"
+  - id: full.client_instances_logical
+    value: 1551081
+    unit: "nonlinear values"
+    tag: "[V]"
+    scope: "Logical values processed at client boundaries across the complete classifier"
+    source: "docs/hybrid/tasks.md, Complete 12-block + GSR-head encrypted forward pass"
+  - id: full.inter_block_refreshes
+    value: 11
+    unit: "refreshes"
+    tag: "[V]"
+    scope: "Full-hidden-state refreshes between twelve consecutive transformer blocks"
+    source: "docs/hybrid/tasks.md, Complete 12-block + GSR-head encrypted forward pass"
+  - id: full.independent_repetitions
+    value: 1
+    tag: "[V]"
+    scope: "Only one clean complete-classifier sample is currently available"
+    source: "docs/hybrid/tasks.md; docs/overview.md"
+
 cost_shares:
   - id: share.server_pct
     value: 80.2
@@ -103,7 +308,7 @@ cost_shares:
     source: "derived from block.client_boundaries and ops.client_crossings_physical"
     notes: >
       An earlier shared-host estimate gave approximately 0.161 s per crossing. Quote the
-      derived value from the dedicated-node measurement, not the older estimate.
+      derived from the shared-host one-block measurement; do not quote it as clean service timing.
 
 # What the data owner actually has to provide. This is the deployment claim, and it is the
 # number a reader will check the scenario against.
@@ -111,7 +316,7 @@ client_requirements:
   - id: client.peak_ram
     value: 14
     unit: GB
-    tag: "[V]"
+    tag: "[U]"
     scope: "Peak client-side memory across a complete block at 103 tokens"
     source: "Measured by the implementing engineer on the optimized configuration."
     notes: >
@@ -173,7 +378,7 @@ correctness:
 
 memory:
   - id: mem.host_peak
-    value: 48.6
+    value: 47.5
     unit: GiB
     tag: "[V]"
     scope: "Peak host resident set size, reached during the MLP stage"
@@ -186,25 +391,25 @@ memory:
     source: "docs/hybrid/t123_walkthrough.md §8"
     notes: "9,839 MiB. Process footprint, not device-wide occupancy."
   - id: mem.stage_qkv
-    value: 25.5
+    value: 24.9
     unit: GiB
     tag: "[V]"
     scope: "Host RSS during query/key/value projection; three weight matrices resident"
     source: "docs/hybrid/t123_walkthrough.md §7"
   - id: mem.stage_attention
-    value: 12.4
+    value: 12.1
     unit: GiB
     tag: "[V]"
     scope: "Host RSS during attention; no weight matrices resident after the stage flush"
     source: "docs/hybrid/t123_walkthrough.md §7"
   - id: mem.stage_mlp
-    value: 48.6
+    value: 47.5
     unit: GiB
     tag: "[V]"
     scope: "Host RSS during the MLP stage; eight weight matrices resident"
     source: "docs/hybrid/t123_walkthrough.md §7"
   - id: mem.unbounded_failure
-    value: 61.9
+    value: 60.4
     unit: GiB
     tag: "[V]"
     scope: >
@@ -493,7 +698,7 @@ prompt_length:
   - id: prompt.kmer
     value: 6
     tag: "[V]"
-    scope: "DNAGPT tokenizes overlapping 6-mers"
+    scope: "DNAGPT tokenizes non-overlapping chunks with stride six"
     source: "DNAGPT upstream tokenizer"
   - id: prompt.gsr_kmer_tokens
     value: 100
@@ -618,9 +823,21 @@ composition:
     scope: "GPU memory peaked in the first block and did not increase in the second"
     source: "docs/hybrid/tasks.md"
   - id: compose.twelve_block_at_task_length
+    value: true
+    tag: "[V]"
+    scope: >
+      All twelve released transformer blocks and the released genomic-signal task head pass at
+      103 tokens; the final label matches the frozen plaintext reference.
+    source: "docs/hybrid/tasks.md, Complete 12-block + GSR-head encrypted forward pass"
+  - id: compose.full_run_repeat
+    value: null
+    tag: "[U]"
+    scope: "The complete clean run has not yet been independently repeated to quantify variance"
+    source: "docs/overview.md; docs/hybrid/roadmap.md"
+  - id: compose.network_transport
     value: null
     tag: "[U]"
     scope: >
-      The twelve-block driver with the released task head is built and passes local
-      contracts, but has not been run at 103 tokens.
-    source: "CLAUDE.md, docs/hybrid/roadmap.md"
+      No networked client/server transport has been implemented or measured; every recorded
+      boundary crossing is an in-process cryptographic operation.
+    source: "docs/overview.md; docs/hybrid/roadmap.md"

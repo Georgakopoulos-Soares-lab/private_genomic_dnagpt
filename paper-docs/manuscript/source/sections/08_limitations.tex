@@ -1,29 +1,26 @@
 % ---------------------------------------------------------------------------
-% 8 Limitations
-% Source: context/05_claims_and_qualifiers.md, docs/hybrid/t123_walkthrough.md §11
-% Discipline: this is where caveats LIVE. Do not scatter them through earlier sections.
+% 8 Limitations. Scope qualifications live here rather than being repeated.
 % ---------------------------------------------------------------------------
 
 \section{Limitations}
 \label{sec:limitations}
 
-The measured unit is one complete released-weight transformer block at the task's full
-$103$-token prompt length, with encrypted server-side linear algebra and client-evaluated
-nonlinearities. It does not include the remaining transformer blocks, the released task head, or
-token-index lookup. The $12$-block driver with the task head is built but has not run at this prompt
-length. The study reports no encrypted task accuracy or encrypted final prediction.
+The strongest measurement is one complete execution of all $12$ released transformer blocks and
+the genomic-signal task head for one held-out input at the full $103$-token prompt length. It
+establishes numerical agreement for that classifier execution, including the final prediction, but
+does not estimate encrypted task accuracy over the full test set. The complete run has one clean
+sample and has not been independently repeated to quantify run-to-run variation.
 
-Client and server are roles inside one program on one node. Boundary calls perform the
-cryptographic operations directly, without ciphertext serialization, network transport, or a key
-custody service. A physical client boundary crossing is therefore not a network message. A
-deployment experiment must measure serialized payload volume, dependency phases, bandwidth
-sensitivity, transport latency, and production key handling rather than infer them from the
-in-process counter.
+Client and server are roles inside one program on one node. Boundary calls perform cryptographic
+operations directly, without ciphertext serialization, network transport, or a key-custody service.
+A physical client boundary crossing is therefore not a network message. A deployment experiment
+must measure payload volume, dependency phases, bandwidth sensitivity, transport latency, and
+production key handling rather than infer them from the in-process counter.
 
 Encryption begins at embedded numeric vectors. Tokenization, token-index lookup in the embedding
 table, and construction of the initial embedding occur before the encrypted boundary. Private
-lookup is therefore an unresolved part of a complete genomic inference service; none of the block
-results closes it.
+lookup therefore remains unresolved even though the classifier computation after embedding now
+completes.
 
 Model confidentiality remains operational rather than cryptographic. Because the data owner sees
 full activations at every nonlinearity, the transcript divides the network into shallow segments
@@ -32,18 +29,9 @@ global inversion problem. Server-side weight placement can discourage casual cop
 protect the model from a determined client; the deployment keeps the model on the server because
 the server operates it.
 
-The exposure is structural. MLP boundaries reveal inputs and corresponding pre- or post-activation
-values for a shallow linear segment, while attention boundaries reveal score and weight relations.
-Changing query policy may limit casual collection of such pairs, but it does not turn the transcript
-into a cryptographic model-protection mechanism.
-
 CKKS decryption is approximate. The client never returns a decoded value to the server, only a
-freshly encrypted result, but the server selects the ciphertext supplied to each declared
-boundary. The semi-honest threat model rules out adversarially chosen deviations from that
-schedule. The current re-encryption path applies no noise flooding. The measured
-$4.64\times10^{-9}$ error leaves seven orders of magnitude inside the $4\times10^{-2}$ acceptance
-tolerance, but numerical headroom alone does not establish a secure flooding parameter. Selecting
-and validating that budget remains future work.
-
-The adversary exclusions are defined in Section~\ref{sec:threat-model}. The results do not extend
-beyond that threat model.
+freshly encrypted result, but the server selects the ciphertext supplied to each declared boundary.
+The semi-honest threat model rules out deviations from that schedule. The current re-encryption
+path applies no noise flooding. The measured numerical headroom does not establish a secure
+flooding parameter, which remains future work. The adversary exclusions are defined in
+Section~\ref{sec:threat-model}; the results do not extend beyond them.

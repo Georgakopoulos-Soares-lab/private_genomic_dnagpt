@@ -1,144 +1,184 @@
 % ---------------------------------------------------------------------------
-% 7 Results
-% Every number here comes from evidence/measurements.yaml, telemetry.yaml, or scaling.yaml.
-% Timing results are withheld until clean dedicated-node artifacts are committed.
+% 7 Results. Every number comes from the paper evidence ledger.
 % ---------------------------------------------------------------------------
 
 \section{Results}
 \label{sec:results}
 
-The client-assisted circuit defined in Section~\ref{sec:protocol} is evaluated along three axes:
-numerical agreement, the executed operation schedule, and memory. Composition is tested separately
-at reduced sequence length. The repository does not contain a clean dedicated-node timing artifact
-for the retained task-length implementation, so this section makes no latency or throughput claim.
+We evaluate the client-assisted circuit along four axes: plaintext model fidelity, encrypted
+numerical agreement, executed work, and resource cost. The strongest result is one complete
+classifier execution for a held-out genomic-signal input at the task's full prompt length.
 
-\subsection{Correctness}
+\input{sections/07_plaintext_results}
 
-Correctness rests on the two-stage chain described in Section~\ref{sec:baseline}. Before encrypted
-evaluation, the independent NumPy reference is asserted against the upstream PyTorch computation at
-a tolerance of $2\times10^{-5}$, separately for all $12$ transformer blocks and the classifier
-head; export aborts on a divergence. The encrypted circuit is then compared with that validated
-reference. This ordering prevents an unchecked reimplementation from serving as the sole judge of
-its encrypted counterpart.
+\subsection{Complete-classifier correctness}
 
-The decrypted output has relative infinity-norm error $4.64\times10^{-9}$ against an acceptance
-tolerance of $4\times10^{-2}$ fixed before the run, leaving seven orders of magnitude of headroom.
-The worst token-relative error is $4.7\times10^{-9}$, and the largest absolute deviation is
-$7.44\times10^{-8}$. These values establish numerical agreement for the encrypted block with the
-released weights and exact client nonlinearities.
+Correctness rests on the two-stage chain in Section~\ref{sec:baseline}. Before encryption, the
+independent NumPy reference is asserted against the upstream PyTorch computation at tolerance
+$2\times10^{-5}$ for every transformer block and the classifier head. The encrypted circuit is
+then compared with that validated reference under the predeclared relative infinity-norm tolerance
+of $4\times10^{-2}$.
+
+All $12$ released transformer blocks, $11$ full-hidden-state client refreshes, and the released
+task head complete for the $103$-token input. Across the block outputs, global relative error is at
+most $2.07\times10^{-8}$, and worst-token relative error is at most
+$1.54\times10^{-7}$. The final encrypted-head margin has relative error
+$8.56\times10^{-9}$ and yields the same label as the frozen plaintext reference. Every block output
+stays within the predeclared tolerance after its refresh. This is an encrypted prediction for one
+held-out input, not an encrypted estimate of task accuracy over the test set.
+
+The complete result subsumes the earlier composition checks summarized in
+Table~\ref{tab:scope}. A separate two-block execution at two tokens had established that a
+full-hidden-state refresh starts the next block at level~$0$ without increasing GPU memory. The
+task-length execution now verifies that mechanism across every released block and the task head.
+
+Figure~\ref{fig:timeline} shows the blockwise timing and numerical agreement within this execution.
+
+\begin{figure}[!t]\centering
+  \includegraphics[width=\columnwidth]{fig_timeline.pdf}
+  \caption{Blockwise time and numerical agreement in the measured complete-classifier execution.
+  The consecutive blocks belong to one input and one run; their variation is not independent-run variance.}
+  \label{fig:timeline}
+\end{figure}
+
+\begin{table*}[!t]\centering\small
+\caption{Encrypted evaluation at the reported scopes. The complete-classifier row represents one
+held-out genomic-signal input, not a test-set accuracy measurement.}
+\label{tab:scope}
+\begin{tabularx}{\textwidth}{>{\hsize=1.25\hsize}Y >{\hsize=.85\hsize}Y >{\hsize=1.2\hsize}Y >{\hsize=.5\hsize}Y >{\hsize=1.2\hsize}Y}
+\toprule
+Scope & Status & Numerical agreement & Wall time & Process peak memory \\
+\midrule
+Two blocks, 2 tokens, client refresh & measured & $8.48\times10^{-11}$ after block 2 & --- & no growth in block 2 \\
+One block, 103 tokens & measured & $4.64\times10^{-9}$ & --- & $9.6$~GiB GPU \\
+Twelve blocks and task head, 103 tokens & measured & label match; $8.56\times10^{-9}$ head margin & $6{,}683$~s & $9{,}839$~MiB GPU; $49.7$~GiB host \\
+Encrypted token-index lookup & outside evaluated boundary & --- & --- & --- \\
+\bottomrule
+\end{tabularx}
+\end{table*}
 
 \subsection{Executed work}
 
-\begin{table}[t]\centering\small
-\caption{Checked operation schedule for the evaluated transformer block.}
+Table~\ref{tab:cost} reports the checked operation schedule. Every block retains the same schedule
+used throughout the systems campaign. The complete run adds the released task head and asserts its
+own totals, so the final label cannot be attributed to silently omitting a model stage.
+
+\begin{table*}[!t]\centering\small
+\caption{Checked work for one task-length block and for the measured complete classifier. Physical
+client crossings are in-process cryptographic operations, not network messages.}
 \label{tab:cost}
-\begin{tabularx}{\textwidth}{Y r l}
+\begin{tabularx}{\textwidth}{Y r r l}
 \toprule
-Operation & Count & Executor \\
+Operation & One block & Complete classifier & Executor \\
 \midrule
-Dense products & 156 & compute provider \\
-Ciphertext--plaintext multiplications & 177{,}734 & compute provider \\
-Ciphertext--ciphertext multiplications & 1{,}506 & compute provider \\
-Rotations & 8{,}173 & compute provider \\
-Slot reductions & 8{,}776 & compute provider \\
-Physical client boundary crossings & 857 & data owner \\
-Logical nonlinear values & 129{,}162 & data owner \\
+Dense encrypted products & 156 & 1{,}872 blocks $+$ 1 head & compute provider \\
+Ciphertext--plaintext multiplications & 177{,}734 & 2{,}133{,}839 & compute provider \\
+Ciphertext--ciphertext multiplications & 1{,}506 & 18{,}076 & compute provider \\
+Rotations & 8{,}173 & --- & compute provider \\
+Slot reductions & 8{,}776 & --- & compute provider \\
+Physical client boundary crossings & 857 & 10{,}299 & data owner \\
+Logical nonlinear values & 129{,}162 & 1{,}551{,}081 & data owner \\
 \bottomrule
 \end{tabularx}
-\end{table}
+\end{table*}
 
-The implementation asserts every count in Table~\ref{tab:cost}, the boundary sequence, and the
-remaining multiplicative depth before the MLP. Any deviation aborts the run. This turns the
-operation schedule into evidence that the optimized implementation executes the same circuit, not
-an assurance inferred from a passing output.
+For one block, the $857$ physical boundary crossings carry $129{,}162$ logical values. Softmax
+accounts for $128{,}544$, or $99.5\%$, of them; LayerNorm and GELU account for the remainder.
+Eight-token packing reduces the serial-equivalent dense-product count from $1{,}236$ to $156$, a
+$7.92\times$ structural reduction. Rotations, masking, client work, and host preparation remain,
+so that factor is an operation-count reduction rather than a latency speedup.
 
-Packing separates physical interaction from nonlinear model work. The $857$ physical client
-boundary crossings carry $129{,}162$ logical values. Softmax accounts for $128{,}544$ of those
-values, or $99.5\%$; LayerNorm and GELU together account for the remainder. Boundary optimization
-is therefore principally an attention problem, even though the protocol contains three
-nonlinearity classes.
+\subsection{Measured elapsed time and work split}
 
-The dense schedule also records the benefit of token packing. Eight-token packing reduces the
-serial-equivalent dense-product count from $1{,}236$ to $156$, a $7.92\times$ reduction in
-operations. Rotations, masking, client work, and host preparation remain in the packed circuit, so
-the factor describes operation count rather than latency.
+The complete classifier takes $6{,}683$~s ($1.86$~h) from process start through completion;
+encrypted evaluation accounts for $6{,}594.75$~s. The $12$ blocks consume $6{,}565.99$~s, the
+encrypted head $9.05$~s, and the refreshes $19.71$~s. The block times within this execution range
+from $533.9$ to $558.9$~s, with a mean of $547.2$~s. This within-run range is about
+$4.5\%$ of the maximum; it describes block consistency in one execution, not independent-run
+variance.
+
+Figure~\ref{fig:waterfall} separates block computation, refreshes, and head evaluation within the
+complete elapsed time.
+
+\begin{figure}[!t]\centering
+  \includegraphics[width=\columnwidth]{fig_waterfall.pdf}
+  \caption{Measured complete-run time decomposition. Transformer evaluation, refreshes, and the
+  task head are instrumented subtotals; the remaining interval is outside those subtotals.}
+  \label{fig:waterfall}
+\end{figure}
+
+Server-side encrypted linear algebra accounts for $5{,}638.56$~s, or $85.5\%$ of encrypted
+evaluation. The in-process client boundaries account for $956.19$~s, or $14.5\%$, and require no
+GPU. The measured execution is therefore server-dominated, while the data owner's work remains
+CPU-only. The client fraction should decrease as $O(1/D)$ with hidden width $D$ at fixed sequence
+structure because boundary values scale with $D$ and server dense transforms with $D^2$; this is a
+scaling argument, not a measurement of a wider model.
+
+\begin{figure}[!b]\centering
+  \includegraphics[width=\columnwidth]{fig_cost_split.pdf}
+  \caption{Server and client shares of measured encrypted-evaluation time. Client operations run
+  on CPU inside the evaluated process; the figure does not include network transport.}
+  \label{fig:cost-split}
+\end{figure}
+
+Figure~\ref{fig:cost-split} summarizes this division of computation.
 
 \subsection{Memory}
 
-The evaluating process peaks at $9.6$~GiB of GPU memory, within the $40$~GB device used for the
-experiment. This is the evaluating process footprint rather than device-wide occupancy.
+The complete process peaks at $9{,}839$~MiB of GPU memory and $49.7$~GiB of host resident memory.
+The GPU value is the evaluating process footprint, not device-wide occupancy. At one-block scope,
+host memory follows the encoded-template lifetime: query/key/value projection reaches $24.9$~GiB,
+attention begins after a cache flush at $12.1$~GiB, and the MLP reaches $47.5$~GiB while holding the
+largest live weight set.
 
-Host memory follows the lifetime of encoded plaintext templates. Query/key/value projection reaches
-$25{,}530$~MiB of target-process resident memory. A cache flush precedes attention, whose recorded
-resident memory is $12{,}434$~MiB. The MLP holds the largest live weight set and reaches the block
-peak of $48{,}610$~MiB. These stage transitions match the explicit flush points in
-Section~\ref{sec:optimization}; encoded weights do not accumulate across the entire block.
+The non-interactive composition configuration and the host cache expose different memory
+mechanisms. The former exceeded its tested $80$~GB GPU envelope while loading a deeper context and
+evaluation keys. Client re-encryption bounds multiplicative depth between declared boundaries and
+thereby moves that accelerator barrier. Separately, stage-bounded eviction prevents encoded host
+templates from accumulating; an unbounded cache was terminated at $60.4$~GiB before the retained
+policy reduced the block peak to $47.5$~GiB.
 
-The two memory results have different mechanisms. The non-interactive composition configuration
-exceeded its tested $80$~GB GPU envelope while loading the deep context and evaluation keys.
-Client re-encryption shortens the encrypted segments and resets their depth budget, moving that
-accelerator-memory barrier. Stage-bounded caching prevents the resulting host-side plaintext
-templates from becoming an unbounded second barrier.
+\subsection{Sequence-length boundary}
 
-\subsection{Composition and evaluation boundary}
-
-\begin{table}[t]\centering\small
-\caption{Encrypted evaluation completed at each reported scope.}
-\label{tab:scope}
-\begin{tabularx}{\textwidth}{Y l l}
-\toprule
-Scope & Status & Relative error \\
-\midrule
-One block, 2 tokens & measured & --- \\
-Two consecutive blocks, 2 tokens, client refresh & measured & $8.48\times10^{-11}$ \\
-One block, 103 tokens (task length) & measured & $4.64\times10^{-9}$ \\
-Twelve blocks and task head, 103 tokens & not run & --- \\
-Encrypted token-index lookup & out of scope & --- \\
-\bottomrule
-\end{tabularx}
-\end{table}
-
-Two consecutive released blocks compose at reduced sequence length through a full-hidden-state
-client refresh, reaching $8.48\times10^{-11}$ relative error after the second block. GPU memory
-peaks in the first block and does not increase in the second. This experiment checks the mechanism
-used for deeper composition: a fresh encryption starts the next block at level~$0$ without
-carrying forward the preceding block's multiplicative depth or GPU-resident temporaries.
-
-\subsection{Sequence-length structure}
-
-Sequence length follows from each task format. Genomic-signal recognition uses $600$ base pairs,
-which become $100$ sequence tokens under $6$-mer tokenization; three task-format tokens produce the
-$103$-token encrypted anchor. Eight-token packing maps that prompt to $13$ ciphertext groups. The
-shorter promoter and splice-site prompts use fewer groups under the same layout, yielding smaller
-causal schedules.
+Genomic-signal recognition uses $600$ base pairs, which become $100$ sequence tokens under
+$6$-mer tokenization; three task-format tokens produce the $103$-token measured prompt. Eight-token
+packing maps it to $13$ ciphertext groups. Core-promoter, promoter, and splice-site prompts use
+fewer groups under the same layout, but their complete encrypted classifiers have not been
+measured; any elapsed-time estimate for them is a fixed-circuit projection.
 
 The abundance-regression task lies outside the encrypted scope. Its $10{,}500$ base pairs produce
-$1{,}755$ tokens and $220$ ciphertext groups under the same tokenization rule. The causal attention
-schedule grows quadratically in the number of groups, placing this task in a different circuit-size
-regime from the classification prompts.
+$1{,}755$ tokens and $220$ ciphertext groups. The causal schedule would require $24{,}310$ score
+tiles, placing it in a different circuit-size regime from the classification prompts.
 
-% fig_cost_split.pdf, fig_timeline.pdf, and fig_scaling.pdf are temporarily excluded pending clean
-% timing evidence and evidence-ledger correction; see paper-docs/TODO.md.
+\begin{figure}[!t]\centering
+  \includegraphics[width=\columnwidth]{fig_scaling.pdf}
+  \caption{Sequence-length comparison. The genomic-signal classifier is the measured complete run;
+  hatched values assume whole-program time proportional to ciphertext-group count. This illustrative
+  model holds the circuit and head fixed and does not separately model quadratic attention or fixed overhead.}
+  \label{fig:scaling}
+\end{figure}
+
+Figure~\ref{fig:scaling} scales the measured complete-program time by ciphertext-group count for
+an illustrative comparison. The alternative task classifiers and their heads have not been measured;
+the projections do not separately model quadratic attention cost or fixed overhead.
 
 \subsection{Feasibility}
 \label{sec:verdict-feasibility}
 
-Encrypted evaluation of a released DNAGPT transformer block is feasible under the stated protocol.
-Its output clears the pre-declared tolerance by seven orders of magnitude, and its $9.6$~GiB process
-footprint fits within the evaluated GPU. Re-encryption returns to level~$0$ at declared boundaries,
-so multiplicative depth bounds each encrypted segment. The composition experiment confirms that a
-second block can begin without retaining the first block's GPU-memory footprint.
-
-Complete-model feasibility remains unresolved. The full driver and released task head have not
-been executed at the task-length prompt, so the present verdict covers the block arithmetic and
-composition mechanism recorded in Table~\ref{tab:scope}.
+Arithmetic feasibility is established for one complete released-weight genomic-signal classifier
+at its full prompt length. Every transformer block, every declared refresh, and the released head
+complete within the tested memory envelope; the final label matches the frozen plaintext reference;
+and intermediate errors remain far inside the acceptance tolerance. This verdict applies from
+encrypted embedded vectors through the released head; it does not cover private token-index lookup
+or prediction agreement over the full genomic-signal test set.
 
 \subsection{Practicality, judged separately}
 \label{sec:verdict-practicality}
 
-The available evidence does not license a latency or throughput verdict for the retained
-implementation. Operation counts show that encrypted linear algebra and client interaction remain
-substantial, but operation counts cannot be converted into service time without a clean
-measurement. Practicality is therefore unresolved rather than inferred from correctness or memory
-fit. A dedicated-node campaign must measure repeated block executions before the complete driver,
-network transport, or an application-specific service target can be assessed.
+The measured cost is substantial: one encrypted example takes $1.86$~h on one A100-class GPU with
+CPU-only client assistance. That value is a real latency measurement for the evaluated program,
+not a projection. It is also one execution with in-process boundaries, without a network or an
+independent repetition. The evidence therefore characterizes the present cost but does not establish
+variance, throughput, transport overhead, or suitability for a particular clinical or research
+service. Practicality remains a deployment-specific question rather than a consequence inferred
+from the affirmative feasibility result.

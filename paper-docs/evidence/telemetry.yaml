@@ -1,4 +1,31 @@
-# Resource trace of the measured encrypted block
+# Complete-run trajectory and legacy standalone-block resource trace
+#
+# Only complete_run is admitted to the current manuscript timeline. The historical trace below
+# is retained for provenance; its stage timings/utilization must not be plotted as a clean run.
+
+complete_run:
+  updated: 2026-09-07
+  tag: "[V]"
+  source: "results/runs/fhe_fides_real_d768_t103_12blocks_head_cpudiagcache_t123_v3_scheme_b_a100_20260812.json, blocks[].evaluation_seconds and blocks[].refresh_metrics"
+  owning_summary: "docs/hybrid/tasks.md, Complete 12-block + GSR-head encrypted forward pass"
+  scope: >
+    Consecutive block evaluations within the single measured complete 103-token classifier.
+    Times exclude the separately recorded refresh intervals. Relative errors are measured at
+    block output against the validated plaintext reference. Blocks are displayed one-based;
+    the immutable result file uses zero-based block indices. These are not independent repeats.
+  block_trajectory:
+    - {block: 1, evaluation_s: 533.86924265100004, global_rel_inf: 4.0902778041291448e-09, worst_token_rel_inf: 4.3904647006649043e-09}
+    - {block: 2, evaluation_s: 546.06615652100004, global_rel_inf: 6.9636506186233228e-09, worst_token_rel_inf: 1.045930936105483e-08}
+    - {block: 3, evaluation_s: 544.95121968599994, global_rel_inf: 1.1012026212541656e-08, worst_token_rel_inf: 2.0173617120110737e-08}
+    - {block: 4, evaluation_s: 541.65947094600006, global_rel_inf: 6.9199079906581552e-09, worst_token_rel_inf: 3.6320837192759978e-08}
+    - {block: 5, evaluation_s: 545.81456189100004, global_rel_inf: 2.349302393730871e-09, worst_token_rel_inf: 6.3495670316456455e-08}
+    - {block: 6, evaluation_s: 549.60969490299999, global_rel_inf: 2.8110059481257052e-09, worst_token_rel_inf: 1.0575529970940888e-07}
+    - {block: 7, evaluation_s: 558.94330988700005, global_rel_inf: 3.3142200983339e-09, worst_token_rel_inf: 1.5438178695621799e-07}
+    - {block: 8, evaluation_s: 547.07354614600001, global_rel_inf: 4.8995199685161907e-09, worst_token_rel_inf: 6.8616860459018688e-08}
+    - {block: 9, evaluation_s: 554.44724627100004, global_rel_inf: 4.8249565344973569e-09, worst_token_rel_inf: 5.601198031968184e-08}
+    - {block: 10, evaluation_s: 542.72321968200004, global_rel_inf: 5.9409076721579588e-09, worst_token_rel_inf: 5.8492593658714606e-08}
+    - {block: 11, evaluation_s: 550.85736766299999, global_rel_inf: 8.3213733742346958e-09, worst_token_rel_inf: 1.0339087793117939e-07}
+    - {block: 12, evaluation_s: 549.97789880000005, global_rel_inf: 2.0656009090123795e-08, worst_token_rel_inf: 1.4300610805943275e-07}
 #
 # Sampled every 5 s during the run and thinned here to the reported points. This is the raw
 # material for the stage-timeline figure, which is the strongest single piece of evidence for

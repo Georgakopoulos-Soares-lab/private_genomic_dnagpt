@@ -7,72 +7,49 @@
 
 \subsection{Private transformer inference}
 
-Private neural-network inference has long combined cryptographic tools according to the
-operation being evaluated. Gazelle established an influential hybrid design in which
-homomorphic encryption handles linear layers and garbled circuits handle
-nonlinearities~\cite{gazelle2018}. Transformer systems inherited this decomposition but had
-to contend with attention, normalization, and activation functions at substantially greater
-scale. Iron, Nimbus, and BumbleBee combine homomorphic encryption with secret sharing,
-oblivious transfer, and specialized two-party protocols for transformer
-inference~\cite{iron2022,nimbus2024,bumblebee2025}. Their protocols optimize a joint secure
-computation between parties; the present work instead keeps the server's linear path in CKKS
-and assigns exact nonlinear evaluation to the data owner at explicit boundaries. This choice
-changes both the security contract and the allocation of work between the parties.
+Gazelle combines homomorphic linear layers with garbled-circuit
+nonlinearities~\cite{gazelle2018}. Iron, BOLT, Nimbus, and BumbleBee adapt homomorphic encryption,
+secret sharing, and/or oblivious-transfer-based protocols to transformer attention,
+normalization, and activations~\cite{iron2022,bolt2024,nimbus2024,bumblebee2025}. They optimize
+joint secure computation; our server evaluates the linear path in CKKS and the data owner
+evaluates exact nonlinearities at explicit boundaries, changing both the security contract and
+the allocation of work.
 
-Safhire is the closest architectural antecedent~\cite{safhire2025}. It likewise places
-homomorphically evaluated linear layers on the server, then has the client decrypt an
-intermediate, apply the nonlinearity in plaintext, and return a fresh encryption. Safhire
-studies convolutional networks and adds randomized output permutation to make reconstruction
-from released intermediates harder. We therefore do not claim the client-assisted pattern as
-new. The contribution here is to test that pattern on a released genomic transformer at its
-task-defined prompt, retain the released weights and exact nonlinearities, verify the
-encrypted block through an independently checked plaintext reference, and expose the resulting
-arithmetic, boundary schedule, and memory behavior. This evaluation applies the established
-protocol pattern to a released genomic transformer with a reproducible verification chain.
+The Safhire preprint describes a closely related architecture: its client decrypts an intermediate,
+evaluates the nonlinearity, and returns fresh encryption~\cite{safhire2025}. It studies convolutional
+networks and adds randomized output permutation intended to hinder reconstruction from intermediates.
+We apply this established pattern to a released genomic transformer at its task-defined prompt,
+preserving released weights and exact nonlinearities. The contribution is the independently
+checked verification chain and measured arithmetic, boundary schedule, and memory behavior.
 
-THOR demonstrates full non-interactive transformer evaluation under homomorphic encryption using
-a circuit and packing strategy designed for that objective, including diagonal-major organization
-and compact packing~\cite{thor}. Its result establishes that the memory wall observed here belongs
-to the evaluated backend, parameters, packing, and circuit. Client assistance addresses a distinct
-engineering question: whether released computation can be preserved when the data owner is
-available to evaluate exact nonlinearities at declared boundaries.
+THOR demonstrates full non-interactive homomorphic transformer evaluation using diagonal-major
+organization and compact packing~\cite{thor}. Thus, our observed memory wall is specific to the
+evaluated backend, parameters, packing, and circuit. Client assistance tests whether released
+computation can be preserved when the data owner is available for exact nonlinear evaluation.
 
 \subsection{Homomorphic encryption for genomics}
 
-Homomorphic encryption already has a substantial genomic-computing lineage. The iDASH secure
-genome analysis competition evaluated encrypted association studies, sequence search, and
-related privacy-preserving workflows~\cite{idash2018}. Private genomic-query systems combine
-homomorphic encryption with hashing and set-intersection techniques to test for variants
-without disclosing either the stored genome or the query~\cite{privategenomicqueries2017}.
-Those workloads center on searches or prescribed statistics over genomic records. DNAGPT inference
-instead composes dense projections, attention, normalization, and a feed-forward network while
-preserving the numerical behavior of a released foundation model. This study extends the genomic
-HE lineage to the feasibility boundary of that transformer forward pass.
+The iDASH competition evaluated encrypted association studies, sequence search, and related
+genomic workflows~\cite{idash2018}. Private genomic-query systems combine homomorphic encryption,
+hashing, and set intersection to test for variants without disclosing the genome or
+query~\cite{privategenomicqueries2017}. Beyond these searches and prescribed statistics, DNAGPT
+inference composes dense projections, attention, normalization, and feed-forward layers while
+preserving the numerical behavior of a released foundation model.
 
 \subsection{GPU-accelerated homomorphic encryption}
 
-GPU CKKS libraries move number-theoretic transforms, key switching, rotations, and
-ciphertext arithmetic onto accelerators; the evaluated backend supplies those primitives and
-interoperates with the host cryptographic runtime~\cite{gpu-ckks-backend,openfhe}. Its API
-also shaped the available systems designs. In particular, the absence of ciphertext
-serialization prevented process-sharded evaluation, leaving thread-level concurrency and
-in-process device placement as the implementable paths for this implementation.
-
-Recent multi-GPU transformer work treats placement and communication--computation overlap as
-first-class scheduling problems~\cite{aegis}. That literature motivates the placement and overlap
-options discussed in Section~\ref{sec:optimization}. The current implementation neither serializes
-ciphertexts between processes nor exercises a networked client/server transport, so those paths
-must be evaluated directly before adopting a multi-device schedule.
+The evaluated GPU backend supplies number-theoretic transforms, key switching, rotations, and
+ciphertext arithmetic interoperable with the host runtime~\cite{gpu-ckks-backend,openfhe}.
+Its missing ciphertext serialization prevented process-sharded evaluation, leaving thread-level
+concurrency and in-process device placement. Multi-GPU transformer work motivates further
+placement and communication--computation overlap~\cite{aegis}; adopting those schedules requires
+direct evaluation of serialization and transport, which this implementation does not exercise.
 
 \subsection{Homomorphic matrix primitives}
 
-Matrix layout determines which rotations, plaintext encodings, and reductions an encrypted
-linear layer requires. THOR's diagonal-major representation and compact packing specialize
-that layout for transformer inference~\cite{thor}; HE-BLAS develops a broader library of
-homomorphic linear-algebra kernels and shape-aware algorithms~\cite{heblas2025}. These works
-motivate the remaining targets in Section~\ref{sec:optimization}: reducing repeated packing
-work, copying fewer distinct diagonal plaintexts, and replacing segmented slot reductions
-with kernels matched to the actual tensor shapes. Packing, key material, level consumption, and
-the operation schedule are coupled. Integrating a candidate primitive therefore includes
-revalidation against the frozen plaintext reference and checked schedule before performance is
-compared.
+Matrix layout determines rotations, plaintext encodings, and reductions. THOR specializes it for
+transformers~\cite{thor}; HE-BLAS supplies homomorphic matrix--vector, vector--vector, and
+matrix--matrix reductions implemented with BLAS~\cite{heblas2025}. These motivate less repeated
+packing, fewer diagonal copies, and shape-matched reductions (Section~\ref{sec:optimization}).
+Because packing, keys, levels, and the operation schedule are coupled, candidate primitives must
+be revalidated against the frozen reference and schedule before performance comparison.

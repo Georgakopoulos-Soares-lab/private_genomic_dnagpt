@@ -1,87 +1,42 @@
 % ---------------------------------------------------------------------------
-% Front matter: title, authors, graphical abstract, abstract, key points.
+% IEEE/JBHI front matter.
 %
-% Framing follows the project objective in CLAUDE.md: this is a FEASIBILITY STUDY.
-% The question is whether DNAGPT inference can run under homomorphic encryption, and where
-% correctness, performance, or memory would stop a complete encrypted deployment.
-% Feasibility and practicality are reported as SEPARATE verdicts. A correct-but-slow encrypted
-% path is a valid, publishable outcome; nothing is tuned to force "practical".
-%
-% Source: context/01_scenario_and_motivation.md, context/05_claims_and_qualifiers.md
+% The abstract is one self-contained paragraph under 250 words and contains no
+% citations, footnotes, displayed equations, or undefined abbreviations. Author
+% contact details and funding remain author-supplied submission metadata.
 % ---------------------------------------------------------------------------
 
-\title{\vspace{-1.2cm}\textbf{Feasibility of Homomorphic Inference for a Genomic Foundation
-Model: A Client-Assisted CKKS Evaluation of DNAGPT}\vspace{-0.2cm}}
+\title{Feasibility of Homomorphic Inference for a Genomic Foundation Model}
 
-\author{%
-  \begin{minipage}{0.96\textwidth}
-  \raggedright
-  \textbf{Christos Galanopoulos$^{1,*}$, Kimon Antonios Provatas$^{1}$,
-  Ilias Georgakopoulos-Soares$^{1,*}$}\\[2pt]
-  \normalsize $^{1}$The University of Texas at Austin, Austin, TX, USA\\[2pt]
-  \small $^{*}$Corresponding authors: \texttt{TODO@utexas.edu}\\[2pt]
-  \small\textit{Homomorphic encryption $\cdot$ Genomic privacy $\cdot$ Transformer inference
-  $\cdot$ GPU acceleration}
-  \end{minipage}
+\author{Christos Galanopoulos, Kimon Antonios Provatas, and Ilias Georgakopoulos-Soares%
+\thanks{The authors are with The University of Texas at Austin, Austin, TX, USA.}%
+% TODO(authors): add institutional e-mail addresses, corresponding-author designation,
+% and funding/support disclosure before submission.
 }
-\date{}
 
 \maketitle
-\thispagestyle{fancy}
 
-% The graphical abstract is temporarily excluded pending evidence-safe regeneration; see
-% paper-docs/TODO.md. The generated asset contains timing and client-memory claims whose
-% supporting logs are not present in the repository.
+\begin{abstract}
+Human genomic sequences can identify individuals, cannot be replaced after disclosure, and are the
+inputs that genomic foundation models are designed to interpret. We assess whether a compute
+provider can execute a released genomic foundation model without receiving query-derived genomic
+values in plaintext and whether
+correctness, memory, or cost prevents complete encrypted inference. We first reproduce the released
+model on three genomic task families and freeze an independently validated numerical reference. We
+then implement a client-assisted approximate homomorphic encryption protocol: the provider evaluates
+linear algebra on ciphertexts, while the key-holding data owner evaluates exact normalization,
+causal softmax, and activation functions at fixed boundaries. A non-interactive configuration
+completes one released-weight block but exceeds the tested accelerator-memory envelope when
+configured for composition. The client-assisted configuration executes all released transformer
+blocks and the task head for one held-out genomic-signal input at its full prompt length. It matches
+the frozen final label, peaks at 9{,}839 mebibytes of accelerator memory, and completes in 6{,}683
+seconds on one accelerator. These results establish arithmetic feasibility for a complete
+classifier, while repeatability, network transport, and private token-index lookup remain
+unresolved. The biomedical significance is that, under the stated threat model, a served genomic
+model can process an encoded sequence without exposing plaintext query-derived activations to the
+compute provider.
+\end{abstract}
 
-% --- Abstract ---------------------------------------------------------------
-\section*{Abstract}
-
-\textbf{Motivation.} Human genomic sequence is identifying, cannot be replaced after disclosure,
-and is precisely the input that genomic foundation models are designed to interpret. We ask
-whether a provider can execute a released genomic transformer without receiving genomic values in
-plaintext, and whether correctness, memory, or cost prevents a complete encrypted deployment.
-
-\textbf{Results.} We validate DNAGPT on genomic-signal recognition, promoter and splice-site
-classification, and mRNA abundance regression, then freeze an independently checked numerical
-reference. We evaluate two CKKS designs. In the evaluated pure non-interactive configuration,
-polynomial nonlinearities permit a released-weight block to complete, but context and evaluation
-keys exceed the tested $80$~GB memory envelope when configured for composition. In the
-client-assisted design, the provider evaluates linear operations on ciphertexts while the
-key-holding data owner evaluates exact LayerNorm, causal softmax, and GELU at fixed boundaries.
-The resulting released-weight block at the task-defined prompt matches its validated plaintext
-reference with $4.64\times10^{-9}$ relative error against a $4\times10^{-2}$ tolerance fixed in
-advance, while the evaluating process peaks at $9.6$~GiB of GPU memory.
-
-\textbf{Conclusions.} Correctness is not the barrier. The protocol moves the accelerator-memory
-barrier by replacing deep non-interactive segments with fresh encryption at declared boundaries;
-bounded caching separately prevents encoded plaintexts from accumulating in host memory. The
-systems campaign removes repeated host encoding while preserving an asserted operation schedule,
-packing, depth, and reference. Client-assisted DNAGPT evaluation is feasible at the demonstrated
-scope. Its practicality remains unresolved until the retained implementation is timed on a clean,
-dedicated node.
-
-\textbf{Availability.} Code, evaluation harnesses, and the evidence record are maintained at
-\url{https://github.com/Georgakopoulos-Soares-lab/private_genomic_dnagpt}.
-
-% --- Key points -------------------------------------------------------------
-\section*{Key Points}
-
-\begin{itemize}
-  \item We test whether a released genomic foundation model can be evaluated under homomorphic
-        encryption, and report feasibility and practicality as separate verdicts rather than as
-        one.
-  \item The model is validated first on three genomic task families; the independent numerical
-        reference is itself asserted against every upstream block before it is used to verify
-        encrypted execution.
-  \item Correctness is not a barrier: a complete transformer block at the task's own prompt length
-        matches the validated plaintext reference to $4.64\times10^{-9}$ relative error, seven
-        orders of magnitude inside the tolerance fixed before the run.
-  \item Memory is a barrier that design moves. Approximating the nonlinearities under encryption
-        exceeded the tested $80$~GB accelerator envelope at composition; client assistance yields
-        a $9.6$~GiB evaluating-process GPU peak for the retained block.
-  \item Bounded caching addresses a distinct host-memory problem. Runtime assertions confirm that
-        the complete operation schedule, packing, depth, and reference remain unchanged while
-        repeated plaintext encoding is removed.
-  \item The data owner requires no GPU. Practicality remains a separate, unresolved verdict until
-        the retained implementation has a clean dedicated-node timing measurement.
-\end{itemize}
+\begin{IEEEkeywords}
+genomic privacy, homomorphic encryption, privacy-preserving inference, transformers.
+\end{IEEEkeywords}

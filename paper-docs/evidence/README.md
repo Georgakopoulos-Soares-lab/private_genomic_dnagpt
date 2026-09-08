@@ -5,7 +5,7 @@ them. The number lint reads them. Nothing else is a source.
 
 | File | Holds |
 |---|---|
-| `measurements.yaml` | the measured encrypted block, correctness, memory, operation counts, crypto parameters, plaintext baseline |
+| `measurements.yaml` | the measured encrypted block and complete classifier, correctness, memory, operation counts, crypto parameters, plaintext baseline |
 | `optimizations.yaml` | the optimization campaign: what was kept, what was abandoned and why, what remains open |
 | `scaling.yaml` | per-task token derivations, the measured anchor, and projections to the other tasks |
 | `telemetry.yaml` | the resource trace of the measured run, and what it shows |

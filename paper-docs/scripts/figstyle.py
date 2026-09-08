@@ -20,8 +20,13 @@ from matplotlib.patches import FancyArrowPatch, FancyBboxPatch  # noqa: E402
 
 # --- Canvas -----------------------------------------------------------------
 
-FIGSIZE = (14.08, 7.68)  # 1408 x 768 px at dpi=100
-DPI = 100
+# IEEEtran's printed widths are about 3.5 in for one column and 7.16 in across
+# both columns.  Figures are drawn at those physical sizes instead of on a large
+# presentation canvas that LaTeX would shrink (along with all of its labels).
+COLUMN_WIDTH = 3.50
+PAGE_WIDTH = 7.16
+FIGSIZE = (PAGE_WIDTH, 3.9)
+DPI = 160
 
 plt.rcParams.update(
     {
@@ -38,6 +43,13 @@ plt.rcParams.update(
         "text.color": "#111111",
         "figure.facecolor": "white",
         "savefig.facecolor": "white",
+        "font.size": 7.4,
+        "axes.titlesize": 8.4,
+        "axes.labelsize": 7.4,
+        "xtick.labelsize": 6.8,
+        "ytick.labelsize": 6.8,
+        "legend.fontsize": 6.8,
+        "hatch.linewidth": 0.55,
     }
 )
 
@@ -80,6 +92,7 @@ PROJECTED_KW = dict(edgecolor=GRAY, linewidth=1.0, alpha=0.55, hatch="///")
 def canvas(figsize=FIGSIZE):
     """Blank axes in 0..100 x 0..100 coordinates, for schematic diagrams."""
     fig, ax = plt.subplots(figsize=figsize, dpi=DPI)
+    fig.subplots_adjust(left=0.015, right=0.985, bottom=0.02, top=0.98)
     ax.set_xlim(0, 100)
     ax.set_ylim(0, 100)
     ax.axis("off")
@@ -89,12 +102,12 @@ def canvas(figsize=FIGSIZE):
 def save(fig, outdir: pathlib.Path, name: str) -> pathlib.Path:
     outdir.mkdir(parents=True, exist_ok=True)
     path = outdir / f"{name}.pdf"
-    fig.savefig(path, bbox_inches="tight", pad_inches=0.08)
+    fig.savefig(path)
     plt.close(fig)
     return path
 
 
-def heading(ax, x, y, text, size=17, color=BLACK, ha="left", weight="bold"):
+def heading(ax, x, y, text, size=9, color=BLACK, ha="left", weight="bold"):
     ax.text(
         x, y, text, fontsize=size, color=color, ha=ha, va="center", fontweight=weight
     )
@@ -125,8 +138,8 @@ def labelled_box(
     subtitle=None,
     facecolor=LIGHT_GRAY,
     edgecolor=GRAY,
-    title_size=13,
-    sub_size=10,
+    title_size=7.5,
+    sub_size=6.5,
     color=BLACK,
 ):
     box(ax, x, y, w, h, facecolor=facecolor, edgecolor=edgecolor)
@@ -189,7 +202,7 @@ def tag(ax, x, y, text, kind="V"):
         x,
         y,
         f"[{kind}] {text}",
-        fontsize=9,
+        fontsize=6.5,
         color=colors.get(kind, GRAY),
         ha="left",
         va="center",
@@ -202,9 +215,9 @@ def despine(ax, keep=("left", "bottom")):
         ax.spines[side].set_visible(side in keep)
 
 
-def save_png(fig, outdir: pathlib.Path, name: str, dpi: int = 110) -> pathlib.Path:
+def save_png(fig, outdir: pathlib.Path, name: str, dpi: int = 220) -> pathlib.Path:
     """PNG alongside the PDF, for quick visual inspection only. Not used by the manuscript."""
     outdir.mkdir(parents=True, exist_ok=True)
     path = outdir / f"{name}.png"
-    fig.savefig(path, bbox_inches="tight", pad_inches=0.08, dpi=dpi)
+    fig.savefig(path, dpi=dpi)
     return path

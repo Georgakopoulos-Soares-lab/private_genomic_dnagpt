@@ -5,10 +5,11 @@
 % This is the spine. Sections 5, 6, and 7 are read against it.
 % ---------------------------------------------------------------------------
 
-\section{Deployment scenario and threat model}
+\section{Study Design and Threat Model}
 \label{sec:threat-model}
 
 \subsection{Deployment roles and privacy objective}
+Figure~\ref{fig:overview} summarizes the deployment and complete-classifier evaluation.
 The deployment has two parties but one cryptographic confidentiality objective. The data owner
 holds a human genomic sequence, ordinary CPU resources, and no GPU. It will not disclose the
 sequence to the compute provider. The model owner operates the accelerator infrastructure and
@@ -39,7 +40,7 @@ or evaluate through a privacy-preserving protocol. Client-assisted CKKS addresse
 The reason to use it is access to a served model without genomic disclosure, not an attempt to beat
 plaintext inference.
 
-\begin{table}[t]\centering\small
+\begin{table*}[t]\centering\small
 \caption{Resource and trust allocation under local and served-model deployment.}
 \label{tab:deployments}
 \begin{tabularx}{\textwidth}{Y c c}
@@ -53,7 +54,7 @@ Server evaluates model linear algebra & no & on ciphertexts \\
 Client evaluates model nonlinearities & as part of local model & at declared boundaries \\
 \bottomrule
 \end{tabularx}
-\end{table}
+\end{table*}
 
 The protocol assigns encrypted dense linear algebra to the party with accelerator hardware while
 the key holder evaluates exact nonlinearities on CPU. This allocation protects the genomic input

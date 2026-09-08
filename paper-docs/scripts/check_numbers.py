@@ -92,6 +92,7 @@ IGNORE_CONTEXTS = re.compile(
 )
 # Column specifications and lengths carry numbers that are layout, not claims.
 LAYOUT_NOISE = re.compile(
+    r"\\hsize\s*=\s*(?:\d+(?:\.\d+)?|\.\d+)\\hsize|"
     r"\\begin\{tabularx\}\{[^}]*\}|\\begin\{minipage\}\{[^}]*\}|"
     r"\d+(?:\.\d+)?\s*(?:pt|cm|mm|em|ex|in|\\textwidth|\\linewidth|\\columnwidth)"
 )
@@ -218,8 +219,11 @@ def check_structure() -> list[str]:
         if key not in labels:
             findings.append(f"{rel}:{lineno}: \\ref{{{key}}} has no matching label")
 
+    # The journal manuscript retains the complete figure set. Catch accidental omissions when
+    # sections are rearranged, as missing assets can otherwise leave a compiling but incomplete PDF.
+    included = {pathlib.Path(name).stem for body in bodies.values() for name in GRAPHIC.findall(body)}
     for fig in sorted((MANUSCRIPT / "figures").glob("*.pdf")):
-        if not any(fig.stem in b for b in bodies.values()):
+        if fig.stem not in included:
             findings.append(f"figures/{fig.name}: generated but never included")
 
     return findings
