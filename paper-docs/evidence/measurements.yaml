@@ -779,6 +779,15 @@ plaintext_baseline:
     tag: "[V]"
     scope: "Same run as base.mrna_r2"
     source: "docs/tasks.md"
+  - id: base.mrna_xpresso_r2
+    value: 0.59
+    tag: "[V]"
+    scope: >
+      Xpresso's own published human mRNA-abundance r^2 (Agarwal & Shendure 2020, Cell Reports
+      31(7):107663, Table 1). Not measured in this work; quoted only so the manuscript can
+      distinguish the Xpresso baseline from DNAGPT's 0.62 on the Xpresso dataset
+      (the reference on base.mrna_r2).
+    source: "refs.bib:xpresso; reviews/2026-09-13-citation-corrections.md"
 
 # ---------------------------------------------------------------------------
 # 6. Non-interactive baseline (the architecture that was set aside)
