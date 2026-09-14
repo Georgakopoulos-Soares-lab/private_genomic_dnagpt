@@ -19,8 +19,9 @@ $8{,}173$ rotations, and $857$ client boundary crossings per block. Runtime asse
 counts, the boundary schedule, and remaining depth before the MLP, aborting on deviation. Packing,
 depth, reference, and acceptance criterion are unchanged. Optimizations alter host-data preparation,
 residency, and CPU placement without removing arithmetic or moving linear work to the client.
-The retained system completes the full classifier in one clean sample; the pre-optimization timing
-denominator lacks matching evidence quality, so we report the endpoint without a speedup factor.
+The retained system completes the full classifier in one clean sample. No pre-optimization timing
+was measured under matching conditions, so we report this endpoint directly rather than as a
+speedup factor.
 
 \subsection{Host-side encoding redundancy}
 The baseline rebuilt and encoded $1{,}024$ diagonals for each of $156$ dense products, yielding

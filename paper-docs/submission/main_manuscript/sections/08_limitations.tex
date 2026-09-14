@@ -24,8 +24,9 @@ completes.
 
 Model confidentiality remains operational rather than cryptographic. Because the data owner sees
 full activations at every nonlinearity, the transcript divides the network into shallow segments
-with known nonlinearities. Weight recovery becomes inexpensive per-segment regression instead of a
-global inversion problem. Server-side weight placement can discourage casual copying but cannot
+with known nonlinearities. An attacker can then recover each segment's weights by ordinary
+regression, rather than by inverting the whole model at once. Server-side weight placement can
+discourage casual copying but cannot
 protect the model from a determined client; the deployment keeps the model on the server because
 the server operates it.
 

@@ -144,8 +144,9 @@ renders as a 12-page regular-paper draft, including all eight figures and the re
    deployment claim.
 4. **Optional backend comparison:** Concrete ML and TFHE-rs are documentation-only references.
    Any future experimental comparison needs pinned releases, configurations, and measured runs.
-5. **Author metadata:** supply institutional e-mail addresses, corresponding-author designation,
-   ORCIDs, funding/support wording, and any approved acknowledgments before submission.
+5. **Author metadata:** institutional affiliations, e-mail, corresponding-author designation,
+   funding/support wording, and the Acknowledgment are now in the manuscript. ORCIDs remain
+   outstanding.
 
 **Recently corrected — worth knowing if you read an earlier draft.** The genomic-signal baseline
 reference was attributed to DeepGSR at 0.916. It is in fact DNAGPT's own reported figure for this

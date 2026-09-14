@@ -29,8 +29,9 @@ exact releases, configurations, and measured runs before making comparative perf
 
 ## Author and production tasks
 
-- Supply author e-mail addresses, the corresponding-author designation, ORCIDs, funding/support text,
-  and any approved acknowledgments.
+- (2026-09-14) Author e-mail address, corresponding-author designation, institutional affiliations,
+  funding/support text, and Acknowledgment are now in `00_frontmatter.tex`/`11_declarations.tex`.
+  ORCIDs are still outstanding.
 - Complete the multi-author consent process and prepare the cover letter required by the submission
   portal.
 - Decide and document the repository reuse license.

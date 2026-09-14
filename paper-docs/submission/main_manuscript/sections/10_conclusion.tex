@@ -8,8 +8,8 @@ Client-assisted CKKS executes all $12$ released DNAGPT transformer blocks and th
 task head for one held-out $103$-token input. Intermediate errors remain within
 $1.54\times10^{-7}$, the encrypted head margin has $8.56\times10^{-9}$ relative error, and the
 final label matches the independently validated plaintext reference. The complete execution peaks
-at $9{,}839$~MiB of process GPU memory. Arithmetic feasibility is therefore affirmative from
-encrypted embedded vectors through the released head.
+at $9{,}839$~MiB of process GPU memory. Arithmetic feasibility therefore holds from encrypted
+embedded vectors through the released head.
 
 The measured cost is $6{,}683$~s for one example on a single accelerator. Server-side encrypted
 linear algebra accounts for $85.5\%$ of encrypted evaluation and CPU-only client boundaries for
